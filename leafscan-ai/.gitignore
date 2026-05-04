@@ -1,0 +1,43 @@
+# ──────────────────────────────
+# Node.js & React Native / Expo
+# ──────────────────────────────
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native builds
+android/
+ios/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
+# Bắt buộc giữ lại file .env.example
+!.env.example
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Firebase / Keystores / Certs
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Logs
+*.log

@@ -1,0 +1,40 @@
+{
+    "expo": {
+        "name": "LeafScan AI",
+        "slug": "leafscan-ai",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "automatic",
+        "splash": {
+            "backgroundColor": "#F7F4EF",
+            "resizeMode": "contain"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.leafscan.ai"
+        },
+        "android": {
+            "adaptiveIcon": {
+                "backgroundColor": "#F7F4EF"
+            },
+            "package": "com.leafscan.ai",
+            "permissions": [
+                "android.permission.CAMERA",
+                "android.permission.RECORD_AUDIO"
+            ]
+        },
+        "plugins": [
+            "expo-image-picker",
+            [
+                "expo-camera",
+                {
+                    "cameraPermission": "Allow LeafScan AI to access your camera to scan plant leaves."
+                }
+            ]
+        ]
+    }
+}

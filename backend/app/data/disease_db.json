@@ -1,0 +1,1163 @@
+{
+  "apple_scab": {
+    "name": "Vảy Táo",
+    "severity": "severe",
+    "description": "Bệnh vảy táo (Apple Scab) do nấm Venturia inaequalis gây ra. Tạo các vết sẫm màu, xù xì trên lá và quả. Đây là bệnh phổ biến nhất trên cây táo, gây giảm năng suất và chất lượng quả nghiêm trọng.",
+    "symptoms": [
+      "Vết bệnh màu ô-liu đến đen trên mặt lá",
+      "Lá bị biến dạng, cuộn tròn và rụng sớm",
+      "Quả có các vết sẹo nứt nẻ, xù xì",
+      "Quả bị biến dạng, kém phát triển"
+    ],
+    "treatment": [
+      "Phun thuốc gốc Mancozeb hoặc Captan vào đầu mùa xuân",
+      "Cắt tỉa cành bệnh, thu gom lá rụng bị bệnh và đốt",
+      "Phun thuốc trừ nấm hệ thống Myclobutanil khi bệnh nặng",
+      "Bổ sung phân bón vi lượng (Kẽm, Bo) qua lá"
+    ],
+    "prevention": [
+      "Chọn giống táo kháng bệnh vảy (VD: Liberty, Enterprise)",
+      "Cắt tỉa tán cây thông thoáng hàng năm",
+      "Phun thuốc phòng ngừa trước mùa mưa",
+      "Quản lý tốt tàn dư lá bệnh vào mùa đông"
+    ],
+    "affected_area": 61,
+    "image": "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80",
+    "treatment_by_stage": {
+      "early": [
+        "Cách ly và cắt tỉa vùng lá mới chớm bệnh.",
+        "Áp dụng biện pháp sinh học/chăm sóc canh tác trước khi dùng thuốc.",
+        "Theo dõi lại sau 48-72 giờ bằng lần quét mới."
+      ],
+      "middle": [
+        "Phun thuốc gốc Mancozeb hoặc Captan mỗi 7-10 ngày",
+        "Cắt tỉa cành bệnh, thu gom lá rụng bị bệnh và đốt",
+        "Tăng tần suất xử lý và theo dõi theo hướng dẫn sản phẩm.",
+        "Loại bỏ lá nhiễm nặng để giảm áp lực lây lan."
+      ],
+      "late": [
+        "Phun thuốc trừ nấm hệ thống Myclobutanil khi bệnh nặng",
+        "Cắt tỉa cành bệnh, thu gom lá rụng bị bệnh và đốt",
+        "Bổ sung phân bón vi lượng (Kẽm, Bo) qua lá",
+        "Ưu tiên xử lý khoanh vùng và tham vấn chuyên gia nông nghiệp địa phương.",
+        "Đánh giá khả năng phục hồi để quyết định giữ hay loại bỏ cây bệnh nặng."
+      ]
+    },
+    "general_care": [
+      "Chọn giống táo kháng bệnh vảy",
+      "Cắt tỉa tán cây thông thoáng hàng năm",
+      "Phun thuốc phòng ngừa trước mùa mưa",
+      "Quản lý tốt tàn dư lá bệnh vào mùa đông"
+    ],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "apple_black_rot": {
+    "name": "Thối Đen Táo",
+    "severity": "severe",
+    "description": "Bệnh thối đen táo do nấm Botryosphaeria obtusa gây ra. Gây ra các vết đốm nâu đen trên lá, quả bị thối và khô lại trên cây. Bệnh phát triển mạnh trong điều kiện ẩm ướt.",
+    "symptoms": [
+      "Vết bệnh tròn, nâu sẫm với viền tím trên lá",
+      "Quả bị thối đen, khô cứng và dính trên cành",
+      "Vết loét trên vỏ cành và thân cây",
+      "Lá rụng sớm, cây suy yếu"
+    ],
+    "treatment": [
+      "Cắt bỏ và tiêu hủy cành bị loét, quả bị thối",
+      "Phun thuốc gốc Captan hoặc Thiophanate-methyl",
+      "Loại bỏ quả khô (mummy) còn trên cây",
+      "Phun thuốc phòng ngừa từ giai đoạn hoa nở"
+    ],
+    "prevention": [
+      "Cắt tỉa cành chết và cành bệnh thường xuyên",
+      "Thu gom quả rụng và tàn dư thực vật",
+      "Duy trì vệ sinh vườn tốt",
+      "Phun thuốc phòng ngừa theo lịch trình đều đặn"
+    ],
+    "affected_area": 45,
+    "image": "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80",
+    "treatment_by_stage": {
+      "early": [
+        "Cắt bỏ ngay các phần bị nhiễm bệnh.",
+        "Thu gom và tiêu hủy tàn dư thực vật.",
+        "Theo dõi lại sau 48-72 giờ bằng lần quét mới."
+      ],
+      "middle": [
+        "Phun thuốc gốc Captan hoặc Thiophanate-methyl mỗi 7-10 ngày",
+        "Cắt bỏ toàn bộ cành và quả bị bệnh",
+        "Tăng tần suất xử lý và theo dõi.",
+        "Loại bỏ quả khô còn dính trên cây."
+      ],
+      "late": [
+        "Phun thuốc trừ nấm hệ thống liên tục",
+        "Cắt tỉa mạnh các cành bị loét",
+        "Loại bỏ toàn bộ quả bệnh trên và dưới cây",
+        "Tham vấn chuyên gia nông nghiệp địa phương.",
+        "Đánh giá khả năng phục hồi của cây."
+      ]
+    },
+    "general_care": [
+      "Cắt tỉa cành chết và cành bệnh",
+      "Thu gom quả rụng và tàn dư thực vật",
+      "Duy trì vệ sinh vườn tốt",
+      "Phun thuốc phòng ngừa theo lịch trình"
+    ],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "apple_cedar_rust": {
+    "name": "Rỉ Sắt Tuyết Tùng Táo",
+    "severity": "moderate",
+    "description": "Bệnh rỉ sắt tuyết tùng táo do nấm Gymnosporangium juniperi-virginianae gây ra. Bệnh cần hai ký chủ: cây táo và cây tuyết tùng. Tạo các vết đốm vàng cam nổi bật trên lá táo.",
+    "symptoms": [
+      "Đốm vàng cam sáng trên mặt trên lá",
+      "Mụn nhỏ màu cam ở mặt dưới lá",
+      "Quả bị biến dạng và có đốm",
+      "Rụng lá sớm khi nhiễm nặng"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Myclobutanil khi lá mới ra",
+      "Phun lại sau 7-10 ngày trong mùa mưa",
+      "Loại bỏ cây tuyết tùng gần vườn táo nếu có thể",
+      "Bổ sung dinh dưỡng để tăng sức đề kháng cho cây"
+    ],
+    "prevention": [
+      "Trồng giống táo kháng bệnh rỉ sắt",
+      "Không trồng cây tuyết tùng gần vườn táo",
+      "Phun phòng ngừa vào đầu mùa xuân",
+      "Cắt tỉa tán cây thông thoáng"
+    ],
+    "affected_area": 30,
+    "image": "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80",
+    "treatment_by_stage": {
+      "early": [
+        "Cắt bỏ lá có đốm vàng cam.",
+        "Phun thuốc phòng ngừa Myclobutanil.",
+        "Theo dõi lại sau 48-72 giờ."
+      ],
+      "middle": [
+        "Phun thuốc trừ nấm Myclobutanil mỗi 7-10 ngày",
+        "Cắt bỏ lá bệnh nặng",
+        "Tăng tần suất theo dõi.",
+        "Bổ sung dinh dưỡng cho cây."
+      ],
+      "late": [
+        "Phun thuốc trừ nấm liên tục mỗi 7 ngày",
+        "Cắt bỏ toàn bộ lá nhiễm bệnh",
+        "Loại bỏ cây tuyết tùng gần đó nếu có thể",
+        "Tham vấn chuyên gia nông nghiệp.",
+        "Đánh giá khả năng phục hồi của cây."
+      ]
+    },
+    "general_care": [
+      "Trồng giống kháng bệnh",
+      "Cắt tỉa tán cây thông thoáng",
+      "Phun phòng ngừa đầu mùa",
+      "Duy trì vệ sinh vườn"
+    ],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "apple_healthy": {
+    "name": "Táo Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây táo trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại. Màu sắc lá xanh đồng đều, bề mặt mịn màng.",
+    "symptoms": [],
+    "treatment": [
+      "Không cần điều trị. Cây đang phát triển tốt!",
+      "Tiếp tục duy trì chế độ chăm sóc hiện tại",
+      "Theo dõi định kỳ mỗi 3-5 ngày để phát hiện sớm"
+    ],
+    "prevention": [
+      "Tưới nước đều đặn và đúng cách",
+      "Bón phân cân đối NPK theo từng giai đoạn",
+      "Cắt tỉa tán cây thông thoáng hàng năm",
+      "Quét lá định kỳ bằng LeafScan AI để theo dõi sức khỏe"
+    ],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc và thông thoáng tán lá."],
+      "middle": ["Tăng tần suất theo dõi lên mỗi 2-3 ngày.", "Loại bỏ lá có dấu hiệu bất thường nhẹ.", "Duy trì vệ sinh khu vực trồng."],
+      "late": ["Rà soát toàn bộ cây để xác nhận không có ổ bệnh tiềm ẩn.", "Ưu tiên biện pháp phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu xuất hiện triệu chứng mới."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa tán cây", "Theo dõi sức khỏe định kỳ"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "blueberry_healthy": {
+    "name": "Việt Quất Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây việt quất trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": [
+      "Không cần điều trị. Cây đang phát triển tốt!",
+      "Tiếp tục duy trì chế độ chăm sóc hiện tại",
+      "Theo dõi định kỳ mỗi 3-5 ngày"
+    ],
+    "prevention": [
+      "Duy trì đất chua pH 4.5-5.5",
+      "Tưới nước đều đặn, tránh ngập úng",
+      "Phủ gốc bằng mùn cưa hoặc vỏ thông",
+      "Quét lá định kỳ bằng LeafScan AI"
+    ],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc và thông thoáng tán lá."],
+      "middle": ["Tăng tần suất theo dõi lên mỗi 2-3 ngày.", "Loại bỏ lá có dấu hiệu bất thường nhẹ.", "Duy trì vệ sinh khu vực trồng."],
+      "late": ["Rà soát toàn bộ cây.", "Ưu tiên biện pháp phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Duy trì đất chua pH 4.5-5.5", "Tưới nước đều đặn", "Phủ gốc bằng mùn", "Theo dõi sức khỏe định kỳ"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "cherry_powdery_mildew": {
+    "name": "Phấn Trắng Cherry",
+    "severity": "moderate",
+    "description": "Bệnh phấn trắng trên cherry do nấm Podosphaera clandestina gây ra. Tạo lớp bột trắng phủ trên lá, chồi non và quả. Phát triển mạnh trong điều kiện ấm áp, khô ráo.",
+    "symptoms": [
+      "Lớp bột trắng mịn phủ trên bề mặt lá",
+      "Lá non bị quăn, biến dạng",
+      "Quả bị phủ lớp trắng, giảm chất lượng",
+      "Cây sinh trưởng kém, năng suất giảm"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm gốc Lưu huỳnh (Sulfur)",
+      "Sử dụng dầu Neem pha loãng mỗi tuần",
+      "Cắt bỏ tất cả các bộ phận bị nhiễm bệnh",
+      "Phun dung dịch Baking Soda (1 muỗng/lít nước)"
+    ],
+    "prevention": [
+      "Trồng nơi có đủ ánh sáng và thông thoáng",
+      "Tưới nước vào buổi sáng, tránh để lá ẩm qua đêm",
+      "Bón phân cân đối, tránh thừa đạm",
+      "Cắt tỉa tán cây thông thoáng"
+    ],
+    "affected_area": 28,
+    "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt tỉa vùng lá mới chớm bệnh.", "Phun phòng ngừa bằng Sulfur.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc trừ nấm gốc Lưu huỳnh mỗi 7-10 ngày", "Cắt bỏ bộ phận nhiễm bệnh", "Tăng tần suất xử lý.", "Loại bỏ lá nhiễm nặng."],
+      "late": ["Phun thuốc trừ nấm hệ thống", "Cắt bỏ toàn bộ phần nhiễm", "Phun dầu Neem hỗ trợ", "Tham vấn chuyên gia nông nghiệp.", "Đánh giá khả năng phục hồi."]
+    },
+    "general_care": ["Trồng nơi thông thoáng", "Tưới buổi sáng", "Bón phân cân đối", "Cắt tỉa định kỳ"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "cherry_healthy": {
+    "name": "Cherry Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây cherry trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa tán cây thông thoáng", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc và thông thoáng tán lá."],
+      "middle": ["Tăng tần suất theo dõi lên mỗi 2-3 ngày.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh khu vực trồng."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa tán cây", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "corn_gray_leaf_spot": {
+    "name": "Đốm Xám Ngô",
+    "severity": "severe",
+    "description": "Bệnh đốm xám trên ngô do nấm Cercospora zeae-maydis gây ra. Tạo các vết chữ nhật dài, màu xám đến nâu trên lá. Bệnh lây lan nhanh trong điều kiện ẩm ướt kéo dài, gây thiệt hại năng suất nghiêm trọng lên đến 50%.",
+    "symptoms": [
+      "Vết bệnh hình chữ nhật dài, màu xám nhạt đến nâu",
+      "Vết bệnh xuất hiện song song theo gân lá",
+      "Lá khô cháy nhanh từ đầu lá vào trong",
+      "Cây mất khả năng quang hợp, bắp nhỏ, hạt lép"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Trifloxystrobin hoặc Azoxystrobin ngay khi phát hiện",
+      "Cắt bỏ lá bệnh nặng, gom đốt để ngăn lây lan",
+      "Bón thêm phân Kali để tăng sức đề kháng cho cây",
+      "Phun thuốc phòng trị 2 lần cách nhau 14 ngày"
+    ],
+    "prevention": [
+      "Trồng giống ngô kháng bệnh đốm xám",
+      "Luân canh với cây họ đậu hoặc lúa",
+      "Thu gom tàn dư cây bệnh sau thu hoạch để tiêu hủy",
+      "Trồng với mật độ hợp lý, tránh trồng quá dày"
+    ],
+    "affected_area": 52,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cách ly và cắt tỉa vùng lá mới chớm bệnh.", "Áp dụng biện pháp sinh học trước khi dùng thuốc.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc trừ nấm Trifloxystrobin mỗi 10-14 ngày", "Cắt bỏ lá bệnh nặng", "Tăng tần suất xử lý.", "Loại bỏ lá nhiễm nặng."],
+      "late": ["Phun thuốc trừ nấm liên tục", "Cắt bỏ lá bệnh, gom đốt", "Bón thêm phân Kali", "Tham vấn chuyên gia.", "Đánh giá khả năng phục hồi."]
+    },
+    "general_care": ["Trồng giống kháng bệnh", "Luân canh cây trồng", "Thu gom tàn dư", "Trồng mật độ hợp lý"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "corn_common_rust": {
+    "name": "Rỉ Sắt Ngô",
+    "severity": "moderate",
+    "description": "Bệnh rỉ sắt ngô do nấm Puccinia sorghi gây ra. Tạo các mụn nhỏ màu nâu đỏ (pustule) trên cả hai mặt lá. Bệnh phát triển mạnh trong điều kiện mát mẻ, ẩm ướt (16-23°C).",
+    "symptoms": [
+      "Mụn nhỏ màu nâu đỏ (pustule) trên cả hai mặt lá",
+      "Mụn nổi dọc theo gân lá",
+      "Lá chuyển vàng và khô khi nhiễm nặng",
+      "Giảm năng suất hạt"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Mancozeb hoặc Propiconazole",
+      "Phun sớm khi thấy mụn rỉ sắt đầu tiên",
+      "Bón thêm phân Kali và Phospho",
+      "Phun lại sau 10-14 ngày nếu bệnh tiếp diễn"
+    ],
+    "prevention": [
+      "Trồng giống ngô kháng rỉ sắt",
+      "Trồng sớm để tránh thời kỳ lây nhiễm cao",
+      "Luân canh cây trồng",
+      "Đảm bảo khoảng cách trồng hợp lý"
+    ],
+    "affected_area": 35,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun thuốc phòng ngừa Mancozeb.", "Theo dõi mật độ mụn rỉ.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc trừ nấm Propiconazole mỗi 10-14 ngày", "Bón thêm phân Kali", "Tăng tần suất theo dõi.", "Cắt bỏ lá nhiễm nặng."],
+      "late": ["Phun thuốc liên tục", "Bón phân tăng sức đề kháng", "Tham vấn chuyên gia.", "Đánh giá thiệt hại năng suất."]
+    },
+    "general_care": ["Trồng giống kháng bệnh", "Trồng đúng thời vụ", "Luân canh cây trồng", "Khoảng cách trồng hợp lý"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "corn_northern_leaf_blight": {
+    "name": "Cháy Lá Phía Bắc Ngô",
+    "severity": "severe",
+    "description": "Bệnh cháy lá phía bắc do nấm Exserohilum turcicum gây ra. Tạo các vết bệnh hình thoi dài, màu xám xanh đến nâu trên lá ngô. Có thể gây giảm năng suất 30-50%.",
+    "symptoms": [
+      "Vết bệnh hình thoi dài 3-15cm, màu xám xanh",
+      "Vết bệnh chuyển nâu khi lá chết",
+      "Lá bị cháy khô từ đầu lá",
+      "Giảm năng suất nghiêm trọng"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Azoxystrobin hoặc Propiconazole",
+      "Cắt bỏ lá bệnh nặng",
+      "Bón thêm phân cân đối NPK",
+      "Phun lại sau 14 ngày nếu cần"
+    ],
+    "prevention": [
+      "Trồng giống ngô kháng bệnh",
+      "Luân canh cây trồng 2-3 năm",
+      "Cày vùi tàn dư sau thu hoạch",
+      "Trồng mật độ vừa phải"
+    ],
+    "affected_area": 48,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun phòng ngừa sớm.", "Theo dõi kỹ diện tích lá bệnh.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc trừ nấm Azoxystrobin", "Cắt bỏ lá bệnh nặng", "Bón thêm phân cân đối.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục mỗi 10 ngày", "Cắt bỏ lá chết", "Bón phân tăng sức đề kháng", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Trồng giống kháng bệnh", "Luân canh cây trồng", "Cày vùi tàn dư", "Khoảng cách trồng hợp lý"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "corn_healthy": {
+    "name": "Ngô Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây ngô trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối NPK", "Luân canh cây trồng", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Luân canh cây trồng", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "grape_black_rot": {
+    "name": "Thối Đen Nho",
+    "severity": "severe",
+    "description": "Bệnh thối đen nho do nấm Guignardia bidwellii gây ra. Tạo các đốm nâu trên lá và gây thối đen quả. Bệnh phát triển mạnh trong điều kiện ẩm ướt, ấm áp.",
+    "symptoms": [
+      "Đốm nâu nhạt hình tròn trên lá, viền nâu sẫm",
+      "Quả chuyển nâu, khô lại thành quả khô đen",
+      "Vết loét trên thân cành",
+      "Quả bị thối trước khi chín"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Mancozeb từ khi chồi dài 10cm",
+      "Phun Myclobutanil trước và sau khi hoa nở",
+      "Loại bỏ và tiêu hủy quả bệnh, quả khô",
+      "Phun thuốc mỗi 10-14 ngày trong mùa mưa"
+    ],
+    "prevention": [
+      "Cắt tỉa tán nho thông thoáng",
+      "Thu gom quả rụng và tàn dư",
+      "Phun phòng ngừa từ sớm",
+      "Trồng giống kháng bệnh"
+    ],
+    "affected_area": 55,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun thuốc phòng ngừa Mancozeb.", "Loại bỏ quả bệnh.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun Myclobutanil mỗi 10-14 ngày", "Loại bỏ toàn bộ quả và lá bệnh", "Tăng tần suất xử lý.", "Cắt tỉa tán thông thoáng."],
+      "late": ["Phun thuốc liên tục", "Tiêu hủy toàn bộ quả bệnh", "Cắt tỉa mạnh", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Cắt tỉa tán nho", "Thu gom tàn dư", "Phun phòng ngừa", "Trồng giống kháng bệnh"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "grape_esca": {
+    "name": "Esca Nho (Sởi Đen)",
+    "severity": "severe",
+    "description": "Bệnh Esca (Black Measles) trên nho do phức hợp nấm gây ra, bao gồm Phaeomoniella chlamydospora và Phaeoacremonium. Gây hoại tử gỗ và đốm lá đặc trưng.",
+    "symptoms": [
+      "Đốm nâu đỏ hoặc tím giữa các gân lá (dạng da hổ)",
+      "Quả có đốm đen nhỏ (black measles)",
+      "Lá héo đột ngột và rụng",
+      "Gỗ bên trong bị hoại tử, biến màu"
+    ],
+    "treatment": [
+      "Cắt bỏ cành bệnh đến phần gỗ khỏe mạnh",
+      "Bôi thuốc trừ nấm lên vết cắt",
+      "Phun Fosetyl-Al hoặc Phosphonate qua lá",
+      "Tưới đủ nước, tránh stress cho cây"
+    ],
+    "prevention": [
+      "Sử dụng cây giống sạch bệnh",
+      "Cắt tỉa trong thời tiết khô",
+      "Bôi sáp hoặc thuốc trừ nấm lên vết cắt tỉa",
+      "Tránh gây vết thương cho thân cây"
+    ],
+    "affected_area": 40,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt bỏ cành có triệu chứng.", "Bôi thuốc lên vết cắt.", "Theo dõi kỹ."],
+      "middle": ["Cắt bỏ cành bệnh mạnh hơn", "Phun Fosetyl-Al", "Tưới đủ nước.", "Giảm stress cho cây."],
+      "late": ["Cắt bỏ toàn bộ phần bệnh", "Đánh giá thay thế cây", "Tham vấn chuyên gia.", "Xem xét nhổ bỏ cây bệnh nặng."]
+    },
+    "general_care": ["Cây giống sạch bệnh", "Cắt tỉa thời tiết khô", "Bôi sáp vết cắt", "Tránh gây vết thương"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "grape_leaf_blight": {
+    "name": "Cháy Lá Nho",
+    "severity": "moderate",
+    "description": "Bệnh cháy lá nho (Isariopsis Leaf Spot) do nấm Pseudocercospora vitis gây ra. Tạo các đốm nâu sẫm trên lá, gây rụng lá sớm và ảnh hưởng năng suất.",
+    "symptoms": [
+      "Đốm nâu sẫm không đều trên lá",
+      "Viền đốm bệnh không rõ ràng",
+      "Lá vàng và rụng sớm",
+      "Cây suy yếu, quả kém phát triển"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm gốc đồng",
+      "Cắt bỏ lá bệnh nặng",
+      "Phun Mancozeb mỗi 10-14 ngày",
+      "Tăng cường phân Kali"
+    ],
+    "prevention": [
+      "Cắt tỉa tán nho thông thoáng",
+      "Tưới gốc, tránh ướt lá",
+      "Thu gom lá rụng bệnh",
+      "Phun phòng ngừa đầu mùa"
+    ],
+    "affected_area": 35,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt bỏ lá bệnh.", "Phun phòng ngừa gốc đồng.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun Mancozeb mỗi 10-14 ngày", "Cắt bỏ lá bệnh nặng", "Bón thêm Kali.", "Tăng tần suất theo dõi."],
+      "late": ["Phun thuốc liên tục", "Cắt tỉa mạnh", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Cắt tỉa thông thoáng", "Tưới gốc", "Thu gom tàn dư", "Phun phòng ngừa"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "grape_healthy": {
+    "name": "Nho Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây nho trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa tán nho thông thoáng", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa tán cây", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "orange_huanglongbing": {
+    "name": "Vàng Lá Gân Xanh (Greening)",
+    "severity": "severe",
+    "description": "Bệnh vàng lá gân xanh (Huanglongbing/Citrus Greening) do vi khuẩn Candidatus Liberibacter gây ra, lây truyền qua rầy chổng cánh. Đây là bệnh nguy hiểm nhất trên cây có múi, chưa có thuốc chữa đặc hiệu.",
+    "symptoms": [
+      "Lá vàng không đối xứng (vàng loang lổ)",
+      "Gân lá vẫn xanh trong khi phiến lá vàng",
+      "Quả nhỏ, lệch, vị đắng, hạt lép",
+      "Cây còi cọc, tán thưa, rụng lá"
+    ],
+    "treatment": [
+      "Phun thuốc diệt rầy chổng cánh (Imidacloprid, Thiamethoxam)",
+      "Bón phân vi lượng (Kẽm, Mangan, Sắt) qua lá",
+      "Tưới nước đều đặn, tránh stress cho cây",
+      "Tiêm kháng sinh Oxytetracycline vào thân (theo hướng dẫn chuyên gia)"
+    ],
+    "prevention": [
+      "Sử dụng cây giống sạch bệnh từ vườn ươm uy tín",
+      "Kiểm soát rầy chổng cánh thường xuyên",
+      "Trồng cây chắn gió xung quanh vườn",
+      "Nhổ bỏ và tiêu hủy cây bệnh nặng"
+    ],
+    "affected_area": 65,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun thuốc diệt rầy ngay lập tức.", "Bón phân vi lượng qua lá.", "Theo dõi kỹ các cây xung quanh."],
+      "middle": ["Phun thuốc diệt rầy mỗi 2 tuần", "Bón phân tăng cường sức đề kháng", "Cách ly cây bệnh.", "Tăng tần suất theo dõi."],
+      "late": ["Đánh giá nhổ bỏ cây bệnh nặng", "Phun thuốc diệt rầy toàn vườn", "Tham vấn chuyên gia nông nghiệp.", "Tiêu hủy cây không phục hồi được."]
+    },
+    "general_care": ["Cây giống sạch bệnh", "Kiểm soát rầy chổng cánh", "Bón phân vi lượng", "Nhổ bỏ cây bệnh nặng"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "peach_bacterial_spot": {
+    "name": "Đốm Vi Khuẩn Đào",
+    "severity": "moderate",
+    "description": "Bệnh đốm vi khuẩn trên đào do Xanthomonas arboricola pv. pruni gây ra. Tạo các đốm nâu nhỏ trên lá và vết loét trên quả. Phát triển mạnh trong điều kiện ẩm ướt, gió mạnh.",
+    "symptoms": [
+      "Đốm nhỏ màu nâu tím trên lá, viền vàng",
+      "Lá bị thủng khi vết bệnh rụng ra",
+      "Quả có vết loét nứt nẻ",
+      "Rụng lá sớm, cây suy yếu"
+    ],
+    "treatment": [
+      "Phun thuốc gốc đồng (Bordeaux) trước mùa mưa",
+      "Phun Oxytetracycline khi bệnh nặng",
+      "Cắt bỏ cành bệnh nặng",
+      "Bón phân cân đối để tăng sức đề kháng"
+    ],
+    "prevention": [
+      "Trồng giống kháng bệnh",
+      "Tránh tưới phun sương",
+      "Cắt tỉa tán cây thông thoáng",
+      "Phun phòng ngừa gốc đồng đầu mùa"
+    ],
+    "affected_area": 30,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun thuốc gốc đồng phòng ngừa.", "Cắt bỏ lá bệnh.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc gốc đồng mỗi 7-10 ngày", "Phun Oxytetracycline", "Cắt bỏ cành bệnh.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục", "Cắt tỉa mạnh", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Giống kháng bệnh", "Tưới gốc", "Cắt tỉa thông thoáng", "Phun phòng ngừa"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "peach_healthy": {
+    "name": "Đào Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây đào trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa tán cây thông thoáng", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa tán cây", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "pepper_bacterial_spot": {
+    "name": "Đốm Vi Khuẩn Ớt Chuông",
+    "severity": "moderate",
+    "description": "Bệnh đốm vi khuẩn trên ớt chuông do Xanthomonas campestris pv. vesicatoria gây ra. Tạo các đốm nước nhỏ trên lá, sau chuyển nâu. Phát triển mạnh trong mưa và nhiệt độ cao.",
+    "symptoms": [
+      "Đốm nước nhỏ trên lá, sau chuyển nâu sẫm",
+      "Lá vàng và rụng sớm",
+      "Quả có vết loét nổi, xù xì",
+      "Cây mất sức, giảm năng suất"
+    ],
+    "treatment": [
+      "Phun thuốc gốc đồng (Copper hydroxide)",
+      "Phun Streptomycin khi bệnh nặng (theo quy định)",
+      "Loại bỏ cây bệnh nặng để ngăn lây lan",
+      "Tưới gốc, tránh làm ướt lá"
+    ],
+    "prevention": [
+      "Sử dụng hạt giống sạch bệnh",
+      "Luân canh cây trồng 2-3 năm",
+      "Tránh làm việc khi cây ướt",
+      "Khoảng cách trồng đủ rộng"
+    ],
+    "affected_area": 32,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun thuốc gốc đồng phòng ngừa.", "Loại bỏ lá bệnh.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc gốc đồng mỗi 7 ngày", "Loại bỏ cây bệnh nặng", "Tăng tần suất theo dõi.", "Tưới gốc, tránh ướt lá."],
+      "late": ["Phun thuốc liên tục", "Nhổ bỏ cây bệnh nặng", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Hạt giống sạch bệnh", "Luân canh cây trồng", "Tránh ướt lá", "Khoảng cách trồng hợp lý"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "pepper_healthy": {
+    "name": "Ớt Chuông Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây ớt chuông trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Giữ vệ sinh vườn", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Giữ vệ sinh vườn", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "potato_early_blight": {
+    "name": "Đốm Lá Sớm Khoai Tây",
+    "severity": "moderate",
+    "description": "Bệnh đốm lá sớm khoai tây do nấm Alternaria solani gây ra. Tạo các đốm nâu sẫm hình bia ngắm trên lá. Phát triển mạnh trong điều kiện ẩm ướt, 24-29°C.",
+    "symptoms": [
+      "Đốm nâu sẫm với vòng đồng tâm hình bia ngắm",
+      "Quầng vàng bao quanh vết bệnh",
+      "Lá khô và rụng từ gốc lên",
+      "Củ bị đốm nâu, thối khô"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Mancozeb hoặc Chlorothalonil",
+      "Phun mỗi 7-10 ngày trong mùa bệnh",
+      "Cắt bỏ lá bệnh nặng",
+      "Bón thêm phân Kali"
+    ],
+    "prevention": [
+      "Sử dụng giống kháng bệnh",
+      "Luân canh cây trồng 2-3 năm",
+      "Tưới gốc, tránh ướt lá",
+      "Thu hoạch đúng thời điểm"
+    ],
+    "affected_area": 38,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt tỉa lá bệnh.", "Phun Mancozeb phòng ngừa.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc mỗi 7-10 ngày", "Cắt bỏ lá bệnh nặng", "Bón Kali.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục", "Cắt bỏ lá chết", "Tham vấn chuyên gia.", "Thu hoạch sớm nếu cần."]
+    },
+    "general_care": ["Giống kháng bệnh", "Luân canh cây trồng", "Tưới gốc", "Thu hoạch đúng lúc"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "potato_late_blight": {
+    "name": "Mốc Sương Khoai Tây",
+    "severity": "severe",
+    "description": "Bệnh mốc sương (Late Blight) do nấm Phytophthora infestans gây ra. Đây là bệnh nguy hiểm nhất trên khoai tây, có thể hủy hoại toàn bộ vụ mùa trong vài ngày. Phát triển cực nhanh trong điều kiện mát ẩm.",
+    "symptoms": [
+      "Đốm nước lớn, màu xanh xám đến nâu đen trên lá",
+      "Lớp mốc trắng ở mặt dưới lá khi ẩm",
+      "Thân cây bị thối đen",
+      "Củ bị thối nâu, mùi hôi"
+    ],
+    "treatment": [
+      "Phun thuốc Metalaxyl + Mancozeb ngay khi phát hiện",
+      "Phun lại mỗi 5-7 ngày khi bệnh phát triển",
+      "Nhổ bỏ và tiêu hủy cây bệnh nặng",
+      "Không tưới phun sương"
+    ],
+    "prevention": [
+      "Trồng giống kháng bệnh",
+      "Tránh trồng quá dày",
+      "Phun phòng ngừa khi thời tiết mát ẩm",
+      "Luân canh cây trồng"
+    ],
+    "affected_area": 60,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun Metalaxyl + Mancozeb ngay.", "Nhổ bỏ cây bệnh.", "Theo dõi cây xung quanh."],
+      "middle": ["Phun thuốc mỗi 5-7 ngày", "Nhổ bỏ cây bệnh nặng", "Tăng tần suất xử lý.", "Ngừng tưới phun sương."],
+      "late": ["Phun thuốc liên tục", "Tiêu hủy cây bệnh", "Thu hoạch sớm củ khỏe", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Giống kháng bệnh", "Khoảng cách trồng hợp lý", "Phun phòng ngừa", "Luân canh cây trồng"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "potato_healthy": {
+    "name": "Khoai Tây Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây khoai tây trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Luân canh cây trồng", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Luân canh cây trồng", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "raspberry_healthy": {
+    "name": "Mâm Xôi Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây mâm xôi trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa cành già", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Cắt tỉa cành già", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "soybean_healthy": {
+    "name": "Đậu Nành Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây đậu nành trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Luân canh cây trồng", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Luân canh cây trồng", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "squash_powdery_mildew": {
+    "name": "Phấn Trắng Bí",
+    "severity": "moderate",
+    "description": "Bệnh phấn trắng trên bí do nấm Podosphaera xanthii gây ra. Tạo lớp bột trắng phủ trên mặt lá. Phát triển mạnh trong điều kiện ấm, khô ban ngày và ẩm ban đêm.",
+    "symptoms": [
+      "Lớp bột trắng mịn trên mặt trên lá",
+      "Lá vàng và khô dần",
+      "Quả kém phát triển",
+      "Cây suy yếu, giảm năng suất"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm gốc Lưu huỳnh",
+      "Phun dung dịch Baking Soda + xà phòng",
+      "Cắt bỏ lá bệnh nặng",
+      "Phun dầu Neem mỗi tuần"
+    ],
+    "prevention": [
+      "Trồng giống kháng bệnh",
+      "Khoảng cách trồng đủ rộng",
+      "Tưới gốc, tránh ướt lá",
+      "Bón phân cân đối, tránh thừa đạm"
+    ],
+    "affected_area": 30,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt bỏ lá bệnh.", "Phun Sulfur phòng ngừa.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc trừ nấm mỗi 7-10 ngày", "Cắt bỏ lá bệnh nặng", "Phun Baking Soda hỗ trợ.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục", "Cắt bỏ toàn bộ lá bệnh", "Tham vấn chuyên gia.", "Đánh giá năng suất."]
+    },
+    "general_care": ["Giống kháng bệnh", "Khoảng cách trồng hợp lý", "Tưới gốc", "Bón phân cân đối"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "strawberry_leaf_scorch": {
+    "name": "Cháy Lá Dâu Tây",
+    "severity": "moderate",
+    "description": "Bệnh cháy lá dâu tây do nấm Diplocarpon earlianum gây ra. Tạo các đốm tím đỏ nhỏ trên lá, sau lan rộng gây cháy lá. Phát triển mạnh trong điều kiện ẩm ướt.",
+    "symptoms": [
+      "Đốm tím đỏ nhỏ trên mặt lá",
+      "Đốm lan rộng, lá chuyển nâu cháy",
+      "Viền lá khô giòn",
+      "Rụng lá, cây suy yếu"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Captan hoặc Thiram",
+      "Cắt bỏ và tiêu hủy lá bệnh",
+      "Tưới gốc, tránh ướt lá",
+      "Phun mỗi 7-10 ngày trong mùa bệnh"
+    ],
+    "prevention": [
+      "Trồng giống kháng bệnh",
+      "Trồng nơi thoát nước tốt",
+      "Phủ gốc bằng rơm rạ",
+      "Luân canh 2-3 năm"
+    ],
+    "affected_area": 35,
+    "image": "https://images.unsplash.com/photo-1601593768799-76e4ea0d175d?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt bỏ lá bệnh.", "Phun Captan phòng ngừa.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc mỗi 7-10 ngày", "Cắt bỏ lá bệnh nặng", "Tưới gốc.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục", "Loại bỏ cây bệnh nặng", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Giống kháng bệnh", "Thoát nước tốt", "Phủ gốc", "Luân canh cây trồng"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "strawberry_healthy": {
+    "name": "Dâu Tây Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây dâu tây trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại.",
+    "symptoms": [],
+    "treatment": ["Không cần điều trị. Cây đang phát triển tốt!", "Tiếp tục duy trì chế độ chăm sóc hiện tại", "Theo dõi định kỳ mỗi 3-5 ngày"],
+    "prevention": ["Tưới nước đều đặn", "Bón phân cân đối", "Phủ gốc bằng rơm rạ", "Quét lá định kỳ bằng LeafScan AI"],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tiếp tục chăm sóc định kỳ.", "Theo dõi lá 3-5 ngày/lần.", "Duy trì tưới gốc."],
+      "middle": ["Tăng tần suất theo dõi.", "Loại bỏ lá bất thường.", "Duy trì vệ sinh."],
+      "late": ["Rà soát toàn bộ cây.", "Phòng ngừa chủ động.", "Tham khảo cán bộ kỹ thuật nếu cần."]
+    },
+    "general_care": ["Tưới nước đều đặn", "Bón phân cân đối", "Phủ gốc", "Theo dõi sức khỏe"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_bacterial_spot": {
+    "name": "Đốm Vi Khuẩn Cà Chua",
+    "severity": "moderate",
+    "description": "Bệnh đốm vi khuẩn cà chua do Xanthomonas vesicatoria gây ra. Tạo các đốm nước nhỏ trên lá và quả. Phát triển mạnh trong mưa, nhiệt độ cao.",
+    "symptoms": [
+      "Đốm nước nhỏ, sau chuyển nâu sẫm trên lá",
+      "Viền vàng quanh vết bệnh",
+      "Quả có vết loét nổi, xù xì",
+      "Rụng lá sớm, cây suy yếu"
+    ],
+    "treatment": [
+      "Phun thuốc gốc đồng (Copper hydroxide)",
+      "Phun mỗi 5-7 ngày khi mưa nhiều",
+      "Loại bỏ cây bệnh nặng",
+      "Tưới gốc, tránh ướt lá"
+    ],
+    "prevention": [
+      "Sử dụng hạt giống sạch bệnh",
+      "Luân canh cây trồng 2-3 năm",
+      "Tránh làm việc khi cây ướt",
+      "Khoảng cách trồng đủ rộng"
+    ],
+    "affected_area": 32,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun thuốc gốc đồng.", "Loại bỏ lá bệnh.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc mỗi 5-7 ngày", "Loại bỏ cây bệnh nặng", "Tưới gốc.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục", "Nhổ bỏ cây bệnh nặng", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Hạt giống sạch bệnh", "Luân canh cây trồng", "Tránh ướt lá", "Khoảng cách trồng hợp lý"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_early_blight": {
+    "name": "Đốm Lá Sớm Cà Chua",
+    "severity": "moderate",
+    "description": "Bệnh đốm lá sớm do nấm Alternaria solani gây ra. Thường xuất hiện dưới dạng các đốm nâu sẫm với các vòng đồng tâm, tạo thành hình \"bia ngắm\" trên lá. Bệnh phát triển mạnh trong điều kiện ẩm ướt, nhiệt độ 24-29°C.",
+    "symptoms": [
+      "Tổn thương màu nâu sẫm với các vòng đồng tâm hình bia ngắm",
+      "Quầng sáng màu vàng bao quanh vết thương",
+      "Rụng lá sớm từ gốc lên ngọn",
+      "Giảm chất lượng quả, quả bị nứt"
+    ],
+    "treatment": [
+      "Phun thuốc diệt nấm gốc đồng (Bordeaux) mỗi 7-10 ngày",
+      "Loại bỏ và tiêu hủy ngay những lá bị nhiễm bệnh",
+      "Đảm bảo khoảng cách trồng 50-60cm để không khí lưu thông",
+      "Tránh tưới nước từ trên cao, nên tưới gốc"
+    ],
+    "prevention": [
+      "Sử dụng giống kháng bệnh được chứng nhận",
+      "Luân canh cây trồng hàng năm",
+      "Duy trì đủ dinh dưỡng Kali và Canxi cho đất",
+      "Phủ rơm rạ hoặc màng phủ quanh gốc cây"
+    ],
+    "affected_area": 34,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": [
+        "Cách ly và cắt tỉa vùng lá mới chớm bệnh.",
+        "Áp dụng biện pháp sinh học/chăm sóc canh tác trước khi dùng thuốc.",
+        "Theo dõi lại sau 48-72 giờ bằng lần quét mới."
+      ],
+      "middle": [
+        "Phun thuốc diệt nấm gốc đồng (Bordeaux) mỗi 7-10 ngày",
+        "Loại bỏ và tiêu hủy ngay những lá bị nhiễm bệnh",
+        "Tăng tần suất xử lý và theo dõi theo hướng dẫn sản phẩm.",
+        "Loại bỏ lá nhiễm nặng để giảm áp lực lây lan."
+      ],
+      "late": [
+        "Phun thuốc diệt nấm gốc đồng (Bordeaux) mỗi 7-10 ngày",
+        "Loại bỏ và tiêu hủy ngay những lá bị nhiễm bệnh",
+        "Đảm bảo khoảng cách trồng 50-60cm",
+        "Tránh tưới nước từ trên cao",
+        "Tham vấn chuyên gia nông nghiệp địa phương.",
+        "Đánh giá khả năng phục hồi."
+      ]
+    },
+    "general_care": [
+      "Sử dụng giống kháng bệnh",
+      "Luân canh cây trồng",
+      "Duy trì đủ dinh dưỡng Kali và Canxi",
+      "Phủ rơm rạ quanh gốc cây"
+    ],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_late_blight": {
+    "name": "Mốc Sương Cà Chua",
+    "severity": "severe",
+    "description": "Bệnh mốc sương (Late Blight) do nấm Phytophthora infestans gây ra. Có thể hủy hoại toàn bộ cánh đồng cà chua trong vài ngày. Phát triển cực nhanh trong điều kiện mát ẩm.",
+    "symptoms": [
+      "Đốm nước lớn, xanh xám trên lá",
+      "Lớp mốc trắng mặt dưới lá",
+      "Thân cây thối đen",
+      "Quả bị thối nâu, cứng"
+    ],
+    "treatment": [
+      "Phun Metalaxyl + Mancozeb ngay lập tức",
+      "Phun lại mỗi 5-7 ngày",
+      "Nhổ bỏ và tiêu hủy cây bệnh nặng",
+      "Không tưới phun sương"
+    ],
+    "prevention": [
+      "Trồng giống kháng bệnh",
+      "Khoảng cách trồng đủ rộng",
+      "Phun phòng ngừa khi mát ẩm",
+      "Luân canh cây trồng"
+    ],
+    "affected_area": 55,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun Metalaxyl + Mancozeb ngay.", "Nhổ bỏ cây bệnh.", "Theo dõi cây xung quanh."],
+      "middle": ["Phun thuốc mỗi 5-7 ngày", "Nhổ bỏ cây bệnh nặng", "Ngừng tưới phun sương.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục", "Tiêu hủy cây bệnh", "Thu hoạch sớm quả khỏe", "Tham vấn chuyên gia."]
+    },
+    "general_care": ["Giống kháng bệnh", "Khoảng cách trồng hợp lý", "Phun phòng ngừa", "Luân canh"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_leaf_mold": {
+    "name": "Mốc Lá Cà Chua",
+    "severity": "moderate",
+    "description": "Bệnh mốc lá cà chua do nấm Passalora fulva (Cladosporium fulvum) gây ra. Tạo các đốm vàng trên mặt trên lá và lớp mốc xám xanh ở mặt dưới. Phổ biến trong nhà kính có độ ẩm cao.",
+    "symptoms": [
+      "Đốm vàng nhạt trên mặt trên lá",
+      "Lớp mốc xám xanh ô-liu ở mặt dưới lá",
+      "Lá cuộn, khô và rụng",
+      "Giảm năng suất quả"
+    ],
+    "treatment": [
+      "Giảm độ ẩm trong nhà kính",
+      "Phun thuốc trừ nấm Chlorothalonil",
+      "Cắt bỏ lá bệnh nặng",
+      "Tăng thông gió"
+    ],
+    "prevention": [
+      "Trồng giống kháng bệnh",
+      "Duy trì thông gió tốt",
+      "Tưới gốc, tránh ướt lá",
+      "Khoảng cách trồng đủ rộng"
+    ],
+    "affected_area": 30,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Tăng thông gió.", "Cắt bỏ lá bệnh.", "Giảm độ ẩm."],
+      "middle": ["Phun Chlorothalonil mỗi 7-10 ngày", "Cắt bỏ lá bệnh nặng", "Tăng thông gió.", "Tưới gốc."],
+      "late": ["Phun thuốc liên tục", "Cắt tỉa mạnh", "Giảm mật độ trồng", "Tham vấn chuyên gia."]
+    },
+    "general_care": ["Giống kháng bệnh", "Thông gió tốt", "Tưới gốc", "Khoảng cách hợp lý"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_septoria_leaf_spot": {
+    "name": "Đốm Lá Septoria Cà Chua",
+    "severity": "moderate",
+    "description": "Bệnh đốm lá Septoria do nấm Septoria lycopersici gây ra. Tạo các đốm tròn nhỏ, màu xám với viền nâu sẫm trên lá. Bệnh bắt đầu từ lá gốc lan dần lên trên.",
+    "symptoms": [
+      "Đốm tròn nhỏ 2-3mm, màu xám, viền nâu sẫm",
+      "Chấm đen nhỏ (pycnidia) ở giữa đốm",
+      "Lá vàng và rụng từ gốc lên",
+      "Cây suy yếu, giảm năng suất"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Chlorothalonil hoặc Mancozeb",
+      "Phun mỗi 7-10 ngày",
+      "Cắt bỏ lá bệnh phía dưới",
+      "Phủ gốc bằng rơm rạ"
+    ],
+    "prevention": [
+      "Luân canh cây trồng",
+      "Tưới gốc, tránh ướt lá",
+      "Khoảng cách trồng đủ rộng",
+      "Thu gom tàn dư sau thu hoạch"
+    ],
+    "affected_area": 35,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt bỏ lá bệnh phía dưới.", "Phun Mancozeb phòng ngừa.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc mỗi 7-10 ngày", "Cắt bỏ lá bệnh", "Phủ gốc.", "Tăng tần suất xử lý."],
+      "late": ["Phun thuốc liên tục", "Cắt tỉa mạnh lá bệnh", "Tham vấn chuyên gia.", "Đánh giá thiệt hại."]
+    },
+    "general_care": ["Luân canh cây trồng", "Tưới gốc", "Khoảng cách trồng hợp lý", "Thu gom tàn dư"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_spider_mites": {
+    "name": "Nhện Đỏ Cà Chua",
+    "severity": "moderate",
+    "description": "Nhện đỏ hai chấm (Tetranychus urticae) là loại nhện hại phổ biến trên cà chua. Chúng hút nhựa cây ở mặt dưới lá, gây ra các đốm vàng nhỏ và mạng nhện mịn.",
+    "symptoms": [
+      "Đốm vàng nhỏ lấm tấm trên lá (stippling)",
+      "Mạng nhện mịn ở mặt dưới lá",
+      "Lá chuyển nâu, khô giòn",
+      "Cây suy yếu, quả nhỏ"
+    ],
+    "treatment": [
+      "Phun nước mạnh để rửa nhện khỏi lá",
+      "Phun dầu Neem hoặc xà phòng diệt côn trùng",
+      "Sử dụng thiên địch (nhện ăn mồi Phytoseiulus)",
+      "Phun thuốc Abamectin khi nhiễm nặng"
+    ],
+    "prevention": [
+      "Duy trì độ ẩm đủ, tránh khô hạn",
+      "Kiểm tra mặt dưới lá thường xuyên",
+      "Tránh phun thuốc trừ sâu phổ rộng",
+      "Trồng cây thu hút thiên địch"
+    ],
+    "affected_area": 25,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun nước mạnh rửa nhện.", "Phun dầu Neem.", "Theo dõi mật độ nhện."],
+      "middle": ["Phun dầu Neem hoặc xà phòng mỗi 5-7 ngày", "Thả thiên địch", "Tăng độ ẩm.", "Cắt bỏ lá nhiễm nặng."],
+      "late": ["Phun Abamectin", "Loại bỏ lá bệnh nặng", "Thả thiên địch", "Tham vấn chuyên gia."]
+    },
+    "general_care": ["Duy trì độ ẩm", "Kiểm tra mặt dưới lá", "Bảo vệ thiên địch", "Tránh thuốc trừ sâu phổ rộng"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_target_spot": {
+    "name": "Đốm Mục Tiêu Cà Chua",
+    "severity": "moderate",
+    "description": "Bệnh đốm mục tiêu do nấm Corynespora cassiicola gây ra. Tạo các đốm nâu có vòng đồng tâm trên lá, thân và quả. Phát triển mạnh trong điều kiện ẩm ướt, ấm áp.",
+    "symptoms": [
+      "Đốm nâu có vòng đồng tâm trên lá",
+      "Đốm bệnh có viền vàng",
+      "Quả có vết loét lõm",
+      "Lá rụng sớm từ phía dưới"
+    ],
+    "treatment": [
+      "Phun thuốc trừ nấm Chlorothalonil",
+      "Phun Azoxystrobin mỗi 10-14 ngày",
+      "Cắt bỏ lá và quả bệnh",
+      "Tăng thông gió"
+    ],
+    "prevention": [
+      "Khoảng cách trồng đủ rộng",
+      "Tưới gốc, tránh ướt lá",
+      "Luân canh cây trồng",
+      "Thu gom tàn dư sau thu hoạch"
+    ],
+    "affected_area": 30,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cắt bỏ lá bệnh.", "Phun Chlorothalonil.", "Theo dõi lại sau 48-72 giờ."],
+      "middle": ["Phun thuốc mỗi 10-14 ngày", "Cắt bỏ lá và quả bệnh", "Tăng thông gió.", "Tưới gốc."],
+      "late": ["Phun thuốc liên tục", "Cắt tỉa mạnh", "Tham vấn chuyên gia.", "Đánh giá năng suất."]
+    },
+    "general_care": ["Khoảng cách trồng hợp lý", "Tưới gốc", "Luân canh", "Thu gom tàn dư"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_yellow_leaf_curl_virus": {
+    "name": "Virus Xoăn Vàng Lá Cà Chua",
+    "severity": "severe",
+    "description": "Bệnh virus xoăn vàng lá (TYLCV) do Begomovirus gây ra, lây truyền qua bọ phấn trắng (Bemisia tabaci). Gây thiệt hại năng suất rất lớn, không có thuốc chữa trực tiếp.",
+    "symptoms": [
+      "Lá non bị xoăn lên, cuộn tròn",
+      "Lá chuyển vàng, đặc biệt ở mép",
+      "Cây còi cọc, không phát triển",
+      "Hoa rụng, không đậu quả"
+    ],
+    "treatment": [
+      "Phun thuốc diệt bọ phấn trắng (Imidacloprid, Acetamiprid)",
+      "Nhổ bỏ cây bệnh nặng và tiêu hủy",
+      "Sử dụng bẫy vàng dính để giảm bọ phấn",
+      "Phun dầu Neem hỗ trợ"
+    ],
+    "prevention": [
+      "Trồng giống kháng virus TYLCV",
+      "Kiểm soát bọ phấn trắng từ sớm",
+      "Sử dụng lưới chắn côn trùng",
+      "Nhổ bỏ cây bệnh ngay khi phát hiện"
+    ],
+    "affected_area": 50,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Phun thuốc diệt bọ phấn ngay.", "Đặt bẫy vàng dính.", "Theo dõi kỹ cây xung quanh."],
+      "middle": ["Phun thuốc diệt bọ phấn mỗi 7 ngày", "Nhổ bỏ cây bệnh nặng", "Tăng cường bẫy vàng.", "Cách ly khu vực bệnh."],
+      "late": ["Nhổ bỏ và tiêu hủy cây bệnh", "Phun thuốc diệt bọ phấn toàn vườn", "Tham vấn chuyên gia.", "Trồng lại giống kháng bệnh."]
+    },
+    "general_care": ["Giống kháng virus", "Kiểm soát bọ phấn", "Lưới chắn côn trùng", "Nhổ bỏ cây bệnh sớm"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_mosaic_virus": {
+    "name": "Virus Khảm Cà Chua",
+    "severity": "moderate",
+    "description": "Bệnh virus khảm cà chua (ToMV) do Tobamovirus gây ra. Lây lan qua tiếp xúc cơ học, hạt giống và dụng cụ. Gây ra các vết khảm sáng tối trên lá.",
+    "symptoms": [
+      "Lá có vết khảm sáng tối xen kẽ (mosaic)",
+      "Lá bị biến dạng, nhăn nheo",
+      "Quả chín không đều, có vết khảm",
+      "Cây còi cọc, năng suất giảm"
+    ],
+    "treatment": [
+      "Nhổ bỏ cây bệnh nặng và tiêu hủy",
+      "Khử trùng dụng cụ bằng dung dịch Trisodium phosphate 10%",
+      "Rửa tay bằng sữa pha loãng trước khi chạm cây",
+      "Không hút thuốc lá gần vườn cà chua"
+    ],
+    "prevention": [
+      "Sử dụng hạt giống sạch virus",
+      "Trồng giống kháng TMV/ToMV",
+      "Khử trùng dụng cụ thường xuyên",
+      "Không hút thuốc lá khi làm việc trong vườn"
+    ],
+    "affected_area": 25,
+    "image": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80",
+    "treatment_by_stage": {
+      "early": ["Cách ly cây bệnh.", "Khử trùng dụng cụ.", "Theo dõi các cây xung quanh."],
+      "middle": ["Nhổ bỏ cây bệnh rõ rệt", "Khử trùng toàn bộ dụng cụ", "Hạn chế tiếp xúc cây.", "Theo dõi kỹ."],
+      "late": ["Nhổ bỏ và tiêu hủy tất cả cây bệnh", "Khử trùng đất và dụng cụ", "Tham vấn chuyên gia.", "Trồng lại giống kháng."]
+    },
+    "general_care": ["Hạt giống sạch virus", "Giống kháng TMV", "Khử trùng dụng cụ", "Vệ sinh tay khi làm vườn"],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  },
+  "tomato_healthy": {
+    "name": "Cà Chua Khỏe Mạnh",
+    "severity": "healthy",
+    "description": "Lá cây cà chua trong tình trạng khỏe mạnh, không phát hiện dấu hiệu bệnh hại. Màu sắc lá xanh đồng đều, bề mặt mịn màng.",
+    "symptoms": [],
+    "treatment": [
+      "Không cần điều trị. Cây đang phát triển tốt!",
+      "Tiếp tục duy trì chế độ chăm sóc hiện tại",
+      "Theo dõi định kỳ mỗi 3-5 ngày để phát hiện sớm"
+    ],
+    "prevention": [
+      "Tưới nước đều đặn và đúng cách",
+      "Bón phân cân đối NPK theo từng giai đoạn",
+      "Vệ sinh vườn thường xuyên, loại bỏ cỏ dại",
+      "Quét lá định kỳ bằng LeafScan AI để theo dõi sức khỏe"
+    ],
+    "affected_area": 0,
+    "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    "treatment_by_stage": {
+      "early": [
+        "Tiếp tục chăm sóc định kỳ, chưa cần can thiệp hóa học.",
+        "Theo dõi lá 3-5 ngày/lần để phát hiện sớm bất thường.",
+        "Duy trì tưới gốc và thông thoáng tán lá."
+      ],
+      "middle": [
+        "Tăng tần suất theo dõi lên mỗi 2-3 ngày.",
+        "Loại bỏ lá có dấu hiệu bất thường nhẹ.",
+        "Duy trì vệ sinh khu vực trồng để hạn chế nguồn bệnh."
+      ],
+      "late": [
+        "Rà soát toàn bộ cây để xác nhận không có ổ bệnh tiềm ẩn.",
+        "Ưu tiên biện pháp phòng ngừa chủ động trước mùa mưa.",
+        "Tham khảo cán bộ kỹ thuật nếu xuất hiện triệu chứng mới."
+      ]
+    },
+    "general_care": [
+      "Tưới nước đều đặn và đúng cách",
+      "Bón phân cân đối NPK theo từng giai đoạn",
+      "Vệ sinh vườn thường xuyên, loại bỏ cỏ dại",
+      "Quét lá định kỳ bằng LeafScan AI để theo dõi sức khỏe"
+    ],
+    "safety_notice": "Khuyến nghị chỉ mang tính tham khảo, cần xác nhận với cán bộ nông nghiệp/chuyên gia trước khi áp dụng thực tế."
+  }
+}

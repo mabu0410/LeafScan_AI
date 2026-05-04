@@ -1,0 +1,39 @@
+# ──────────────────────────────
+# OS generated files
+# ──────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Thumbs.db:encryptable
+
+# ──────────────────────────────
+# IDEs and Editors
+# ──────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.bak
+
+# ──────────────────────────────
+# Archives
+# ──────────────────────────────
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# ignore notebook chứa token
+backend/training/train_plantvillage.ipynb
+
+# ignore model nặng
+backend/app/models/efficientnetv2s_plantvillage.onnx

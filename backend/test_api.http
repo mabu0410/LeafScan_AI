@@ -1,0 +1,72 @@
+### HTTP Test Requests cho LeafScan AI Backend
+# Bạn có thể dùng Rest Client extension trong VSCode để click "Send Request"
+
+@baseUrl = http://localhost:8000/api/v1
+@token = 
+
+### 1. KIỂM TRA MÁY CHỦ
+GET {{baseUrl}}/health
+
+### 2. ĐĂNG KÍ
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Nông Dân A",
+  "email": "nongdana@example.com",
+  "password": "password123"
+}
+
+### 3. ĐĂNG NHẬP
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nongdana@example.com",
+  "password": "password123"
+}
+
+### 4. LẤY THÔNG TIN ACCOUNT ĐANG LOGIN
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### 5. THÊM CÂY MỚI (MY GARDEN)
+POST {{baseUrl}}/plants
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Cây Cà Chua Vườn Ngoài",
+  "latin_name": "Solanum",
+  "category": "Rau màu",
+  "location": "Ban Công",
+  "notes": "Mới gieo hạt 1 tuần trước"
+}
+
+### 6. LẤY DANH SÁCH CÂY
+GET {{baseUrl}}/plants
+Authorization: Bearer {{token}}
+
+### 7. CHẨN ĐOÁN BỆNH (YÊU CẦU FILE)
+# Lưu ý: Cú pháp gửi file ảnh phụ thuộc vào tool REST Client.
+# Multipart/form-data thường được hỗ trợ tốt hơn qua cURL hoặc Postman.
+POST {{baseUrl}}/diagnose
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="leaf_sample.jpg"
+Content-Type: image/jpeg
+
+< ./test_sample/leaf_sample.jpg
+--boundary
+Content-Disposition: form-data; name="plant_id"
+
+1
+--boundary--
+
+### 8. XEM LỊCH SỬ QUÉT CỦA BẢN THÂN
+GET {{baseUrl}}/history
+Authorization: Bearer {{token}}

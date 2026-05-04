@@ -1,0 +1,5 @@
+{
+  "name": "LeafScan AI",
+  "description": "AI-powered plant leaf disease detection app.",
+  "requestFramePermissions": ["camera"]
+}
