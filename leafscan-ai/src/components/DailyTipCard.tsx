@@ -1,38 +1,71 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { theme } from '../theme/theme';
 
-export function DailyTipCard() {
+interface DailyTipCardProps {
+  onPress?: () => void;
+}
+
+export function DailyTipCard({ onPress }: DailyTipCardProps) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <TouchableOpacity activeOpacity={0.85} style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Ionicons name="leaf" size={24} color={theme.colors.primary} />
-      </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>Mẹo hôm nay</Text>
-        <Text style={styles.description} numberOfLines={2}>
-          Tưới nước vào buổi sáng sớm giúp lá khô nhanh, ngăn ngừa nấm bệnh phát triển.
-        </Text>
-        <Text style={styles.readMore}>Xem thêm</Text>
-      </View>
-    </TouchableOpacity>
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => {
+          scale.value = withTiming(0.985, { duration: 120 });
+        }}
+        onPressOut={() => {
+          scale.value = withTiming(1, { duration: 160 });
+        }}
+        style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
+      >
+        <View style={styles.iconContainer}>
+          <Ionicons name="leaf" size={24} color={theme.colors.primary} />
+        </View>
+
+        <View style={styles.content}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>Mẹo chăm sóc</Text>
+          </View>
+          <Text style={styles.title}>Mẹo hôm nay</Text>
+          <Text style={styles.description} numberOfLines={2}>
+            Tưới nước vào buổi sáng sớm giúp lá khô nhanh, ngăn ngừa nấm bệnh phát triển.
+          </Text>
+          <View style={styles.readMoreRow}>
+            <Text style={styles.readMore}>Xem thêm</Text>
+            <Ionicons name="arrow-forward" size={14} color={theme.colors.accent} />
+          </View>
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.moderateBg,
-    borderRadius: 16,
+    backgroundColor: '#F4EFE6',
+    borderRadius: 20,
     padding: 16,
-    gap: 16,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: '#ECE4D8',
     ...theme.shadows.card,
   },
+  containerPressed: {
+    backgroundColor: '#F0E9DE',
+  },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: theme.colors.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -41,21 +74,39 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  tag: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E9F6EC',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  tagText: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+    fontSize: 11,
+  },
   title: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 4,
-    fontSize: 15,
+    fontSize: 17,
   },
   description: {
     color: theme.colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 13.2,
+    lineHeight: 19,
     marginBottom: 8,
+  },
+  readMoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   readMore: {
     color: theme.colors.accent,
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 13,
   },
 });

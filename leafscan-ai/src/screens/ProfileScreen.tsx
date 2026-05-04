@@ -1,31 +1,167 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, StyleSheet, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useCameraPermissions } from 'expo-camera';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/authStore';
+import { useHistoryStore } from '../stores/historyStore';
+import { usePlantsStore } from '../stores/plantsStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { theme } from '../theme/theme';
+import { ProfileHeader } from '../components/profile/ProfileHeader';
+import { AchievementCard } from '../components/profile/AchievementCard';
+import { StatsGrid } from '../components/profile/StatsGrid';
+import { MyPlantsSection } from '../components/profile/MyPlantsSection';
+import { RecentScanSection } from '../components/profile/RecentScanSection';
+import { SettingsSection } from '../components/profile/SettingsSection';
+import { AccountSecuritySection } from '../components/profile/AccountSecuritySection';
+import { AppInfoSection } from '../components/profile/AppInfoSection';
 
-const ACHIEVEMENTS = [
-    { label: 'Người mới', icon: '🌱' },
-    { label: 'Thợ quét', icon: '📷' },
-    { label: 'Bác sĩ cây', icon: '🩺' },
-    { label: 'Nông dân', icon: '👨‍🌾' },
-];
+const APP_VERSION = '1.0.0';
 
-const STATS = [
-    { label: 'Ngày hoạt động', value: '23' },
-    { label: 'Cây đã quét', value: '47' },
-    { label: 'Bệnh phát hiện', value: '12' },
-];
+function parseDateMillis(raw?: string): number {
+    if (!raw) return 0;
+    const dt = new Date(raw);
+    if (Number.isNaN(dt.getTime())) return 0;
+    return dt.getTime();
+}
+
+function buildLevel(totalScans: number) {
+    const tiers = [
+        { title: 'Người mới', target: 20, nextTitle: 'Thợ quét cấp 1' },
+        { title: 'Thợ quét cấp 1', target: 50, nextTitle: 'Thợ quét cấp 2' },
+        { title: 'Thợ quét cấp 2', target: 100, nextTitle: 'Bác sĩ cây' },
+        { title: 'Bác sĩ cây', target: 200, nextTitle: 'Chuyên gia nông nghiệp AI' },
+    ];
+
+    const tier = tiers.find((item) => totalScans < item.target) || tiers[tiers.length - 1];
+    return {
+        title: tier.title,
+        current: totalScans,
+        target: tier.target,
+        nextTitle: tier.nextTitle,
+    };
+}
 
 export default function ProfileScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+    const insets = useSafeAreaInsets();
+    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
     const user = useAuthStore(state => state.user);
     const logout = useAuthStore(state => state.logout);
-    const { notifications, darkMode, toggleNotifications, toggleDarkMode } = useSettingsStore();
+    const scans = useHistoryStore(state => state.scans);
+    const loadHistory = useHistoryStore(state => state.loadHistory);
+    const plants = usePlantsStore(state => state.plants);
+    const loadPlants = usePlantsStore(state => state.loadPlants);
+    const {
+        notifications,
+        autoSaveScanImages,
+        language,
+        scanQuality,
+        toggleNotifications,
+        toggleAutoSaveScanImages,
+        updateSettings,
+    } = useSettingsStore();
+    const [isGoogleLinked, setIsGoogleLinked] = useState(false);
+    const logoutScale = useSharedValue(1);
+
+    useEffect(() => {
+        loadPlants().catch(() => undefined);
+        loadHistory().catch(() => undefined);
+    }, [loadHistory, loadPlants]);
+
+    const sortedScans = useMemo(
+        () =>
+            [...scans].sort((a, b) => {
+                const diff = parseDateMillis(b.scanDateISO) - parseDateMillis(a.scanDateISO);
+                return diff === 0 ? b.id.localeCompare(a.id) : diff;
+            }),
+        [scans]
+    );
+
+    const level = useMemo(() => buildLevel(sortedScans.length), [sortedScans.length]);
+
+    const badges = useMemo(
+        () => [
+            { id: 'sprout', label: 'Mầm xanh', icon: 'leaf-outline' as const, earned: sortedScans.length >= 1 },
+            { id: 'observer', label: 'Quan sát viên', icon: 'eye-outline' as const, earned: sortedScans.length >= 10 },
+            { id: 'scanner', label: 'Thợ quét', icon: 'scan-outline' as const, earned: sortedScans.length >= 25 },
+            { id: 'doctor', label: 'Bác sĩ cây', icon: 'medkit-outline' as const, earned: sortedScans.length >= 50 },
+            { id: 'ai-farmer', label: 'Nông dân AI', icon: 'sparkles-outline' as const, earned: sortedScans.length >= 100 },
+        ],
+        [sortedScans.length]
+    );
+
+    const activeDays = useMemo(() => {
+        const daySet = new Set<string>();
+        sortedScans.forEach((scan) => {
+            if (scan.scanDateISO) {
+                daySet.add(scan.scanDateISO.slice(0, 10));
+                return;
+            }
+            daySet.add(scan.date);
+        });
+        return daySet.size;
+    }, [sortedScans]);
+
+    const diseaseDetectedCount = useMemo(
+        () => sortedScans.filter((s) => s.severity !== 'healthy').length,
+        [sortedScans]
+    );
+
+    const healthyPlantRate = useMemo(() => {
+        if (plants.length === 0) return 0;
+        const healthyCount = plants.filter((p) => p.status === 'healthy').length;
+        return Math.round((healthyCount / plants.length) * 100);
+    }, [plants]);
+
+    const commonDisease = useMemo(() => {
+        if (sortedScans.length === 0) return 'Chưa có dữ liệu';
+        const bucket: Record<string, number> = {};
+        sortedScans.forEach((scan) => {
+            if (!scan.result) return;
+            bucket[scan.result] = (bucket[scan.result] || 0) + 1;
+        });
+        const top = Object.entries(bucket).sort((a, b) => b[1] - a[1])[0];
+        return top?.[0] || 'Chưa có dữ liệu';
+    }, [sortedScans]);
+
+    const stats = useMemo(
+        () => [
+            { id: 'days', label: 'Ngày hoạt động', value: String(activeDays), icon: 'calendar-outline' as const },
+            { id: 'scans', label: 'Cây đã quét', value: String(sortedScans.length), icon: 'scan-outline' as const },
+            {
+                id: 'diseases',
+                label: 'Bệnh phát hiện',
+                value: String(diseaseDetectedCount),
+                icon: 'bug-outline' as const,
+                tint: '#F9E9DE',
+            },
+            {
+                id: 'healthy-rate',
+                label: 'Tỷ lệ cây khỏe',
+                value: `${healthyPlantRate}%`,
+                icon: 'heart-outline' as const,
+            },
+            {
+                id: 'common-disease',
+                label: 'Bệnh thường gặp nhất',
+                value: commonDisease,
+                icon: 'stats-chart-outline' as const,
+                tint: '#EFEAF9',
+            },
+        ],
+        [activeDays, commonDisease, diseaseDetectedCount, healthyPlantRate, sortedScans.length]
+    );
+
+    const cameraPermissionLabel = !cameraPermission
+        ? 'Đang kiểm tra'
+        : cameraPermission.granted
+            ? 'Đã cấp'
+            : 'Chưa cấp';
 
     const handleLogout = () => {
         Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
@@ -34,97 +170,142 @@ export default function ProfileScreen() {
         ]);
     };
 
+    const logoutAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: logoutScale.value }],
+    }));
+
+    const toggleLanguage = () => {
+        updateSettings('language', language === 'vi' ? 'en' : 'vi');
+    };
+
+    const cycleScanQuality = () => {
+        const next = scanQuality === 'normal' ? 'high' : scanQuality === 'high' ? 'ultra' : 'normal';
+        updateSettings('scanQuality', next);
+    };
+
+    const handleCameraPermission = async () => {
+        try {
+            if (cameraPermission?.granted) {
+                await Linking.openSettings();
+                return;
+            }
+            await requestCameraPermission();
+        } catch {
+            Alert.alert('Không thể mở cài đặt', 'Vui lòng cấp quyền camera trong cài đặt thiết bị.');
+        }
+    };
+
+    const handleClearCache = async () => {
+        await Promise.all([loadPlants(), loadHistory()]);
+        Alert.alert('Đã dọn bộ nhớ cache', 'Dữ liệu tạm đã được làm mới.');
+    };
+
+    const openPlaceholder = (featureName: string) => {
+        Alert.alert('Đang cập nhật', `${featureName} sẽ sớm có trong phiên bản tới.`);
+    };
+
+    const openExternal = async (url: string) => {
+        const supported = await Linking.canOpenURL(url);
+        if (!supported) {
+            Alert.alert('Không thể mở liên kết', 'Thiết bị chưa hỗ trợ mở liên kết này.');
+            return;
+        }
+        await Linking.openURL(url);
+    };
+
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.avatar}>
-                    <Ionicons name="person" size={32} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.name}>{user?.name || 'Nông dân'}</Text>
-                <Text style={styles.email}>{user?.email || 'email@example.com'}</Text>
-            </View>
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+        >
+            <Animated.View entering={FadeInDown.duration(420)}>
+                <ProfileHeader
+                    name={user?.name || 'Nông dân LeafScan'}
+                    email={user?.email || 'email@example.com'}
+                    onEditPress={() => navigation.navigate('EditProfile')}
+                />
+            </Animated.View>
 
-            {/* Achievements */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Thành tích</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {ACHIEVEMENTS.map((badge, index) => (
-                        <View key={badge.label} style={styles.badge}>
-                            <Text style={styles.badgeIcon}>{badge.icon}</Text>
-                            <Text style={styles.badgeLabel}>{badge.label}</Text>
-                        </View>
-                    ))}
-                </ScrollView>
-            </View>
+            <Animated.View entering={FadeInDown.delay(60).duration(420)}>
+                <AchievementCard level={level} badges={badges} />
+            </Animated.View>
 
-            {/* Stats */}
-            <View style={styles.statsRow}>
-                {STATS.map(stat => (
-                    <View key={stat.label} style={styles.statCard}>
-                        <Text style={styles.statValue}>{stat.value}</Text>
-                        <Text style={styles.statLabel}>{stat.label}</Text>
-                    </View>
-                ))}
-            </View>
+            <Animated.View entering={FadeInDown.delay(110).duration(420)}>
+                <StatsGrid stats={stats} />
+            </Animated.View>
 
-            {/* Settings */}
-            <View style={styles.settingsSection}>
-                <Text style={styles.sectionTitle}>Cài đặt</Text>
+            <Animated.View entering={FadeInDown.delay(150).duration(420)}>
+                <MyPlantsSection
+                    plants={plants}
+                    onPressPlant={(plantId) => navigation.navigate('PlantDetail', { plantId })}
+                    onPressManage={() => navigation.navigate('MainTabs', { screen: 'Garden' } as any)}
+                />
+            </Animated.View>
 
-                <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                        <Ionicons name="notifications-outline" size={20} color={theme.colors.textSecondary} />
-                        <Text style={styles.settingLabel}>Thông báo</Text>
-                    </View>
-                    <Switch
-                        value={notifications}
-                        onValueChange={toggleNotifications}
-                        trackColor={{ false: theme.colors.bgMuted, true: theme.colors.primaryLight }}
-                        thumbColor={theme.colors.white}
-                    />
-                </View>
+            <Animated.View entering={FadeInDown.delay(190).duration(420)}>
+                <RecentScanSection
+                    scans={sortedScans}
+                    onPressScan={(scan) => navigation.navigate('DiseaseDetail', { diseaseId: scan.diseaseKey || scan.id })}
+                    onPressViewAll={() => navigation.navigate('MainTabs', { screen: 'History' } as any)}
+                />
+            </Animated.View>
 
-                <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                        <Ionicons name="moon-outline" size={20} color={theme.colors.textSecondary} />
-                        <Text style={styles.settingLabel}>Chế độ tối</Text>
-                    </View>
-                    <Switch
-                        value={darkMode}
-                        onValueChange={toggleDarkMode}
-                        trackColor={{ false: theme.colors.bgMuted, true: theme.colors.primaryLight }}
-                        thumbColor={theme.colors.white}
-                    />
-                </View>
+            <Animated.View entering={FadeInDown.delay(230).duration(420)}>
+                <SettingsSection
+                    notifications={notifications}
+                    autoSaveScanImages={autoSaveScanImages}
+                    language={language}
+                    scanQuality={scanQuality}
+                    cameraPermissionLabel={cameraPermissionLabel}
+                    onToggleNotifications={toggleNotifications}
+                    onToggleAutoSave={toggleAutoSaveScanImages}
+                    onLanguagePress={toggleLanguage}
+                    onCameraPermissionPress={handleCameraPermission}
+                    onScanQualityPress={cycleScanQuality}
+                    onClearCachePress={handleClearCache}
+                />
+            </Animated.View>
 
-                <TouchableOpacity style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                        <Ionicons name="language-outline" size={20} color={theme.colors.textSecondary} />
-                        <Text style={styles.settingLabel}>Ngôn ngữ</Text>
-                    </View>
-                    <View style={styles.settingRight}>
-                        <Text style={styles.settingValue}>Tiếng Việt</Text>
-                        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                    </View>
-                </TouchableOpacity>
+            <Animated.View entering={FadeInDown.delay(270).duration(420)}>
+                <AccountSecuritySection
+                    isGoogleLinked={isGoogleLinked}
+                    onChangePassword={() => navigation.navigate('ChangePassword')}
+                    onToggleGoogleLink={() => setIsGoogleLinked((prev) => !prev)}
+                    onDeleteAccount={() =>
+                        Alert.alert('Xóa tài khoản', 'Thao tác này sẽ xóa toàn bộ dữ liệu của bạn.', [
+                            { text: 'Hủy', style: 'cancel' },
+                            { text: 'Xác nhận xóa', style: 'destructive', onPress: () => openPlaceholder('Xóa tài khoản') },
+                        ])
+                    }
+                />
+            </Animated.View>
 
-                <TouchableOpacity style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                        <Ionicons name="help-circle-outline" size={20} color={theme.colors.textSecondary} />
-                        <Text style={styles.settingLabel}>Trợ giúp & Phản hồi</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-            </View>
+            <Animated.View entering={FadeInDown.delay(310).duration(420)}>
+                <AppInfoSection
+                    appVersion={APP_VERSION}
+                    onHelpFeedback={() => openPlaceholder('Trợ giúp & Phản hồi')}
+                    onPrivacyPolicy={() => openExternal('https://leafscan.ai/privacy')}
+                    onTermsOfUse={() => openExternal('https://leafscan.ai/terms')}
+                />
+            </Animated.View>
 
-            {/* Logout */}
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                <Ionicons name="log-out-outline" size={20} color={theme.colors.severe} />
-                <Text style={styles.logoutText}>Đăng xuất</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 100 }} />
+            <Animated.View style={styles.logoutWrap} entering={FadeInDown.delay(340).duration(420)}>
+                <Animated.View style={logoutAnimatedStyle}>
+                    <Pressable
+                        onPress={handleLogout}
+                        onPressIn={() => {
+                            logoutScale.value = withTiming(0.97, { duration: 100 });
+                        }}
+                        onPressOut={() => {
+                            logoutScale.value = withTiming(1, { duration: 150 });
+                        }}
+                        style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
+                    >
+                        <Text style={styles.logoutText}>Đăng xuất</Text>
+                    </Pressable>
+                </Animated.View>
+            </Animated.View>
         </ScrollView>
     );
 }
@@ -133,135 +314,26 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.bg,
-        paddingTop: 60,
     },
-    header: {
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingBottom: 24,
-    },
-    avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: theme.colors.primaryPale,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    name: {
-        fontSize: 22,
-        fontWeight: '600',
-        color: theme.colors.textPrimary,
-        marginBottom: 4,
-    },
-    email: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-    },
-    section: {
-        paddingHorizontal: 20,
-        marginBottom: 20,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: theme.colors.textPrimary,
-        marginBottom: 12,
-    },
-    badge: {
-        alignItems: 'center',
-        backgroundColor: theme.colors.bgCard,
-        borderRadius: 16,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        marginRight: 10,
-        borderWidth: 0.5,
-        borderColor: theme.colors.border,
-        minWidth: 80,
-    },
-    badgeIcon: {
-        fontSize: 24,
-        marginBottom: 6,
-    },
-    badgeLabel: {
-        fontSize: 11,
-        color: theme.colors.textSecondary,
-        fontWeight: '500',
-    },
-    statsRow: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        gap: 10,
-        marginBottom: 24,
-    },
-    statCard: {
-        flex: 1,
-        backgroundColor: theme.colors.bgCard,
-        borderRadius: 16,
-        padding: 14,
-        alignItems: 'center',
-        borderWidth: 0.5,
-        borderColor: theme.colors.border,
-        ...theme.shadows.card,
-    },
-    statValue: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: theme.colors.textPrimary,
-    },
-    statLabel: {
-        fontSize: 10,
-        color: theme.colors.textMuted,
-        marginTop: 4,
-        textAlign: 'center',
-    },
-    settingsSection: {
-        paddingHorizontal: 20,
-        marginBottom: 20,
-    },
-    settingRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: theme.colors.bgCard,
-        borderRadius: 14,
-        padding: 16,
-        marginBottom: 8,
-        borderWidth: 0.5,
-        borderColor: theme.colors.border,
-    },
-    settingLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    settingLabel: {
-        fontSize: 15,
-        color: theme.colors.textPrimary,
-    },
-    settingRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    settingValue: {
-        fontSize: 14,
-        color: theme.colors.textMuted,
+    logoutWrap: {
+        marginHorizontal: 20,
+        marginTop: 26,
     },
     logoutButton: {
-        flexDirection: 'row',
-        justifyContent: 'center',
+        height: 52,
+        borderRadius: 16,
         alignItems: 'center',
-        gap: 8,
-        marginHorizontal: 20,
-        height: 48,
+        justifyContent: 'center',
         backgroundColor: theme.colors.severeBg,
-        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#F1CDD3',
+    },
+    logoutButtonPressed: {
+        backgroundColor: '#F8E7EB',
     },
     logoutText: {
         color: theme.colors.severe,
-        fontWeight: '600',
-        fontSize: 15,
+        fontWeight: '700',
+        fontSize: 15.5,
     },
 });

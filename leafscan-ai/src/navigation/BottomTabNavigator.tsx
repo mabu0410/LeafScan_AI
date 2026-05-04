@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { BottomTabParamList } from '../types';
 import { theme } from '../theme/theme';
+import { BottomNavigation, BottomTabIcon } from '../components/home/BottomNavigation';
 
 import HomeScreen from '../screens/HomeScreen';
 import MyGardenScreen from '../screens/MyGardenScreen';
@@ -13,20 +13,6 @@ import HistoryScreen from '../screens/HistoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
-
-function CenterScanButton({ onPress }: { onPress: () => void }) {
-    return (
-        <TouchableOpacity
-            style={styles.centerButton}
-            onPress={onPress}
-            activeOpacity={0.85}
-        >
-            <View style={styles.centerButtonInner}>
-                <Ionicons name="camera" size={28} color={theme.colors.white} />
-            </View>
-        </TouchableOpacity>
-    );
-}
 
 export default function BottomTabNavigator() {
     return (
@@ -52,7 +38,14 @@ export default function BottomTabNavigator() {
                         iconName = focused ? 'person' : 'person-outline';
                     }
 
-                    return <Ionicons name={iconName} size={size} color={color} />;
+                    return (
+                        <BottomTabIcon
+                            focused={focused}
+                            iconName={iconName}
+                            size={size}
+                            color={color}
+                        />
+                    );
                 },
             })}
         >
@@ -64,7 +57,7 @@ export default function BottomTabNavigator() {
                 options={{
                     tabBarLabel: () => null,
                     tabBarButton: (props) => (
-                        <CenterScanButton onPress={() => props.onPress?.(undefined as any)} />
+                        <BottomNavigation onPress={() => props.onPress?.(undefined as any)} />
                     ),
                 }}
             />
@@ -86,19 +79,5 @@ const styles = StyleSheet.create({
     tabBarLabel: {
         fontSize: 10,
         fontWeight: '600',
-    },
-    centerButton: {
-        top: -20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    centerButtonInner: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: theme.colors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...theme.shadows.scanButton,
     },
 });

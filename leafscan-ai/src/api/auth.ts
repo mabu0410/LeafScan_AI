@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   phone?: string;
   avatar?: string;
+  createdAt?: string;
 }
 
 export interface AuthResult {
@@ -24,6 +25,7 @@ function mapAuthData(payload: any): AuthResult {
       email: payload.user.email,
       phone: payload.user.phone || undefined,
       avatar: payload.user.avatar || undefined,
+      createdAt: payload.user.created_at || undefined,
     },
   };
 }
@@ -61,5 +63,6 @@ export async function meApi(token: string): Promise<AuthUser> {
     email: response.data.user.email,
     phone: response.data.user.phone || undefined,
     avatar: response.data.user.avatar || undefined,
+    createdAt: response.data.user.created_at || undefined,
   };
 }

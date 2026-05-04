@@ -77,6 +77,8 @@ export type RootStackParamList = {
   PlantDetail: { plantId: string };
   AddPlant: undefined;
   EditPlant: { plantId: string };
+  EditProfile: undefined;
+  ChangePassword: undefined;
   Search: undefined;
 };
 

@@ -15,6 +15,8 @@ import DiseaseDetailScreen from '../screens/DiseaseDetailScreen';
 import PlantDetailScreen from '../screens/PlantDetailScreen';
 import AddPlantScreen from '../screens/AddPlantScreen';
 import EditPlantScreen from '../screens/EditPlantScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import SearchScreen from '../screens/SearchScreen';
 import ChatScreen from '../screens/ChatScreen';
 import BottomTabNavigator from './BottomTabNavigator';
@@ -55,6 +57,8 @@ export default function AppNavigator() {
                         <Stack.Screen name="PlantDetail" component={PlantDetailScreen} />
                         <Stack.Screen name="AddPlant" component={AddPlantScreen} />
                         <Stack.Screen name="EditPlant" component={EditPlantScreen} />
+                        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
                         <Stack.Screen name="Search" component={SearchScreen} />
                     </>
                 )}

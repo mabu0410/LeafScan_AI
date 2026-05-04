@@ -1,7 +1,20 @@
 """
 SQLAlchemy Domain Models (Database Tables)
 """
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, JSON
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    JSON,
+    Index,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -56,6 +69,41 @@ class Disease(Base):
     prevention = Column(JSON)                              # Cách phòng ngừa
     affected_area_typical = Column(Integer, default=0)
     image_url = Column(String)
+    care_tips = relationship("CareTip", back_populates="related_disease")
+
+
+class CareTip(Base):
+    """Bảng lưu mẹo chăm sóc cây theo ngày/độ ưu tiên."""
+    __tablename__ = "care_tips"
+    __table_args__ = (
+        Index("ix_care_tips_active_priority", "is_active", "priority"),
+        Index("ix_care_tips_date_range", "start_date", "end_date"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(255), unique=True, index=True, nullable=False)
+    title = Column(String, nullable=False)
+    summary = Column(Text, nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String, nullable=False)
+    suitable_plants = Column(JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list)
+    related_disease_id = Column(Integer, ForeignKey("diseases.id", ondelete="SET NULL"), nullable=True)
+    priority = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    source_name = Column(String(255), nullable=True)
+    source_url = Column(Text, nullable=True)
+    source_note = Column(Text, nullable=True)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    related_disease = relationship("Disease", back_populates="care_tips")
 
 class ScanHistory(Base):
     """Bảng lưu lịch sử quét ảnh."""

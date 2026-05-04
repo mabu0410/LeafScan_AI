@@ -6,9 +6,11 @@ interface SettingsState {
   notifications: boolean;
   darkMode: boolean;
   language: 'vi' | 'en';
+  autoSaveScanImages: boolean;
   scanQuality: 'normal' | 'high' | 'ultra';
   toggleNotifications: () => void;
   toggleDarkMode: () => void;
+  toggleAutoSaveScanImages: () => void;
   updateSettings: (key: string, value: any) => void;
 }
 
@@ -18,9 +20,11 @@ export const useSettingsStore = create<SettingsState>()(
       notifications: true,
       darkMode: false,
       language: 'vi',
+      autoSaveScanImages: true,
       scanQuality: 'high',
       toggleNotifications: () => set((state) => ({ notifications: !state.notifications })),
       toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
+      toggleAutoSaveScanImages: () => set((state) => ({ autoSaveScanImages: !state.autoSaveScanImages })),
       updateSettings: (key, value) => set({ [key]: value }),
     }),
     {

@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import CORS_ORIGINS, UPLOAD_DIR
-from app.routers import diagnosis, auth, plants, history, chat, diseases
+from app.routers import diagnosis, auth, plants, history, chat, diseases, care_tips, home
 from app.database import init_db
 
 logging.basicConfig(
@@ -89,6 +89,8 @@ app.include_router(auth.router)
 app.include_router(plants.router)
 app.include_router(history.router)
 app.include_router(diseases.router)
+app.include_router(care_tips.router)
+app.include_router(home.router)
 app.include_router(diagnosis.router)
 app.include_router(chat.router)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

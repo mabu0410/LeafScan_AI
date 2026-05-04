@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginApi, meApi, registerApi } from '../api/auth';
+import { loginApi, registerApi } from '../api/auth';
+import { getCurrentUserApi } from '../api/users';
 
 interface User {
   id: string;
@@ -9,6 +10,7 @@ interface User {
   email: string;
   phone?: string;
   avatar?: string;
+  createdAt?: string;
 }
 
 interface AuthState {
@@ -21,6 +23,7 @@ interface AuthState {
   register: (data: { name: string; email: string; password: string }) => Promise<void>;
   completeOnboarding: () => void;
   refreshProfile: () => Promise<void>;
+  setUserProfile: (profile: User) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -51,8 +54,11 @@ export const useAuthStore = create<AuthState>()(
       refreshProfile: async () => {
         const token = get().accessToken;
         if (!token) return;
-        const user = await meApi(token);
+        const user = await getCurrentUserApi(token);
         set({ user, isLoggedIn: true });
+      },
+      setUserProfile: (profile) => {
+        set({ user: profile, isLoggedIn: true });
       },
     }),
     {

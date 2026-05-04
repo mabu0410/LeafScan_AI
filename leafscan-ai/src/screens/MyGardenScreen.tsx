@@ -1,257 +1,285 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { RootStackParamList, Plant } from '../types';
-import { PlantCard } from '../components/PlantCard';
 import { usePlantsStore } from '../stores/plantsStore';
 import { theme } from '../theme/theme';
+import { GardenHeader } from '../components/garden/GardenHeader';
+import { GardenFilterChips, GardenFilterChipItem } from '../components/garden/GardenFilterChips';
+import { EmptyGardenState } from '../components/garden/EmptyGardenState';
+import { PlantCard as GardenPlantCard } from '../components/garden/PlantCard';
+import { GardenSummary } from '../components/garden/GardenSummary';
+import { FloatingAddButton } from '../components/garden/FloatingAddButton';
+
+type GardenSortMode = 'recent' | 'name' | 'health';
+type GardenFilterId = 'all' | 'attention' | 'Rau củ' | 'Cây ăn quả' | 'Ngũ cốc' | 'Hoa cảnh';
+
+const FILTER_CHIPS: GardenFilterChipItem[] = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'Rau củ', label: 'Rau củ' },
+  { id: 'Cây ăn quả', label: 'Cây ăn quả' },
+  { id: 'Ngũ cốc', label: 'Ngũ cốc' },
+  { id: 'Hoa cảnh', label: 'Hoa cảnh' },
+  { id: 'attention', label: 'Cần chú ý' },
+];
+
+const SORT_LABEL: Record<GardenSortMode, string> = {
+  recent: 'Mới quét gần đây',
+  name: 'Tên cây A → Z',
+  health: 'Điểm sức khỏe cao',
+};
+
+const ENABLE_GARDEN_MOCK_PREVIEW = false;
+
+const GARDEN_MOCK_PLANTS: Plant[] = [
+  {
+    id: 'mock-1',
+    name: 'Cà chua bi',
+    latinName: 'Solanum lycopersicum',
+    category: 'Rau củ',
+    image: '',
+    thumbnail: '',
+    healthScore: 83,
+    lastScanned: '2 giờ trước',
+    location: 'Luống A',
+    daysTracked: 12,
+    totalScans: 9,
+    status: 'healthy',
+    notes: '',
+  },
+  {
+    id: 'mock-2',
+    name: 'Cam sành',
+    latinName: 'Citrus nobilis',
+    category: 'Cây ăn quả',
+    image: '',
+    thumbnail: '',
+    healthScore: 46,
+    lastScanned: 'Hôm qua',
+    location: 'Góc vườn phía Tây',
+    daysTracked: 29,
+    totalScans: 14,
+    status: 'warning',
+    notes: '',
+  },
+];
 
 export default function MyGardenScreen() {
-    const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-    const [activeCategory, setActiveCategory] = useState('all');
-    const plants = usePlantsStore(state => state.plants);
-    const getFilteredPlants = usePlantsStore(state => state.getFilteredPlants);
-    const loadPlants = usePlantsStore(state => state.loadPlants);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
+  const [activeFilter, setActiveFilter] = useState<GardenFilterId>('all');
+  const [sortMode, setSortMode] = useState<GardenSortMode>('recent');
+  const [searchQuery, setSearchQuery] = useState('');
+  const plants = usePlantsStore((state) => state.plants);
+  const loadPlants = usePlantsStore((state) => state.loadPlants);
 
-    useEffect(() => {
-        loadPlants().catch(() => undefined);
-    }, [loadPlants]);
+  useEffect(() => {
+    loadPlants().catch(() => undefined);
+  }, [loadPlants]);
 
-    const categories = useMemo(() => {
-        const counts = plants.reduce<Record<string, number>>((acc, plant) => {
-            const key = plant.category || 'Khác';
-            acc[key] = (acc[key] || 0) + 1;
-            return acc;
-        }, {});
-        return [
-            { id: 'all', label: 'Tất cả', count: plants.length },
-            ...Object.entries(counts).map(([label, count]) => ({ id: label, label, count })),
-        ];
-    }, [plants]);
+  const sourcePlants = useMemo(() => {
+    if (ENABLE_GARDEN_MOCK_PREVIEW && plants.length === 0) {
+      return GARDEN_MOCK_PLANTS;
+    }
+    return plants;
+  }, [plants]);
 
-    const filteredPlants = getFilteredPlants({
-        category: activeCategory,
-        status: 'all',
-        sortBy: 'recent',
-        searchQuery: '',
-    });
+  const totalPlants = sourcePlants.length;
+  const healthyPlants = sourcePlants.filter((plant) => plant.status === 'healthy').length;
+  const attentionPlants = sourcePlants.filter(
+    (plant) => plant.status === 'warning' || plant.status === 'critical'
+  ).length;
 
-    const renderPlant = ({ item, index }: { item: Plant; index: number }) => (
-        <View style={styles.plantItem}>
-            <PlantCard
-                plant={item}
-                onPress={() => navigation.navigate('PlantDetail', { plantId: item.id })}
+  const filteredPlants = useMemo(() => {
+    let result = [...sourcePlants];
+    const keyword = searchQuery.trim().toLowerCase();
+
+    if (activeFilter === 'attention') {
+      result = result.filter((plant) => plant.status === 'warning' || plant.status === 'critical');
+    } else if (activeFilter !== 'all') {
+      result = result.filter((plant) => plant.category === activeFilter);
+    }
+
+    if (keyword) {
+      result = result.filter((plant) => {
+        const name = plant.name.toLowerCase();
+        const category = (plant.category || '').toLowerCase();
+        const location = (plant.location || '').toLowerCase();
+        return name.includes(keyword) || category.includes(keyword) || location.includes(keyword);
+      });
+    }
+
+    switch (sortMode) {
+      case 'name':
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'health':
+        result.sort((a, b) => b.healthScore - a.healthScore);
+        break;
+      case 'recent':
+      default:
+        result.sort((a, b) => b.totalScans - a.totalScans);
+        break;
+    }
+
+    return result;
+  }, [activeFilter, searchQuery, sortMode, sourcePlants]);
+
+  const subtitle =
+    totalPlants === 0
+      ? 'Bắt đầu thêm cây để theo dõi sức khỏe cây trồng'
+      : `Bạn đang theo dõi ${totalPlants} cây`;
+
+  const cycleSortMode = () => {
+    setSortMode((prev) => (prev === 'recent' ? 'name' : prev === 'name' ? 'health' : 'recent'));
+  };
+
+  const handlePressFilter = () => {
+    Alert.alert('Bộ lọc hiện tại', FILTER_CHIPS.find((chip) => chip.id === activeFilter)?.label || 'Tất cả');
+  };
+
+  const renderPlantItem = ({ item }: { item: Plant }) => (
+    <View style={styles.plantRow}>
+      <GardenPlantCard
+        plant={item}
+        onPress={() => navigation.navigate('PlantDetail', { plantId: item.id })}
+      />
+    </View>
+  );
+
+  const isTrulyEmpty = totalPlants === 0;
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <Animated.View entering={FadeInDown.duration(420)} style={styles.headerTopSpace}>
+          <GardenHeader
+            title="Vườn của tôi"
+            subtitle={subtitle}
+            searchQuery={searchQuery}
+            onChangeSearch={setSearchQuery}
+            onPressFilter={handlePressFilter}
+            onPressSort={cycleSortMode}
+          />
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(70).duration(420)}>
+          <GardenFilterChips
+            chips={FILTER_CHIPS}
+            activeChipId={activeFilter}
+            onSelectChip={(chipId) => setActiveFilter(chipId as GardenFilterId)}
+          />
+        </Animated.View>
+
+        {!isTrulyEmpty ? (
+          <Animated.View entering={FadeInDown.delay(110).duration(420)}>
+            <GardenSummary
+              totalPlants={totalPlants}
+              healthyPlants={healthyPlants}
+              attentionPlants={attentionPlants}
             />
-        </View>
-    );
+          </Animated.View>
+        ) : null}
 
-    return (
-        <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerTop}>
-                    <View>
-                        <Text style={styles.title}>Vườn của tôi</Text>
-                        <Text style={styles.subtitle}>{filteredPlants.length} loài cây</Text>
-                    </View>
-                    <View style={styles.headerButtons}>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="filter" size={20} color={theme.colors.textPrimary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="swap-vertical" size={20} color={theme.colors.textPrimary} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
+        {!isTrulyEmpty ? (
+          <View style={styles.sortHintWrap}>
+            <Text style={styles.sortHint}>Sắp xếp: {SORT_LABEL[sortMode]}</Text>
+          </View>
+        ) : null}
 
-                {/* Categories */}
-                <FlatList
-                    data={categories}
-                    keyExtractor={item => item.id}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.categoryList}
-                    renderItem={({ item: cat }) => (
-                        <TouchableOpacity
-                            onPress={() => setActiveCategory(cat.id)}
-                            style={[styles.categoryChip, activeCategory === cat.id && styles.categoryChipActive]}
-                        >
-                            <Text style={[styles.categoryText, activeCategory === cat.id && styles.categoryTextActive]}>
-                                {cat.label} {cat.id === 'all' ? '' : cat.count}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                />
-            </View>
+        {isTrulyEmpty ? (
+          <EmptyGardenState onAddFirstPlant={() => navigation.navigate('AddPlant')} />
+        ) : filteredPlants.length === 0 ? (
+          <View style={styles.filteredEmpty}>
+            <Text style={styles.filteredEmptyTitle}>Không có cây phù hợp</Text>
+            <Text style={styles.filteredEmptyText}>
+              Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để xem nhiều cây hơn.
+            </Text>
+            <Pressable onPress={() => setSearchQuery('')} style={styles.filteredEmptyButton}>
+              <Text style={styles.filteredEmptyButtonText}>Xóa tìm kiếm</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredPlants}
+            keyExtractor={(item) => item.id}
+            renderItem={renderPlantItem}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingBottom: Math.max(110, insets.bottom + 100),
+            }}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
 
-            {/* Grid */}
-            {filteredPlants.length > 0 ? (
-                <FlatList
-                    data={filteredPlants}
-                    keyExtractor={item => item.id}
-                    numColumns={2}
-                    columnWrapperStyle={styles.row}
-                    contentContainerStyle={styles.gridContent}
-                    renderItem={renderPlant}
-                    showsVerticalScrollIndicator={false}
-                />
-            ) : (
-                <View style={styles.emptyContainer}>
-                    <View style={styles.emptyIcon}>
-                        <Ionicons name="leaf" size={40} color={theme.colors.textMuted} />
-                    </View>
-                    <Text style={styles.emptyTitle}>Không có cây nào</Text>
-                    <Text style={styles.emptyText}>Không tìm thấy cây nào trong danh mục này.</Text>
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('AddPlant')}
-                        style={styles.addButton}
-                    >
-                        <Text style={styles.addButtonText}>Thêm cây mới</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {/* FAB */}
-            <TouchableOpacity
-                onPress={() => navigation.navigate('AddPlant')}
-                style={styles.fab}
-                activeOpacity={0.85}
-            >
-                <Ionicons name="add" size={28} color={theme.colors.white} />
-            </TouchableOpacity>
-        </View>
-    );
+        {!isTrulyEmpty ? (
+          <FloatingAddButton
+            onPress={() => navigation.navigate('AddPlant')}
+            bottomOffset={Math.max(insets.bottom + 88, 112)}
+          />
+        ) : null}
+      </View>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.bg,
-    },
-    header: {
-        backgroundColor: theme.colors.bg,
-        paddingTop: 60,
-        paddingHorizontal: 20,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: '500',
-        color: theme.colors.textPrimary,
-    },
-    subtitle: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        marginTop: 4,
-    },
-    headerButtons: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    iconButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: theme.colors.bgCard,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-    },
-    categoryList: {
-        marginBottom: 4,
-    },
-    categoryChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: theme.colors.bgMuted,
-        marginRight: 8,
-    },
-    categoryChipActive: {
-        backgroundColor: theme.colors.primary,
-    },
-    categoryText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: theme.colors.textSecondary,
-    },
-    categoryTextActive: {
-        color: theme.colors.white,
-    },
-    gridContent: {
-        padding: 20,
-        paddingBottom: 100,
-    },
-    row: {
-        justifyContent: 'space-between',
-        gap: 16,
-        marginBottom: 16,
-    },
-    plantItem: {
-        flex: 1,
-        maxWidth: '48%',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-    },
-    emptyIcon: {
-        width: 96,
-        height: 96,
-        borderRadius: 48,
-        backgroundColor: theme.colors.bgMuted,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
-        opacity: 0.5,
-    },
-    emptyTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: theme.colors.textPrimary,
-        marginBottom: 8,
-    },
-    emptyText: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        marginBottom: 24,
-    },
-    addButton: {
-        backgroundColor: theme.colors.primary,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 24,
-        ...theme.shadows.scanButton,
-    },
-    addButtonText: {
-        color: theme.colors.white,
-        fontWeight: '600',
-        fontSize: 15,
-    },
-    fab: {
-        position: 'absolute',
-        bottom: 24,
-        right: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: theme.colors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...theme.shadows.scanButton,
-    },
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.bg,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.bg,
+  },
+  headerTopSpace: {
+    paddingTop: 10,
+  },
+  sortHintWrap: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  sortHint: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontWeight: '500',
+  },
+  plantRow: {
+    marginBottom: 10,
+  },
+  filteredEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    marginTop: -24,
+  },
+  filteredEmptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  filteredEmptyText: {
+    fontSize: 13.5,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  filteredEmptyButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: theme.colors.primaryPale,
+  },
+  filteredEmptyButtonText: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
 });

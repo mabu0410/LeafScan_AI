@@ -1,12 +1,18 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../types';
-import { ScanOverlay } from '../components/ScanOverlay';
+import { ScanOverlay } from '../components/scan/ScanOverlay';
+import { ScanHeader } from '../components/scan/ScanHeader';
+import { CaptureControls } from '../components/scan/CaptureControls';
+import { ScanGuideText } from '../components/scan/ScanGuideText';
+import { ScanStatus } from '../components/scan/ScanStatus';
+import { ScanState } from '../components/scan/types';
 import { theme } from '../theme/theme';
 import { useAuthStore } from '../stores/authStore';
 import { diagnoseApi } from '../api/diagnosis';
@@ -19,10 +25,30 @@ export default function ScanScreen() {
     const [isScanning, setIsScanning] = useState(false);
     const [facing, setFacing] = useState<CameraType>('back');
     const [torchEnabled, setTorchEnabled] = useState(false);
+    const [scanState, setScanState] = useState<ScanState>('ready');
     const [permission, requestPermission] = useCameraPermissions();
+    const insets = useSafeAreaInsets();
     const accessToken = useAuthStore(state => state.accessToken);
     const loadHistory = useHistoryStore(state => state.loadHistory);
     const loadPlants = usePlantsStore(state => state.loadPlants);
+
+    useEffect(() => {
+        if (isScanning) {
+            setScanState('processing');
+            return;
+        }
+
+        const phaseOrder: ScanState[] = ['aligning', 'optimal', 'ready'];
+        let index = 0;
+        setScanState(phaseOrder[index]);
+
+        const interval = setInterval(() => {
+            index = (index + 1) % phaseOrder.length;
+            setScanState(phaseOrder[index]);
+        }, 2200);
+
+        return () => clearInterval(interval);
+    }, [isScanning]);
 
     if (!permission) {
         return <View style={styles.container} />;
@@ -108,52 +134,44 @@ export default function ScanScreen() {
     };
 
     const toggleCameraFacing = () => {
+        if (isScanning) {
+            return;
+        }
         setFacing(current => (current === 'back' ? 'front' : 'back'));
+    };
+
+    const toggleTorch = () => {
+        if (isScanning) {
+            return;
+        }
+        setTorchEnabled(v => !v);
     };
 
     return (
         <View style={styles.container}>
-            <CameraView ref={cameraRef} style={styles.cameraView} facing={facing} enableTorch={torchEnabled}>
-                <ScanOverlay />
-            </CameraView>
+            <CameraView ref={cameraRef} style={styles.cameraView} facing={facing} enableTorch={torchEnabled} />
 
-            <View style={styles.topBar}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.topButton}>
-                    <Ionicons name="close" size={24} color={theme.colors.white} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setTorchEnabled(v => !v)} style={styles.topButton}>
-                    <Ionicons name={torchEnabled ? 'flash' : 'flash-outline'} size={24} color={theme.colors.white} />
-                </TouchableOpacity>
+            <View style={styles.overlayLayer} pointerEvents="box-none">
+                <ScanOverlay state={scanState} topInset={insets.top} bottomInset={insets.bottom} />
+
+                <ScanHeader
+                    topInset={insets.top}
+                    torchEnabled={torchEnabled}
+                    onClose={() => navigation.goBack()}
+                    onToggleFlash={toggleTorch}
+                    disabled={isScanning}
+                />
+
+                <ScanGuideText state={scanState} bottomInset={insets.bottom} />
+                <ScanStatus state={scanState} bottomInset={insets.bottom} />
+                <CaptureControls
+                    isScanning={isScanning}
+                    bottomInset={insets.bottom}
+                    onCapture={handleCapture}
+                    onPickFromGallery={handlePickFromGallery}
+                    onFlipCamera={toggleCameraFacing}
+                />
             </View>
-
-            <View style={styles.bottomControls}>
-                {isScanning ? (
-                    <View style={styles.progressContainer}>
-                        <Ionicons name="scan" size={28} color={theme.colors.white} />
-                        <Text style={styles.progressText}>Đang phân tích ảnh...</Text>
-                    </View>
-                ) : (
-                    <>
-                        <TouchableOpacity onPress={handlePickFromGallery} style={styles.galleryButton}>
-                            <Ionicons name="images-outline" size={24} color={theme.colors.white} />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={handleCapture} style={styles.captureButton} activeOpacity={0.8}>
-                            <View style={styles.captureInner}>
-                                <Ionicons name="scan" size={32} color={theme.colors.white} />
-                            </View>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={toggleCameraFacing} style={styles.galleryButton}>
-                            <Ionicons name="camera-reverse-outline" size={24} color={theme.colors.white} />
-                        </TouchableOpacity>
-                    </>
-                )}
-            </View>
-
-            {!isScanning && (
-                <Text style={styles.hint}>Đưa lá cây vào khung hình</Text>
-            )}
         </View>
     );
 }
@@ -166,86 +184,9 @@ const styles = StyleSheet.create({
     cameraView: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: '#2a2a2a',
-        justifyContent: 'center',
-        alignItems: 'center',
     },
-    topBar: {
-        position: 'absolute',
-        top: 60,
-        left: 20,
-        right: 20,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        zIndex: 20,
-    },
-    topButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    bottomControls: {
-        position: 'absolute',
-        bottom: 60,
-        left: 0,
-        right: 0,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 32,
-        paddingHorizontal: 40,
-        zIndex: 20,
-    },
-    galleryButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    captureButton: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        borderWidth: 4,
-        borderColor: theme.colors.white,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 4,
-    },
-    captureInner: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 36,
-        backgroundColor: theme.colors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    progressContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 24,
-    },
-    progressText: {
-        color: theme.colors.white,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    hint: {
-        position: 'absolute',
-        bottom: 160,
-        alignSelf: 'center',
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 14,
-        fontWeight: '500',
-        zIndex: 20,
+    overlayLayer: {
+        ...StyleSheet.absoluteFillObject,
     },
     permissionContainer: {
         flex: 1,
