@@ -32,6 +32,34 @@ export async function createPlantApi(token: string, payload: PlantPayload): Prom
   return mapPlant(response.data);
 }
 
+function getImageMimeType(uri: string): string {
+  const extension = uri.split('?')[0].split('.').pop()?.toLowerCase();
+  if (extension === 'png') return 'image/png';
+  if (extension === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}
+
+export async function uploadPlantImageApi(token: string, plantId: string, imageUri: string): Promise<Plant> {
+  const form = new FormData();
+  const filename = imageUri.split('/').pop()?.split('?')[0] || `plant_${Date.now()}.jpg`;
+
+  form.append('file', {
+    uri: imageUri,
+    type: getImageMimeType(imageUri),
+    name: filename,
+  } as any);
+
+  const response = await requestJson<any>(`/plants/${plantId}/image`, {
+    method: 'POST',
+    token,
+    body: form,
+  });
+  if (!response.success || !response.data) {
+    throw new Error(response.message || 'Upload ảnh cây thất bại');
+  }
+  return mapPlant(response.data);
+}
+
 export async function updatePlantApi(token: string, plantId: string, payload: Partial<PlantPayload>): Promise<Plant> {
   const response = await requestJson<any>(`/plants/${plantId}`, {
     method: 'PUT',

@@ -1,6 +1,6 @@
 PYTHON ?= ./.venv/bin/python
 
-.PHONY: install run test build
+.PHONY: install run test build install-dev
 
 install:
 	$(PYTHON) -m pip install -r requirements.txt
@@ -13,3 +13,6 @@ test:
 
 build:
 	$(PYTHON) -m compileall -q app
+
+install-dev:
+	$(PYTHON) -m pip install -r requirements-dev.txt

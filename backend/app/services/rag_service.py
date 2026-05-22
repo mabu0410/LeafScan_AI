@@ -1,11 +1,12 @@
 """
 RAG Service - Retrieval-Augmented Generation cho tư vấn bệnh cây.
 
-Phiên bản này triển khai RAG theo hướng:
+Phiên bản nâng cấp:
 1) Chunking dữ liệu bệnh từ disease_db.json
-2) Embedding cục bộ dạng hashing vector (không phụ thuộc vector DB ngoài)
-3) Retrieval theo cosine similarity + ưu tiên disease_key đã chẩn đoán
-4) Trả về citations để frontend hiển thị nguồn tham khảo
+2) Embedding bằng Gemini text-embedding-004 (cache vào file JSON)
+3) Fallback sang hashing embedding nếu API key chưa cấu hình
+4) Retrieval theo cosine similarity + ưu tiên disease_key đã chẩn đoán
+5) Trả về citations để frontend hiển thị nguồn tham khảo
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import AsyncIterator
 
 import httpx
@@ -29,8 +31,14 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────
 
 _DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "disease_db.json")
+_EMBED_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "embedding_cache.json")
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
-_EMBED_DIM = 512
+_EMBED_DIM = 768  # Gemini text-embedding-004 output dimension
+_FALLBACK_DIM = 512  # Hashing fallback dimension
+
+_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+_EMBED_MODEL = "text-embedding-004"
+_EMBED_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 
 
 @dataclass
@@ -66,17 +74,103 @@ def _tokenize(text: str) -> list[str]:
     return [token.lower() for token in _TOKEN_RE.findall(text)]
 
 
-def _embed_text(text: str) -> np.ndarray:
-    vec = np.zeros(_EMBED_DIM, dtype=np.float32)
+# ──────────────────────────────────────────────
+# Embedding: Gemini API with file cache + hashing fallback
+# ──────────────────────────────────────────────
+
+_embed_cache: dict[str, list[float]] = {}
+
+
+def _load_embed_cache() -> dict[str, list[float]]:
+    """Load cached embeddings from disk."""
+    if os.path.isfile(_EMBED_CACHE_PATH):
+        try:
+            with open(_EMBED_CACHE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            logger.warning("Failed to load embedding cache, starting fresh.")
+    return {}
+
+
+def _save_embed_cache() -> None:
+    """Persist embedding cache to disk."""
+    try:
+        os.makedirs(os.path.dirname(_EMBED_CACHE_PATH), exist_ok=True)
+        with open(_EMBED_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(_embed_cache, f, ensure_ascii=False)
+    except Exception:
+        logger.warning("Failed to save embedding cache.")
+
+
+def _gemini_embed_batch(texts: list[str]) -> list[np.ndarray] | None:
+    """Call Gemini embedding API for a batch of texts. Returns None on failure."""
+    if not _GEMINI_API_KEY:
+        return None
+
+    # Use individual embedContent calls (more reliable than batch)
+    embeddings: list[np.ndarray] = []
+    url = f"{_EMBED_BASE_URL}/models/{_EMBED_MODEL}:embedContent?key={_GEMINI_API_KEY}"
+
+    try:
+        import requests as req_lib
+        for text in texts:
+            payload = {
+                "model": f"models/{_EMBED_MODEL}",
+                "content": {"parts": [{"text": text[:2048]}]},
+            }
+            resp = req_lib.post(url, json=payload, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            values = data.get("embedding", {}).get("values", [])
+            if values:
+                embeddings.append(np.array(values, dtype=np.float32))
+            else:
+                return None  # Unexpected response format
+
+        return embeddings if len(embeddings) == len(texts) else None
+    except Exception as exc:
+        logger.warning("Gemini embedding API failed: %s", exc)
+        return None
+
+
+def _embed_text_gemini(text: str) -> np.ndarray | None:
+    """Get embedding for a single text via Gemini API (with cache)."""
+    cache_key = hashlib.md5(text.encode("utf-8")).hexdigest()
+    if cache_key in _embed_cache:
+        return np.array(_embed_cache[cache_key], dtype=np.float32)
+
+    result = _gemini_embed_batch([text])
+    if result and len(result) == 1:
+        _embed_cache[cache_key] = result[0].tolist()
+        return result[0]
+    return None
+
+
+def _embed_text_hashing(text: str) -> np.ndarray:
+    """Fallback: hashing-based embedding khi không có Gemini API."""
+    vec = np.zeros(_FALLBACK_DIM, dtype=np.float32)
     for token in _tokenize(text):
         digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
-        idx = int.from_bytes(digest, byteorder="little") % _EMBED_DIM
+        idx = int.from_bytes(digest, byteorder="little") % _FALLBACK_DIM
         vec[idx] += 1.0
 
     norm = np.linalg.norm(vec)
     if norm > 0:
         vec /= norm
     return vec
+
+
+def _embed_text(text: str) -> np.ndarray:
+    """
+    Embed text: ưu tiên Gemini API, fallback sang hashing.
+    """
+    gemini_result = _embed_text_gemini(text)
+    if gemini_result is not None:
+        norm = np.linalg.norm(gemini_result)
+        if norm > 0:
+            gemini_result /= norm
+        return gemini_result
+    return _embed_text_hashing(text)
 
 
 def _join_steps(title: str, steps: list[str]) -> str:
@@ -139,7 +233,7 @@ def _build_kb_chunks(db: dict) -> list[_KBChunk]:
                 continue
             source = f"{name}::{section}"
             chunk_id = f"{disease_key}:{section}"
-            embedding = _embed_text(f"{disease_key} {name} {cleaned_text}")
+            embedding = _embed_text_hashing(f"{disease_key} {name} {cleaned_text}")
             chunks.append(
                 _KBChunk(
                     chunk_id=chunk_id,
@@ -154,6 +248,7 @@ def _build_kb_chunks(db: dict) -> list[_KBChunk]:
 
 
 _DISEASE_DB: dict = _load_disease_db()
+_embed_cache = _load_embed_cache()
 _KB_CHUNKS: list[_KBChunk] = _build_kb_chunks(_DISEASE_DB)
 
 
@@ -207,7 +302,7 @@ def retrieve_chunks(query: str, disease_key: str, top_k: int = 6) -> list[Retrie
     Semantic retrieval từ chunk KB bằng cosine similarity.
     Ưu tiên chunk cùng disease_key, nhưng vẫn cho phép lấy chunk liên quan.
     """
-    query_vec = _embed_text(query)
+    query_vec = _embed_text_hashing(query)
     if not np.any(query_vec):
         return []
 
@@ -296,6 +391,21 @@ NGUYÊN TẮC:
 7. Luôn nhắc người dùng tham khảo chuyên gia nông nghiệp trước khi áp dụng thực tế.
 """
 
+_LOW_CONFIDENCE_PROMPT = """\
+Bạn là LeafScan AI Assistant - trợ lý chăm sóc cây trồng.
+
+LƯU Ý QUAN TRỌNG: Kết quả chẩn đoán có độ tin cậy THẤP (dưới 70%).
+Điều này có nghĩa hệ thống CHƯA CHẮC CHẮN về loại bệnh.
+
+NGUYÊN TẮC KHI ĐỘ TIN CẬY THẤP:
+1. KHÔNG khẳng định cây bị bệnh cụ thể nào.
+2. Chỉ tư vấn chung về chăm sóc cây và phòng bệnh.
+3. Khuyến nghị người dùng chụp lại ảnh rõ hơn hoặc hỏi chuyên gia.
+4. Có thể đề cập các khả năng nhưng PHẢI nói rõ "chưa xác định chắc chắn".
+5. Trả lời bằng tiếng Việt, thân thiện.
+6. Luôn nhắc tham khảo chuyên gia nông nghiệp.
+"""
+
 
 def _build_messages(
     disease_name: str,
@@ -306,14 +416,17 @@ def _build_messages(
     user_message: str,
 ) -> list[dict]:
     """Xây dựng messages cho LLM với retrieval context."""
+    # Chọn system prompt dựa trên confidence
+    base_prompt = _LOW_CONFIDENCE_PROMPT if confidence < 70.0 else _SYSTEM_PROMPT
+
     system_content = (
-        f"{_SYSTEM_PROMPT}\n\n"
+        f"{base_prompt}\n\n"
         f"--- CONTEXT TRUY XUẤT ---\n"
         f"{retrieved_context}\n\n"
         f"--- KẾT QUẢ CHẨN ĐOÁN ---\n"
         f"Bệnh: {disease_name}\n"
         f"Giai đoạn: {predicted_stage}\n"
-        f"Độ tin cậy: {confidence}%\n"
+        f"Độ tin cậy: {confidence}%{' (THẤP - chưa chắc chắn)' if confidence < 70.0 else ''}\n"
         f"---\n"
     )
 

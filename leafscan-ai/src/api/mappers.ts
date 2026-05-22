@@ -1,4 +1,10 @@
 import { Disease, DiseaseSeverity, DiseaseStage, Plant, ScanHistory } from '../types';
+import { toApiAssetUrl } from './config';
+
+const PLANT_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=80';
+const PLANT_THUMBNAIL_FALLBACK = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200&q=80';
+const DISEASE_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80';
+const HISTORY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&q=80';
 
 function mapSeverity(value: string): DiseaseSeverity {
   if (value === 'healthy' || value === 'moderate' || value === 'severe') {
@@ -15,13 +21,16 @@ function mapStage(value: string | undefined): DiseaseStage {
 }
 
 export function mapPlant(apiPlant: any): Plant {
+  const image = toApiAssetUrl(apiPlant.image_url);
+  const thumbnail = toApiAssetUrl(apiPlant.thumbnail_url) || image;
+
   return {
     id: String(apiPlant.id),
     name: apiPlant.name || 'Chưa đặt tên',
     latinName: apiPlant.latin_name || '',
     category: apiPlant.category || 'Khác',
-    image: apiPlant.image_url || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=80',
-    thumbnail: apiPlant.thumbnail_url || apiPlant.image_url || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200&q=80',
+    image: image || PLANT_IMAGE_FALLBACK,
+    thumbnail: thumbnail || PLANT_THUMBNAIL_FALLBACK,
     healthScore: Number(apiPlant.health_score ?? 100),
     lastScanned: apiPlant.last_scanned || 'Chưa quét',
     location: apiPlant.location || 'Chưa cập nhật',
@@ -34,11 +43,19 @@ export function mapPlant(apiPlant: any): Plant {
 }
 
 export function mapDisease(apiDisease: any, diagnosis?: any): Disease {
+  const modelConfidence = diagnosis?.prediction?.confidence;
+  const confidencePercent = typeof modelConfidence === 'number'
+    ? Number((modelConfidence * 100).toFixed(2))
+    : Number(apiDisease.confidence ?? 0);
+
+  const image = toApiAssetUrl(apiDisease.image || apiDisease.image_url);
+
   return {
-    id: apiDisease.id,
+    id: String(apiDisease.id ?? apiDisease.disease_key ?? ''),
+    diseaseKey: apiDisease.disease_key || undefined,
     name: apiDisease.name,
     severity: mapSeverity(apiDisease.severity),
-    confidence: Number(apiDisease.confidence ?? 0),
+    confidence: confidencePercent,
     description: apiDisease.description || '',
     symptoms: apiDisease.symptoms || [],
     treatment: apiDisease.treatment || [],
@@ -48,7 +65,7 @@ export function mapDisease(apiDisease: any, diagnosis?: any): Disease {
     safetyNotice: diagnosis?.safety_notice || apiDisease.safety_notice || undefined,
     prevention: apiDisease.prevention || [],
     affectedArea: Number(apiDisease.affected_area ?? 0),
-    image: apiDisease.image || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80',
+    image: image || DISEASE_IMAGE_FALLBACK,
     predictedStage: mapStage(diagnosis?.predicted_stage),
     forecastStage7d: mapStage(diagnosis?.forecast_stage_7d),
     forecastConfidence: Number(diagnosis?.forecast_confidence ?? 0),
@@ -61,6 +78,8 @@ export function mapHistoryItem(apiHistory: any): ScanHistory {
     ? 'Không xác định'
     : `${dateRaw.getHours().toString().padStart(2, '0')}:${dateRaw.getMinutes().toString().padStart(2, '0')} · ${dateRaw.toLocaleDateString('vi-VN')}`;
 
+  const image = toApiAssetUrl(apiHistory.image_url);
+
   return {
     id: String(apiHistory.id),
     diseaseKey: apiHistory.disease_key || undefined,
@@ -69,7 +88,7 @@ export function mapHistoryItem(apiHistory: any): ScanHistory {
     scanDateISO: Number.isNaN(dateRaw.getTime()) ? undefined : dateRaw.toISOString(),
     result: apiHistory.result || 'Không xác định',
     severity: mapSeverity(apiHistory.severity || 'healthy'),
-    image: apiHistory.image_url || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&q=80',
+    image: image || HISTORY_IMAGE_FALLBACK,
     confidence: Number(apiHistory.confidence ?? 0),
     predictedStage: mapStage(apiHistory.predicted_stage),
     forecastStage7d: mapStage(apiHistory.forecast_stage_7d),

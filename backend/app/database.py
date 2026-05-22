@@ -51,10 +51,30 @@ def init_db() -> None:
     from app.models import domain as _domain_models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _ensure_user_google_id_column()
+    _ensure_user_role_column()
     _ensure_care_tips_columns()
     _ensure_scan_history_columns()
+    _ensure_diseases_columns()
+    _ensure_partner_marketplace_columns()
     _seed_diseases_from_json()
     _seed_care_tips()
+
+
+def _table_columns(conn, table_name: str) -> set[str]:
+    dialect = engine.dialect.name
+    if dialect == "postgresql":
+        rows = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :table_name"
+            ),
+            {"table_name": table_name},
+        ).fetchall()
+        return {row[0] for row in rows}
+    if dialect == "sqlite":
+        return {row[1] for row in conn.execute(text(f"PRAGMA table_info('{table_name}')")).fetchall()}
+    return set()
 
 
 def _ensure_scan_history_columns() -> None:
@@ -105,6 +125,168 @@ def _ensure_scan_history_columns() -> None:
                 conn.execute(
                     text("ALTER TABLE scan_history ADD COLUMN affected_area_snapshot REAL")
                 )
+
+
+def _ensure_diseases_columns() -> None:
+    """Bảo đảm bảng diseases có cột model_class_name để map đúng class model."""
+    dialect = engine.dialect.name
+    with engine.begin() as conn:
+        if not inspect(conn).has_table("diseases"):
+            return
+
+        if dialect == "postgresql":
+            conn.execute(
+                text(
+                    "ALTER TABLE diseases "
+                    "ADD COLUMN IF NOT EXISTS model_class_name VARCHAR"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_diseases_model_class_name "
+                    "ON diseases(model_class_name) "
+                    "WHERE model_class_name IS NOT NULL"
+                )
+            )
+        elif dialect == "sqlite":
+            columns = {
+                row[1]
+                for row in conn.execute(text("PRAGMA table_info('diseases')")).fetchall()
+            }
+            if "model_class_name" not in columns:
+                conn.execute(text("ALTER TABLE diseases ADD COLUMN model_class_name TEXT"))
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_diseases_model_class_name "
+                    "ON diseases(model_class_name)"
+                )
+            )
+
+
+def _ensure_partner_marketplace_columns() -> None:
+    """Bảo đảm các cột marketplace/payment mới tồn tại cho DB demo đã có sẵn."""
+    dialect = engine.dialect.name
+    with engine.begin() as conn:
+        inspector = inspect(conn)
+
+        if inspector.has_table("partners"):
+            columns = _table_columns(conn, "partners")
+            if dialect == "postgresql":
+                additions = {
+                    "user_id": "INTEGER REFERENCES users(id) ON DELETE CASCADE",
+                    "store_name": "VARCHAR(255)",
+                    "description": "TEXT",
+                    "address": "VARCHAR(500)",
+                    "logo_url": "VARCHAR(500)",
+                    "cover_url": "VARCHAR(500)",
+                    "website_url": "VARCHAR(500)",
+                    "contact_url": "VARCHAR(500)",
+                    "rejection_reason": "TEXT",
+                    "business_license_file_url": "VARCHAR(500)",
+                    "representative_name": "VARCHAR(255)",
+                    "representative_role": "VARCHAR(100)",
+                    "service_area": "VARCHAR(255)",
+                    "main_products": "TEXT",
+                    "advertising_commitment_accepted": "BOOLEAN NOT NULL DEFAULT FALSE",
+                    "advertising_commitment_at": "TIMESTAMP",
+                }
+                for name, definition in additions.items():
+                    if name not in columns:
+                        conn.execute(text(f"ALTER TABLE partners ADD COLUMN {name} {definition}"))
+                conn.execute(
+                    text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS uq_partners_user_id "
+                        "ON partners(user_id) WHERE user_id IS NOT NULL"
+                    )
+                )
+            elif dialect == "sqlite":
+                additions = {
+                    "user_id": "INTEGER",
+                    "store_name": "TEXT",
+                    "description": "TEXT",
+                    "address": "TEXT",
+                    "logo_url": "TEXT",
+                    "cover_url": "TEXT",
+                    "website_url": "TEXT",
+                    "contact_url": "TEXT",
+                    "rejection_reason": "TEXT",
+                    "business_license_file_url": "TEXT",
+                    "representative_name": "TEXT",
+                    "representative_role": "TEXT",
+                    "service_area": "TEXT",
+                    "main_products": "TEXT",
+                    "advertising_commitment_accepted": "INTEGER NOT NULL DEFAULT 0",
+                    "advertising_commitment_at": "TEXT",
+                }
+                for name, definition in additions.items():
+                    if name not in columns:
+                        conn.execute(text(f"ALTER TABLE partners ADD COLUMN {name} {definition}"))
+                conn.execute(
+                    text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS uq_partners_user_id "
+                        "ON partners(user_id)"
+                    )
+                )
+
+        if inspector.has_table("partner_products"):
+            columns = _table_columns(conn, "partner_products")
+            if dialect == "postgresql":
+                if "moderation_status" not in columns:
+                    conn.execute(
+                        text(
+                            "ALTER TABLE partner_products "
+                            "ADD COLUMN moderation_status VARCHAR(20) NOT NULL DEFAULT 'pending_review'"
+                        )
+                    )
+                if "rejection_reason" not in columns:
+                    conn.execute(text("ALTER TABLE partner_products ADD COLUMN rejection_reason TEXT"))
+            elif dialect == "sqlite":
+                if "moderation_status" not in columns:
+                    conn.execute(
+                        text(
+                            "ALTER TABLE partner_products "
+                            "ADD COLUMN moderation_status TEXT NOT NULL DEFAULT 'pending_review'"
+                        )
+                    )
+                if "rejection_reason" not in columns:
+                    conn.execute(text("ALTER TABLE partner_products ADD COLUMN rejection_reason TEXT"))
+
+        if inspector.has_table("product_impressions"):
+            if dialect == "postgresql":
+                conn.execute(text("ALTER TABLE product_impressions ALTER COLUMN scan_id DROP NOT NULL"))
+                conn.execute(text("ALTER TABLE product_impressions ALTER COLUMN user_id DROP NOT NULL"))
+
+
+def _ensure_user_google_id_column() -> None:
+    """Bảo đảm bảng users có cột google_id cho OAuth."""
+    dialect = engine.dialect.name
+    with engine.begin() as conn:
+        if not inspect(conn).has_table("users"):
+            return
+        if dialect == "postgresql":
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR"))
+            conn.execute(
+                text("CREATE UNIQUE INDEX IF NOT EXISTS uq_users_google_id ON users(google_id) WHERE google_id IS NOT NULL")
+            )
+        elif dialect == "sqlite":
+            columns = {row[1] for row in conn.execute(text("PRAGMA table_info('users')")).fetchall()}
+            if "google_id" not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN google_id TEXT"))
+
+
+def _ensure_user_role_column() -> None:
+    """Bảo đảm bảng users có cột role để phân luồng farmer/partner."""
+    dialect = engine.dialect.name
+    with engine.begin() as conn:
+        if not inspect(conn).has_table("users"):
+            return
+        columns = _table_columns(conn, "users")
+        if "role" in columns:
+            return
+        if dialect == "postgresql":
+            conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'farmer'"))
+        elif dialect == "sqlite":
+            conn.execute(text("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'farmer'"))
 
 
 def _ensure_care_tips_columns() -> None:
@@ -158,6 +340,7 @@ def _seed_diseases_from_json() -> None:
         return
 
     from app.models.domain import Disease
+    from app.services.model_service import disease_key_to_class_name
 
     payload = json.loads(db_path.read_text(encoding="utf-8"))
     def _safe_int(value) -> int:
@@ -175,6 +358,7 @@ def _seed_diseases_from_json() -> None:
         }
 
         for disease_key, disease_data in payload.items():
+            model_class_name = disease_key_to_class_name(disease_key)
             mapped_data = {
                 "name": str(disease_data.get("name", disease_key)),
                 "severity": str(disease_data.get("severity", "unknown")),
@@ -184,6 +368,7 @@ def _seed_diseases_from_json() -> None:
                 "prevention": disease_data.get("prevention", []),
                 "affected_area_typical": _safe_int(disease_data.get("affected_area", 0)),
                 "image_url": str(disease_data.get("image", "")),
+                "model_class_name": model_class_name,
             }
 
             row = existing.get(disease_key)

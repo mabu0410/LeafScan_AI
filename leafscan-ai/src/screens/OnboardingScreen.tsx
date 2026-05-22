@@ -1,98 +1,81 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, withSpring, FadeIn, FadeOut, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
+import React from 'react';
+import {
+    ImageBackground,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
+import { useAuthStore } from '../stores/authStore';
 import { theme } from '../theme/theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const ONBOARDING_SLIDES = [
-    {
-        id: 1,
-        image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=390&q=85',
-        icon: '📷',
-        title: 'Quét lá, phát hiện bệnh',
-        subtitle: 'Chỉ cần chụp ảnh lá cây, AI sẽ chẩn đoán bệnh trong 3 giây',
-    },
-    {
-        id: 2,
-        image: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=390&q=85',
-        icon: '🧠',
-        title: 'AI chẩn đoán chính xác 95%',
-        subtitle: 'Nhận dạng hơn 50 loại bệnh phổ biến trên 30+ loài cây trồng tại Việt Nam',
-    },
-    {
-        id: 3,
-        image: 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?w=390&q=85',
-        icon: '💊',
-        title: 'Điều trị & Phòng ngừa',
-        subtitle: 'Nhận hướng dẫn điều trị cụ thể và lịch nhắc chăm sóc cây tự động',
-    },
-];
+const ONBOARDING_BACKGROUND = require('../../assets/onboarding-field.png');
 
 type Props = {
     navigation: StackNavigationProp<RootStackParamList, 'Onboarding'>;
 };
 
 export default function OnboardingScreen({ navigation }: Props) {
-    const [currentSlide, setCurrentSlide] = useState(0);
-    const slide = ONBOARDING_SLIDES[currentSlide];
+    const insets = useSafeAreaInsets();
+    const completeOnboarding = useAuthStore(state => state.completeOnboarding);
 
-    const handleNext = () => {
-        if (currentSlide === ONBOARDING_SLIDES.length - 1) {
-            navigation.replace('Login');
-        } else {
-            setCurrentSlide(prev => prev + 1);
-        }
+    const goToRegister = () => {
+        completeOnboarding();
+        navigation.replace('Register');
     };
 
-    const handleSkip = () => {
+    const goToLogin = () => {
+        completeOnboarding();
         navigation.replace('Login');
     };
 
     return (
         <View style={styles.container}>
-            {/* Background Image */}
-            <Image source={{ uri: slide.image }} style={styles.bgImage} />
+            <ImageBackground
+                source={ONBOARDING_BACKGROUND}
+                style={styles.background}
+                imageStyle={styles.backgroundImage}
+            >
+                <LinearGradient
+                    pointerEvents="none"
+                    colors={[
+                        'rgba(255,255,255,0)',
+                        'rgba(255,255,255,0.18)',
+                        'rgba(255,255,255,0.92)',
+                    ]}
+                    locations={[0, 0.48, 1]}
+                    style={styles.fieldFade}
+                />
+            </ImageBackground>
 
-            {/* Gradient Overlay */}
-            <View style={styles.gradient} />
+            <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}>
+                <View style={styles.dragHandle} />
 
-            {/* Skip Button */}
-            <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-                <Text style={styles.skipText}>Bỏ qua</Text>
-            </TouchableOpacity>
+                <Text style={styles.title}>
+                    Chào mừng bạn đến với{'\n'}
+                    Leaf AI
+                </Text>
 
-            {/* Content */}
-            <View style={styles.content}>
-                <Text style={styles.icon}>{slide.icon}</Text>
-                <Text style={styles.title}>{slide.title}</Text>
-                <Text style={styles.subtitle}>{slide.subtitle}</Text>
+                <Text style={styles.subtitle}>Giải pháp AI bảo vệ mùa màng của bạn</Text>
 
-                {/* Controls */}
-                <View style={styles.controls}>
-                    {/* Dots */}
-                    <View style={styles.dots}>
-                        {ONBOARDING_SLIDES.map((_, index) => (
-                            <Animated.View
-                                key={index}
-                                style={[
-                                    styles.dot,
-                                    {
-                                        width: index === currentSlide ? 24 : 6,
-                                        backgroundColor: index === currentSlide ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
-                                    },
-                                ]}
-                            />
-                        ))}
-                    </View>
+                <TouchableOpacity
+                    activeOpacity={0.88}
+                    onPress={goToRegister}
+                    style={styles.primaryButton}
+                >
+                    <Text style={styles.primaryButtonText}>Bắt đầu ngay</Text>
+                    <Ionicons name="arrow-forward" size={30} color={theme.colors.white} />
+                </TouchableOpacity>
 
-                    {/* Button */}
-                    <TouchableOpacity onPress={handleNext} style={styles.nextButton} activeOpacity={0.85}>
-                        <Text style={styles.nextText}>
-                            {currentSlide === ONBOARDING_SLIDES.length - 1 ? 'Bắt đầu' : 'Tiếp theo'}
-                        </Text>
+                <View style={styles.loginRow}>
+                    <Text style={styles.loginText}>Đã có tài khoản?</Text>
+                    <TouchableOpacity activeOpacity={0.72} onPress={goToLogin} hitSlop={8}>
+                        <Text style={styles.loginLink}>Đăng nhập</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -103,83 +86,104 @@ export default function OnboardingScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.bgDark,
+        backgroundColor: theme.colors.white,
     },
-    bgImage: {
+    background: {
         ...StyleSheet.absoluteFillObject,
-        width: '100%',
-        height: '100%',
+    },
+    backgroundImage: {
         resizeMode: 'cover',
     },
-    gradient: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(28,25,23,0.6)',
-    },
-    skipButton: {
+    fieldFade: {
         position: 'absolute',
-        top: 60,
-        right: 20,
-        zIndex: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderRadius: 20,
+        left: 0,
+        right: 0,
+        bottom: 260,
+        height: 340,
     },
-    skipText: {
-        color: 'rgba(255,255,255,0.6)',
-        fontWeight: '500',
-        fontSize: 14,
-    },
-    content: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        paddingHorizontal: 24,
-        paddingBottom: 60,
-    },
-    icon: {
-        fontSize: 48,
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: '700',
-        color: theme.colors.white,
-        marginBottom: 12,
-        lineHeight: 40,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.75)',
-        lineHeight: 24,
-        maxWidth: 300,
-    },
-    controls: {
-        flexDirection: 'row',
+    sheet: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        minHeight: 320,
+        paddingTop: 58,
+        paddingHorizontal: 28,
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 40,
+        backgroundColor: '#FAFAF8',
+        borderTopLeftRadius: 42,
+        borderTopRightRadius: 42,
+        shadowColor: '#263326',
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.08,
+        shadowRadius: 22,
+        elevation: 18,
     },
-    dots: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    dot: {
+    dragHandle: {
+        position: 'absolute',
+        top: 28,
+        width: 48,
         height: 6,
         borderRadius: 3,
+        backgroundColor: '#D9D9D6',
     },
-    nextButton: {
-        backgroundColor: theme.colors.white,
-        height: 54,
-        paddingHorizontal: 32,
-        borderRadius: 14,
-        justifyContent: 'center',
+    title: {
+        width: '100%',
+        maxWidth: 320,
+        textAlign: 'center',
+        fontSize: 30,
+        lineHeight: 38,
+        fontWeight: '800',
+        color: '#00460E',
+    },
+    subtitle: {
+        marginTop: 26,
+        width: '100%',
+        textAlign: 'center',
+        fontSize: 18,
+        lineHeight: 25,
+        fontWeight: '400',
+        color: '#3B4038',
+    },
+    primaryButton: {
+        marginTop: 36,
+        width: '100%',
+        height: 64,
+        borderRadius: 15,
+        backgroundColor: '#004B0A',
+        flexDirection: 'row',
         alignItems: 'center',
-        ...theme.shadows.float,
+        justifyContent: 'center',
+        gap: 14,
+        shadowColor: '#004B0A',
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.18,
+        shadowRadius: 18,
+        elevation: 8,
     },
-    nextText: {
-        color: theme.colors.bgDark,
-        fontWeight: '600',
+    primaryButtonText: {
+        color: theme.colors.white,
+        fontSize: 19,
+        lineHeight: 24,
+        fontWeight: '800',
+    },
+    loginRow: {
+        marginTop: 30,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 16,
+    },
+    loginText: {
+        color: '#50574D',
         fontSize: 16,
+        lineHeight: 22,
+        fontWeight: '400',
+    },
+    loginLink: {
+        color: '#00460E',
+        fontSize: 16,
+        lineHeight: 22,
+        fontWeight: '800',
     },
 });

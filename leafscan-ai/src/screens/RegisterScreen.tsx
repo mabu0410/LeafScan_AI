@@ -1,41 +1,79 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
+import { useGoogleAuth } from '../api/google-auth';
 import { useAuthStore } from '../stores/authStore';
-import { AnimatedButton } from '../components/AnimatedButton';
 import { theme } from '../theme/theme';
 
 type Props = {
     navigation: StackNavigationProp<RootStackParamList, 'Register'>;
 };
 
-const FARM_TYPES = ['Lúa', 'Cây ăn quả', 'Rau màu', 'Hoa', 'Cây công nghiệp', 'Khác'];
-const SCALES = ['< 1 ha', '1-5 ha', '5-20 ha', '> 20 ha'];
+type AccountRole = 'farmer' | 'dealer';
 
 export default function RegisterScreen({ navigation }: Props) {
-    const [step, setStep] = useState(1);
+    const insets = useSafeAreaInsets();
+    const [role, setRole] = useState<AccountRole>('farmer');
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [selectedFarms, setSelectedFarms] = useState<string[]>([]);
-    const [selectedScale, setSelectedScale] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const register = useAuthStore(state => state.register);
+    const loginWithGoogle = useAuthStore(state => state.loginWithGoogle);
+    const {
+        request: googleRequest,
+        response: googleResponse,
+        promptAsync: googlePromptAsync,
+        isConfigured: isGoogleAuthConfigured,
+    } = useGoogleAuth();
 
-    const toggleFarm = (farm: string) => {
-        setSelectedFarms(prev =>
-            prev.includes(farm) ? prev.filter(f => f !== farm) : [...prev, farm]
-        );
-    };
+    useEffect(() => {
+        if (!googleResponse) return;
+
+        if (googleResponse.type === 'success' && googleResponse.authentication?.idToken) {
+            setGoogleLoading(true);
+            loginWithGoogle(googleResponse.authentication.idToken)
+                .catch((error: any) => {
+                    Alert.alert('Đăng ký Google thất bại', error?.message || 'Vui lòng thử lại.');
+                })
+                .finally(() => setGoogleLoading(false));
+            return;
+        }
+
+        setGoogleLoading(false);
+    }, [googleResponse, loginWithGoogle]);
 
     const handleRegister = async () => {
+        if (!name.trim() || !email.trim() || !password) {
+            Alert.alert('Thiếu thông tin', 'Vui lòng nhập họ tên, email và mật khẩu.');
+            return;
+        }
+
         setLoading(true);
         try {
-            await register({ name, email, password });
+            await register({
+                name: name.trim(),
+                email: email.trim(),
+                password,
+                phone: phone.trim() || undefined,
+                role: role === 'dealer' ? 'partner' : 'farmer',
+            });
         } catch (error: any) {
             Alert.alert('Đăng ký thất bại', error?.message || 'Vui lòng thử lại.');
         } finally {
@@ -43,288 +81,512 @@ export default function RegisterScreen({ navigation }: Props) {
         }
     };
 
-    const renderStep1 = () => (
-        <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Thông tin cá nhân</Text>
-            <Text style={styles.stepSubtitle}>Cho chúng tôi biết đôi điều về bạn</Text>
+    const handleGoogleRegister = async () => {
+        if (!isGoogleAuthConfigured) {
+            Alert.alert(
+                'Chưa cấu hình Google OAuth',
+                'Thiếu Google client ID. Vui lòng cấu hình EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID trong leafscan-ai/.env.'
+            );
+            return;
+        }
 
-            <View style={styles.inputGroup}>
-                <Ionicons name="person-outline" size={20} color={theme.colors.textMuted} style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Họ và tên"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={name}
-                    onChangeText={setName}
-                />
-            </View>
+        if (!googleRequest) {
+            Alert.alert('Vui lòng thử lại', 'Google OAuth chưa sẵn sàng.');
+            return;
+        }
 
-            <View style={styles.inputGroup}>
-                <Ionicons name="call-outline" size={20} color={theme.colors.textMuted} style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Số điện thoại"
-                    placeholderTextColor={theme.colors.textMuted}
-                    keyboardType="phone-pad"
-                    value={phone}
-                    onChangeText={setPhone}
-                />
-            </View>
+        setGoogleLoading(true);
+        const result = await googlePromptAsync();
+        if (result.type !== 'success') {
+            setGoogleLoading(false);
+        }
+    };
 
-            <AnimatedButton onPress={() => setStep(2)} size="lg" style={styles.button}>
-                Tiếp theo
-            </AnimatedButton>
-        </View>
-    );
-
-    const renderStep2 = () => (
-        <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Loại nông trại</Text>
-            <Text style={styles.stepSubtitle}>Bạn đang trồng gì?</Text>
-
-            <View style={styles.chipGrid}>
-                {FARM_TYPES.map(farm => (
-                    <TouchableOpacity
-                        key={farm}
-                        onPress={() => toggleFarm(farm)}
-                        style={[styles.chip, selectedFarms.includes(farm) && styles.chipActive]}
-                    >
-                        <Text style={[styles.chipText, selectedFarms.includes(farm) && styles.chipTextActive]}>
-                            {farm}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            <Text style={[styles.stepSubtitle, { marginTop: 24 }]}>Quy mô</Text>
-            <View style={styles.chipGrid}>
-                {SCALES.map(scale => (
-                    <TouchableOpacity
-                        key={scale}
-                        onPress={() => setSelectedScale(scale)}
-                        style={[styles.chip, selectedScale === scale && styles.chipActive]}
-                    >
-                        <Text style={[styles.chipText, selectedScale === scale && styles.chipTextActive]}>
-                            {scale}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            <AnimatedButton onPress={() => setStep(3)} size="lg" style={styles.button}>
-                Tiếp theo
-            </AnimatedButton>
-        </View>
-    );
-
-    const renderStep3 = () => (
-        <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Tạo tài khoản</Text>
-            <Text style={styles.stepSubtitle}>Thiết lập đăng nhập cho bạn</Text>
-
-            <View style={styles.inputGroup}>
-                <Ionicons name="mail-outline" size={20} color={theme.colors.textMuted} style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor={theme.colors.textMuted}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    value={email}
-                    onChangeText={setEmail}
-                />
-            </View>
-
-            <View style={styles.inputGroup}>
-                <Ionicons name="lock-closed-outline" size={20} color={theme.colors.textMuted} style={styles.inputIcon} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Mật khẩu"
-                    placeholderTextColor={theme.colors.textMuted}
-                    secureTextEntry={!showPassword}
-                    value={password}
-                    onChangeText={setPassword}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-            </View>
-
-            <AnimatedButton
-                onPress={handleRegister}
-                loading={loading}
-                size="lg"
-                style={styles.button}
-            >
-                Đăng ký
-            </AnimatedButton>
-        </View>
-    );
+    const handleAppleRegister = () => {
+        Alert.alert('Chưa hỗ trợ', 'Ứng dụng hiện chưa cấu hình đăng ký Apple.');
+    };
 
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
+            <View
+                style={[
+                    styles.screenContent,
+                    { paddingTop: Math.max(insets.top + 10, 22), paddingBottom: Math.max(insets.bottom + 10, 22) },
+                ]}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Đăng ký</Text>
-                    <View style={{ width: 40 }} />
-                </View>
+                <View style={styles.card}>
+                    <View style={styles.header}>
+                        <View style={styles.logoCircle}>
+                            <Ionicons name="leaf-outline" size={28} color="#00460E" />
+                        </View>
+                        <Text style={styles.brand}>Leaf AI</Text>
+                        <Text style={styles.subtitle}>Tạo tài khoản để bắt đầu quản lý</Text>
+                    </View>
 
-                {/* Progress */}
-                <View style={styles.progressRow}>
-                    {[1, 2, 3].map(s => (
-                        <View key={s} style={[styles.progressDot, s <= step && styles.progressDotActive]} />
-                    ))}
-                </View>
+                    <View style={styles.content}>
+                        <Text style={styles.sectionLabel}>Bạn là:</Text>
+                        <View style={styles.roleRow}>
+                            <RoleButton
+                                label="Nông dân"
+                                icon="leaf-outline"
+                                active={role === 'farmer'}
+                                onPress={() => setRole('farmer')}
+                            />
+                            <RoleButton
+                                label="Đại lý vật tư"
+                                icon="storefront-outline"
+                                active={role === 'dealer'}
+                                onPress={() => setRole('dealer')}
+                            />
+                        </View>
 
-                {step === 1 && renderStep1()}
-                {step === 2 && renderStep2()}
-                {step === 3 && renderStep3()}
+                        <View style={styles.form}>
+                            <InputField
+                                label="Họ tên"
+                                icon="person-outline"
+                                placeholder="Nhập họ và tên"
+                                value={name}
+                                onChangeText={setName}
+                            />
+                            <InputField
+                                label="Email"
+                                icon="mail-outline"
+                                placeholder="example@leafai.com"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                value={email}
+                                onChangeText={setEmail}
+                            />
+                            <InputField
+                                label="Số điện thoại"
+                                icon="call-outline"
+                                placeholder="09xx xxx xxx"
+                                keyboardType="phone-pad"
+                                value={phone}
+                                onChangeText={setPhone}
+                            />
+                            <InputField
+                                label="Mật khẩu"
+                                icon="lock-closed-outline"
+                                placeholder="••••••••"
+                                secureTextEntry={!showPassword}
+                                value={password}
+                                onChangeText={setPassword}
+                                rightIcon={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                                onRightIconPress={() => setShowPassword(prev => !prev)}
+                            />
+                        </View>
 
-                {/* Login Link */}
-                <View style={styles.loginRow}>
-                    <Text style={styles.loginText}>Đã có tài khoản? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                        <Text style={styles.loginLink}>Đăng nhập</Text>
-                    </TouchableOpacity>
+                        <PrimaryButton label="Đăng ký" loading={loading} onPress={handleRegister} />
+
+                        <Divider label="Hoặc đăng ký bằng" />
+
+                        <View style={styles.socialRow}>
+                            <SocialButton
+                                label="Google"
+                                icon="logo-google"
+                                iconColor="#4285F4"
+                                loading={googleLoading}
+                                onPress={handleGoogleRegister}
+                            />
+                            <SocialButton
+                                label="Apple"
+                                icon="logo-apple"
+                                iconColor="#000000"
+                                onPress={handleAppleRegister}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>Đã có tài khoản?</Text>
+                        <TouchableOpacity activeOpacity={0.72} onPress={() => navigation.navigate('Login')}>
+                            <Text style={styles.footerLink}>Đăng nhập</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </ScrollView>
+            </View>
         </KeyboardAvoidingView>
+    );
+}
+
+function RoleButton({
+    label,
+    icon,
+    active,
+    onPress,
+}: {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    active: boolean;
+    onPress: () => void;
+}) {
+    return (
+        <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={onPress}
+            style={[styles.roleButton, active && styles.roleButtonActive]}
+        >
+            {active && (
+                <View style={styles.roleCheck}>
+                    <Ionicons name="checkmark" size={18} color={theme.colors.white} />
+                </View>
+            )}
+            <Ionicons name={icon} size={23} color={active ? '#00460E' : '#374234'} />
+            <Text style={[styles.roleText, active && styles.roleTextActive]}>{label}</Text>
+        </TouchableOpacity>
+    );
+}
+
+type InputFieldProps = {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    placeholder: string;
+    value: string;
+    onChangeText: (value: string) => void;
+    keyboardType?: 'default' | 'email-address' | 'phone-pad';
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+    secureTextEntry?: boolean;
+    rightIcon?: keyof typeof Ionicons.glyphMap;
+    onRightIconPress?: () => void;
+};
+
+function InputField({
+    label,
+    icon,
+    placeholder,
+    value,
+    onChangeText,
+    keyboardType = 'default',
+    autoCapitalize = 'sentences',
+    secureTextEntry,
+    rightIcon,
+    onRightIconPress,
+}: InputFieldProps) {
+    return (
+        <View style={styles.inputBlock}>
+            <Text style={styles.inputLabel}>{label}</Text>
+            <View style={styles.inputShell}>
+                <Ionicons name={icon} size={21} color="#B9C2B3" style={styles.inputIcon} />
+                <TextInput
+                    style={styles.input}
+                    placeholder={placeholder}
+                    placeholderTextColor="#7F877A"
+                    value={value}
+                    onChangeText={onChangeText}
+                    keyboardType={keyboardType}
+                    autoCapitalize={autoCapitalize}
+                    secureTextEntry={secureTextEntry}
+                />
+                {rightIcon && (
+                    <TouchableOpacity onPress={onRightIconPress} activeOpacity={0.72} hitSlop={8}>
+                        <Ionicons name={rightIcon} size={23} color="#B9C2B3" />
+                    </TouchableOpacity>
+                )}
+            </View>
+        </View>
+    );
+}
+
+function PrimaryButton({
+    label,
+    loading,
+    onPress,
+}: {
+    label: string;
+    loading: boolean;
+    onPress: () => void;
+}) {
+    return (
+        <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={onPress}
+            disabled={loading}
+            style={[styles.primaryButton, loading && styles.disabledButton]}
+        >
+            {loading ? (
+                <ActivityIndicator color={theme.colors.white} />
+            ) : (
+                <>
+                    <Text style={styles.primaryButtonText}>{label}</Text>
+                    <Ionicons name="arrow-forward" size={24} color={theme.colors.white} />
+                </>
+            )}
+        </TouchableOpacity>
+    );
+}
+
+function Divider({ label }: { label: string }) {
+    return (
+        <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{label}</Text>
+            <View style={styles.dividerLine} />
+        </View>
+    );
+}
+
+function SocialButton({
+    label,
+    icon,
+    iconColor,
+    loading,
+    onPress,
+}: {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    iconColor: string;
+    loading?: boolean;
+    onPress: () => void;
+}) {
+    return (
+        <TouchableOpacity activeOpacity={0.8} onPress={onPress} disabled={loading} style={styles.socialButton}>
+            {loading ? (
+                <ActivityIndicator color="#004B0A" />
+            ) : (
+                <>
+                    <Ionicons name={icon} size={23} color={iconColor} />
+                    <Text style={styles.socialText}>{label}</Text>
+                </>
+            )}
+        </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.bg,
+        backgroundColor: '#F7F8F3',
     },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: 24,
-        paddingTop: 60,
-        paddingBottom: 40,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 24,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: theme.colors.bgCard,
+    screenContent: {
+        flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: theme.colors.textPrimary,
-    },
-    progressRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 8,
-        marginBottom: 32,
-    },
-    progressDot: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: theme.colors.bgMuted,
-    },
-    progressDotActive: {
-        backgroundColor: theme.colors.primary,
-    },
-    stepContent: {
-        gap: 16,
-    },
-    stepTitle: {
-        fontSize: 24,
-        fontWeight: '600',
-        color: theme.colors.textPrimary,
-    },
-    stepSubtitle: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        marginBottom: 8,
-    },
-    inputGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: theme.colors.white,
-        borderWidth: 1.5,
-        borderColor: theme.colors.border,
-        borderRadius: 14,
-        height: 54,
         paddingHorizontal: 16,
     },
+    card: {
+        width: '100%',
+        overflow: 'hidden',
+        borderRadius: 20,
+        backgroundColor: '#FCFCFA',
+        shadowColor: '#1B2A18',
+        shadowOffset: { width: 0, height: 18 },
+        shadowOpacity: 0.08,
+        shadowRadius: 30,
+        elevation: 10,
+    },
+    header: {
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 18,
+        paddingBottom: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ECEFE8',
+    },
+    logoCircle: {
+        width: 54,
+        height: 54,
+        borderRadius: 27,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#1B2A18',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 14,
+        elevation: 5,
+    },
+    brand: {
+        marginTop: 10,
+        color: '#00460E',
+        textAlign: 'center',
+        fontSize: 26,
+        lineHeight: 31,
+        fontWeight: '800',
+    },
+    subtitle: {
+        marginTop: 2,
+        color: '#4C5449',
+        textAlign: 'center',
+        fontSize: 14,
+        lineHeight: 19,
+        fontWeight: '400',
+    },
+    content: {
+        paddingHorizontal: 20,
+        paddingTop: 14,
+        paddingBottom: 16,
+    },
+    sectionLabel: {
+        color: '#10150F',
+        fontSize: 14,
+        lineHeight: 18,
+        fontWeight: '500',
+    },
+    roleRow: {
+        marginTop: 6,
+        flexDirection: 'row',
+        gap: 10,
+    },
+    roleButton: {
+        position: 'relative',
+        flex: 1,
+        height: 68,
+        borderRadius: 12,
+        borderWidth: 1.4,
+        borderColor: '#BFC9BA',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 5,
+        backgroundColor: '#FCFCFA',
+    },
+    roleButtonActive: {
+        borderWidth: 2.2,
+        borderColor: '#00460E',
+        backgroundColor: '#FFFFFF',
+    },
+    roleCheck: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#005C12',
+    },
+    roleText: {
+        color: '#374234',
+        textAlign: 'center',
+        fontSize: 13,
+        lineHeight: 17,
+        fontWeight: '600',
+    },
+    roleTextActive: {
+        color: '#00460E',
+        fontWeight: '800',
+    },
+    form: {
+        marginTop: 12,
+        gap: 8,
+    },
+    inputBlock: {
+        gap: 4,
+    },
+    inputLabel: {
+        color: '#10150F',
+        fontSize: 13,
+        lineHeight: 17,
+        fontWeight: '500',
+    },
+    inputShell: {
+        height: 44,
+        borderRadius: 10,
+        borderWidth: 1.35,
+        borderColor: '#B7C4B2',
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+    },
     inputIcon: {
-        marginRight: 12,
+        marginRight: 9,
     },
     input: {
         flex: 1,
-        fontSize: 16,
-        color: theme.colors.textPrimary,
+        height: '100%',
+        color: '#20271F',
+        fontSize: 14,
+        lineHeight: 18,
+        paddingVertical: 0,
     },
-    eyeButton: {
-        padding: 4,
-    },
-    chipGrid: {
+    primaryButton: {
+        marginTop: 14,
+        height: 50,
+        borderRadius: 11,
+        backgroundColor: '#004B0A',
         flexDirection: 'row',
-        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 14,
+        shadowColor: '#004B0A',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.18,
+        shadowRadius: 12,
+        elevation: 7,
+    },
+    disabledButton: {
+        opacity: 0.75,
+    },
+    primaryButtonText: {
+        color: theme.colors.white,
+        fontSize: 16,
+        lineHeight: 21,
+        fontWeight: '800',
+    },
+    dividerRow: {
+        marginTop: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 10,
     },
-    chip: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-        backgroundColor: theme.colors.bgMuted,
-        borderWidth: 1.5,
-        borderColor: 'transparent',
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#E2E6DD',
     },
-    chipActive: {
-        backgroundColor: theme.colors.primaryPale,
-        borderColor: theme.colors.primary,
-    },
-    chipText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: theme.colors.textSecondary,
-    },
-    chipTextActive: {
-        color: theme.colors.primary,
-    },
-    button: {
-        width: '100%',
-        marginTop: 16,
-    },
-    loginRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 32,
-    },
-    loginText: {
-        color: theme.colors.textSecondary,
-        fontSize: 14,
-    },
-    loginLink: {
-        color: theme.colors.primary,
+    dividerText: {
+        color: '#747B70',
+        fontSize: 13,
+        lineHeight: 17,
         fontWeight: '600',
+    },
+    socialRow: {
+        marginTop: 12,
+        flexDirection: 'row',
+        gap: 10,
+    },
+    socialButton: {
+        flex: 1,
+        height: 44,
+        borderRadius: 10,
+        borderWidth: 1.2,
+        borderColor: '#B7C4B2',
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+    },
+    socialText: {
+        color: '#10120F',
         fontSize: 14,
+        lineHeight: 18,
+        fontWeight: '600',
+    },
+    footer: {
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        backgroundColor: '#F8F8F5',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 5,
+        flexWrap: 'wrap',
+    },
+    footerText: {
+        color: '#4D554B',
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: '400',
+    },
+    footerLink: {
+        color: '#00460E',
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: '800',
     },
 });

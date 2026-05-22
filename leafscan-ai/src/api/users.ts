@@ -15,6 +15,7 @@ function normalizeUser(raw: any): AuthUser {
     email: raw.email || '',
     phone: raw.phone || undefined,
     avatar: raw.avatar || undefined,
+    role: raw.role || 'farmer',
     createdAt: raw.created_at || raw.createdAt || undefined,
   };
 }

@@ -6,15 +6,19 @@ import { theme } from '../../theme/theme';
 interface SettingsSectionProps {
   notifications: boolean;
   autoSaveScanImages: boolean;
+  darkMode: boolean;
   language: 'vi' | 'en';
   scanQuality: 'normal' | 'high' | 'ultra';
   cameraPermissionLabel: string;
   onToggleNotifications: () => void;
   onToggleAutoSave: () => void;
+  onToggleDarkMode: () => void;
   onLanguagePress: () => void;
   onCameraPermissionPress: () => void;
   onScanQualityPress: () => void;
   onClearCachePress: () => void;
+  onHistoryPress: () => void;
+  onUpgradePlanPress: () => void;
 }
 
 function SettingsRow({
@@ -72,15 +76,19 @@ function ToggleRow({
 export function SettingsSection({
   notifications,
   autoSaveScanImages,
+  darkMode,
   language,
   scanQuality,
   cameraPermissionLabel,
   onToggleNotifications,
   onToggleAutoSave,
+  onToggleDarkMode,
   onLanguagePress,
   onCameraPermissionPress,
   onScanQualityPress,
   onClearCachePress,
+  onHistoryPress,
+  onUpgradePlanPress,
 }: SettingsSectionProps) {
   const languageLabel = language === 'vi' ? 'Tiếng Việt' : 'English';
   const qualityLabel = scanQuality === 'ultra' ? 'Siêu cao' : scanQuality === 'high' ? 'Cao' : 'Tiêu chuẩn';
@@ -88,11 +96,19 @@ export function SettingsSection({
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Cài đặt</Text>
+      <SettingsRow icon="time-outline" label="Lịch sử quét" onPress={onHistoryPress} />
+      <SettingsRow icon="diamond-outline" label="Gói quét AI" onPress={onUpgradePlanPress} />
       <ToggleRow
         icon="notifications-outline"
         label="Thông báo"
         value={notifications}
         onToggle={onToggleNotifications}
+      />
+      <ToggleRow
+        icon="moon-outline"
+        label="Chế độ tối"
+        value={darkMode}
+        onToggle={onToggleDarkMode}
       />
       <ToggleRow
         icon="save-outline"

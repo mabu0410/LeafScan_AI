@@ -1,0 +1,58 @@
+# render.yaml — Cấu hình Render.com (infrastructure as code)
+# Đẩy file này lên repo, Render sẽ tự deploy khi push lên main.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: leafscan-backend
+    runtime: docker
+    plan: free  # hoặc "starter" ($7/mo) nếu cần luôn chạy
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+
+    envVars:
+      # Tự sinh SECRET_KEY random khi deploy lần đầu
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Kết nối Postgres service bên dưới
+      - key: DATABASE_URL
+        fromDatabase:
+          name: leafscan-db
+          property: connectionString
+
+      # Secrets (set thủ công trong Render dashboard)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+
+      # Optional: SMTP
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_NAME
+        value: Leaf_AI
+
+      # Optional: Google OAuth
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+      # AI thresholds (có default trong code)
+      - key: MIN_DIAGNOSIS_CONFIDENCE
+        value: "70.0"
+      - key: CORS_ORIGINS
+        value: "*"
+
+databases:
+  - name: leafscan-db
+    databaseName: leafscan
+    user: leafscan
+    plan: free  # hoặc "starter" ($7/mo) cho persistent storage

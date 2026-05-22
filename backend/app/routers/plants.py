@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.domain import User, Plant
 from app.schemas.plant import PlantCreate, PlantUpdate, PlantResponse, PlantListResponse, SinglePlantResponse
 from app.dependencies.auth import get_current_user
-from app.config import UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE, API_PUBLIC_BASE_URL
+from app.config import UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 
 router = APIRouter(prefix="/api/v1/plants", tags=["Plants"])
 
@@ -127,7 +127,7 @@ def delete_plant(plant_id: int, db: Session = Depends(get_db), current_user: Use
     db.commit()
     return {"success": True, "message": "Đã xóa cây thành công."}
 
-@router.post("/{plant_id}/image")
+@router.post("/{plant_id}/image", response_model=SinglePlantResponse)
 async def upload_plant_image(plant_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Upload ảnh mới cho cây trồng."""
     plant = db.query(Plant).filter(Plant.id == plant_id, Plant.user_id == current_user.id).first()
@@ -148,12 +148,15 @@ async def upload_plant_image(plant_id: int, file: UploadFile = File(...), db: Se
     with open(save_path, "wb") as f:
         f.write(content)
         
-    # URL ảnh cho môi trường local/LAN.
-    url = f"{API_PUBLIC_BASE_URL}/uploads/{unique_name}"
+    url = f"/uploads/{unique_name}"
     
     plant.image_url = url
     plant.thumbnail_url = url
     db.commit()
     db.refresh(plant)
-    
-    return {"success": True, "message": "Upload ảnh thành công", "data": {"image_url": url}}
+
+    return SinglePlantResponse(
+        success=True,
+        message="Upload ảnh thành công",
+        data=PlantResponse.model_validate(plant),
+    )

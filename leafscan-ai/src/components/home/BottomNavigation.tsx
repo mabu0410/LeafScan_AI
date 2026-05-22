@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { theme } from '../../theme/theme';
@@ -26,9 +26,10 @@ export function BottomNavigation({
         }}
       >
         <View style={styles.centerButtonInner}>
-          <Ionicons name="camera" size={28} color={theme.colors.white} />
+          <Ionicons name="scan-outline" size={30} color={theme.colors.white} />
         </View>
       </Pressable>
+      <Text style={styles.centerLabel}>Quét</Text>
     </Animated.View>
   );
 }
@@ -59,7 +60,7 @@ export function BottomTabIcon({
   }));
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[styles.tabIconWrap, focused && styles.tabIconWrapActive, animatedStyle]}>
       <Ionicons name={iconName} size={size} color={color} />
     </Animated.View>
   );
@@ -67,17 +68,35 @@ export function BottomTabIcon({
 
 const styles = StyleSheet.create({
   centerButton: {
-    top: -20,
+    top: -26,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 6,
   },
   centerButtonInner: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: theme.colors.primary,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: '#3EA76A',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.92)',
     ...theme.shadows.scanButton,
+  },
+  centerLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#2F6E4C',
+  },
+  tabIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconWrapActive: {
+    backgroundColor: 'rgba(92, 139, 90, 0.12)',
   },
 });

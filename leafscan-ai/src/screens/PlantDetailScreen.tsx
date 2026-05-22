@@ -8,6 +8,7 @@ import { usePlantsStore } from '../stores/plantsStore';
 import { HealthRing } from '../components/HealthRing';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { theme } from '../theme/theme';
+import { derivePlantKeyFromPlant } from '../utils/plantKey';
 
 type Props = {
     navigation: StackNavigationProp<RootStackParamList, 'PlantDetail'>;
@@ -19,6 +20,7 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
     const plants = usePlantsStore(state => state.plants);
     const deletePlant = usePlantsStore(state => state.deletePlant);
     const plant = plants.find(p => p.id === plantId);
+    const plantKey = derivePlantKeyFromPlant(plant);
 
     const severityMap: Record<string, 'healthy' | 'moderate' | 'severe'> = {
         healthy: 'healthy',
@@ -126,7 +128,15 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
 
                 {/* Actions */}
                 <View style={styles.actions}>
-                    <TouchableOpacity onPress={() => navigation.navigate('Scan')} style={styles.scanButton}>
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate('Scan', {
+                                plantId,
+                                selectedPlantKey: plantKey,
+                            })
+                        }
+                        style={styles.scanButton}
+                    >
                         <Ionicons name="camera" size={20} color={theme.colors.white} />
                         <Text style={styles.scanButtonText}>Quét ngay</Text>
                     </TouchableOpacity>

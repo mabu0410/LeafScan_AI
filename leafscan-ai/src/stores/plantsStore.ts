@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 import { Plant } from '../types';
-import { createPlantApi, deletePlantApi, fetchPlantsApi, PlantPayload, updatePlantApi } from '../api/plants';
+import {
+  createPlantApi,
+  deletePlantApi,
+  fetchPlantsApi,
+  PlantPayload,
+  updatePlantApi,
+  uploadPlantImageApi,
+} from '../api/plants';
 import { useAuthStore } from './authStore';
+
+type AddPlantPayload = PlantPayload & {
+  imageUri?: string | null;
+};
 
 interface FilterState {
   category: string;
@@ -14,7 +25,7 @@ interface PlantsState {
   plants: Plant[];
   loading: boolean;
   loadPlants: () => Promise<void>;
-  addPlant: (plant: PlantPayload) => Promise<void>;
+  addPlant: (plant: AddPlantPayload) => Promise<void>;
   updatePlant: (id: string, data: Partial<PlantPayload>) => Promise<void>;
   deletePlant: (id: string) => Promise<void>;
   getFilteredPlants: (filter: FilterState) => Plant[];
@@ -37,8 +48,12 @@ export const usePlantsStore = create<PlantsState>()((set, get) => ({
   addPlant: async (plant) => {
     const token = useAuthStore.getState().accessToken;
     if (!token) return;
-    const created = await createPlantApi(token, plant);
-    set((state) => ({ plants: [created, ...state.plants] }));
+    const { imageUri, ...payload } = plant;
+    const created = await createPlantApi(token, payload);
+    const finalPlant = imageUri
+      ? await uploadPlantImageApi(token, created.id, imageUri)
+      : created;
+    set((state) => ({ plants: [finalPlant, ...state.plants] }));
   },
   updatePlant: async (id, data) => {
     const token = useAuthStore.getState().accessToken;

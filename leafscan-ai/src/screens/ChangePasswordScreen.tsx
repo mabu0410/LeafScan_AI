@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +15,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../types';
 import { theme } from '../theme/theme';
+import { changePasswordApi } from '../api/account';
+import { useAuthStore } from '../stores/authStore';
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, 'ChangePassword'>;
@@ -23,11 +26,28 @@ export default function ChangePasswordScreen({ navigation }: Props) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const accessToken = useAuthStore(state => state.accessToken);
 
   const isValid =
     currentPassword.length >= 6 &&
     newPassword.length >= 8 &&
     confirmPassword === newPassword;
+
+  const handleSubmit = async () => {
+    if (!isValid || !accessToken) return;
+    setLoading(true);
+    try {
+      await changePasswordApi(accessToken, currentPassword, newPassword);
+      Alert.alert('Thành công', 'Mật khẩu đã được cập nhật.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.message || 'Đổi mật khẩu thất bại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -74,11 +94,15 @@ export default function ChangePasswordScreen({ navigation }: Props) {
           />
 
           <Pressable
-            disabled={!isValid}
-            onPress={() => Alert.alert('Thông báo', 'API đổi mật khẩu sẽ được nối ở bước backend tiếp theo.')}
-            style={[styles.submitButton, !isValid && styles.submitButtonDisabled]}
+            disabled={!isValid || loading}
+            onPress={handleSubmit}
+            style={[styles.submitButton, (!isValid || loading) && styles.submitButtonDisabled]}
           >
-            <Text style={styles.submitText}>Cập nhật mật khẩu</Text>
+            {loading ? (
+              <ActivityIndicator color={theme.colors.white} size="small" />
+            ) : (
+              <Text style={styles.submitText}>Cập nhật mật khẩu</Text>
+            )}
           </Pressable>
         </View>
       </KeyboardAvoidingView>

@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   phone?: string;
   avatar?: string;
+  role?: 'farmer' | 'partner' | string;
   createdAt?: string;
 }
 
@@ -25,6 +26,7 @@ function mapAuthData(payload: any): AuthResult {
       email: payload.user.email,
       phone: payload.user.phone || undefined,
       avatar: payload.user.avatar || undefined,
+      role: payload.user.role || 'farmer',
       createdAt: payload.user.created_at || undefined,
     },
   };
@@ -41,10 +43,16 @@ export async function loginApi(email: string, password: string): Promise<AuthRes
   return mapAuthData(response.data);
 }
 
-export async function registerApi(name: string, email: string, password: string): Promise<AuthResult> {
+export async function registerApi(
+  name: string,
+  email: string,
+  password: string,
+  phone?: string,
+  role: 'farmer' | 'partner' = 'farmer'
+): Promise<AuthResult> {
   const response = await requestJson<any>('/auth/register', {
     method: 'POST',
-    body: { name, email, password },
+    body: { name, email, password, phone, role },
   });
   if (!response.success || !response.data) {
     throw new Error(response.message || 'Đăng ký thất bại');
@@ -63,6 +71,7 @@ export async function meApi(token: string): Promise<AuthUser> {
     email: response.data.user.email,
     phone: response.data.user.phone || undefined,
     avatar: response.data.user.avatar || undefined,
+    role: response.data.user.role || 'farmer',
     createdAt: response.data.user.created_at || undefined,
   };
 }

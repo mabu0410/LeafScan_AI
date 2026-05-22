@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../types';
+import { PartnerProduct, RootStackParamList } from '../types';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { HealthRing } from '../components/HealthRing';
 import { theme } from '../theme/theme';
+import { listMarketplaceProductsApi } from '../api/marketplace';
 
 type Props = {
     navigation: StackNavigationProp<RootStackParamList, 'Result'>;
@@ -18,10 +19,55 @@ const TABS = [
     { id: 'treatment', label: 'Điều trị', icon: 'medkit-outline' as const },
     { id: 'prevention', label: 'Phòng ngừa', icon: 'shield-checkmark-outline' as const },
 ];
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80';
 
 export default function ResultScreen({ navigation, route }: Props) {
-    const { result: disease } = route.params;
+    const disease = route.params?.result;
     const [activeTab, setActiveTab] = useState<'overview' | 'treatment' | 'prevention'>('overview');
+    const [recommendedProducts, setRecommendedProducts] = useState<PartnerProduct[]>([]);
+    const hasValidResult = Boolean(disease && disease.success !== false && disease.id && disease.name);
+    const scanImageUri = disease?.imageUri || disease?.uploadedImageUrl;
+    const mainImageUri = scanImageUri || disease?.image || PLACEHOLDER_IMAGE;
+    const referenceImageUri = disease?.referenceImage || disease?.image;
+    const showReferenceImage = Boolean(referenceImageUri && referenceImageUri !== mainImageUri);
+
+    useEffect(() => {
+        if (!disease) {
+            return;
+        }
+        console.log('[ResultScreen] imageUri', {
+            imageUri: disease.imageUri,
+            uploadedImageUrl: disease.uploadedImageUrl,
+            referenceImage: referenceImageUri,
+            resolvedMainImage: mainImageUri,
+        });
+    }, [disease, referenceImageUri, mainImageUri]);
+
+    useEffect(() => {
+        if (!disease?.diseaseKey) {
+            setRecommendedProducts([]);
+            return;
+        }
+        listMarketplaceProductsApi({ diseaseKey: disease.diseaseKey })
+            .then((items) => setRecommendedProducts(items.slice(0, 3)))
+            .catch(() => setRecommendedProducts([]));
+    }, [disease?.diseaseKey]);
+
+    if (!disease || !hasValidResult) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Ionicons name="alert-circle-outline" size={56} color={theme.colors.textMuted} />
+                <Text style={styles.emptyTitle}>Không có kết quả hợp lệ</Text>
+                <Text style={styles.emptyText}>
+                    Ảnh vừa quét chưa đủ điều kiện để nhận diện bệnh. Vui lòng quay lại và quét lại lá cây rõ hơn.
+                </Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('Scan')}>
+                    <Text style={styles.emptyButtonText}>Quay lại quét</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
     const treatmentSteps = disease.treatmentPlan?.length ? disease.treatmentPlan : disease.treatment;
 
     const stageLabelMap: Record<string, string> = {
@@ -72,7 +118,13 @@ export default function ResultScreen({ navigation, route }: Props) {
                 </View>
 
                 {/* Image */}
-                <Image source={{ uri: disease.image }} style={styles.image} />
+                <Image source={{ uri: mainImageUri }} style={styles.image} />
+                {showReferenceImage && (
+                    <View style={styles.referenceCard}>
+                        <Text style={styles.referenceTitle}>Ảnh tham khảo</Text>
+                        <Image source={{ uri: referenceImageUri }} style={styles.referenceImage} />
+                    </View>
+                )}
 
                 {/* Tabs */}
                 <View style={styles.tabRow}>
@@ -129,6 +181,35 @@ export default function ResultScreen({ navigation, route }: Props) {
                     </View>
                 )}
 
+                <View style={styles.productSection}>
+                    <View style={styles.productSectionHeader}>
+                        <Text style={styles.sectionTitle}>Sản phẩm liên quan</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Marketplace', { diseaseKey: disease.diseaseKey })}>
+                            <Text style={styles.viewProductsText}>Xem thêm</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {recommendedProducts.length === 0 ? (
+                        <Text style={styles.bodyText}>Chưa có sản phẩm đại lý phù hợp với kết quả này.</Text>
+                    ) : (
+                        recommendedProducts.map((product) => (
+                            <TouchableOpacity
+                                key={product.id}
+                                style={styles.productCard}
+                                onPress={() => navigation.navigate('PartnerProductDetail', { product })}
+                            >
+                                <View style={styles.productIcon}>
+                                    <Ionicons name="storefront-outline" size={17} color={theme.colors.primary} />
+                                </View>
+                                <View style={styles.productInfo}>
+                                    <Text numberOfLines={1} style={styles.productName}>{product.name}</Text>
+                                    <Text numberOfLines={1} style={styles.productPartner}>{product.partnerName || 'Đại lý LeafScan'}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={17} color={theme.colors.textMuted} />
+                            </TouchableOpacity>
+                        ))
+                    )}
+                </View>
+
                 {!!disease.safetyNotice && (
                     <View style={styles.noticeCard}>
                         <Ionicons name="warning-outline" size={18} color={theme.colors.severe} />
@@ -154,6 +235,36 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.bg,
+    },
+    emptyContainer: {
+        flex: 1,
+        backgroundColor: theme.colors.bg,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        gap: 12,
+    },
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: theme.colors.textPrimary,
+    },
+    emptyText: {
+        fontSize: 14,
+        lineHeight: 22,
+        textAlign: 'center',
+        color: theme.colors.textSecondary,
+    },
+    emptyButton: {
+        marginTop: 8,
+        backgroundColor: theme.colors.primary,
+        borderRadius: 10,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+    },
+    emptyButtonText: {
+        color: theme.colors.white,
+        fontWeight: '600',
     },
     header: {
         flexDirection: 'row',
@@ -230,6 +341,26 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         resizeMode: 'cover',
         marginBottom: 16,
+    },
+    referenceCard: {
+        backgroundColor: theme.colors.bgCard,
+        borderRadius: 12,
+        borderWidth: 0.5,
+        borderColor: theme.colors.border,
+        padding: 12,
+        marginBottom: 16,
+    },
+    referenceTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: theme.colors.textSecondary,
+        marginBottom: 8,
+    },
+    referenceImage: {
+        width: '100%',
+        height: 140,
+        borderRadius: 10,
+        resizeMode: 'cover',
     },
     tabRow: {
         flexDirection: 'row',
@@ -319,6 +450,55 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: theme.colors.textSecondary,
         lineHeight: 20,
+    },
+    productSection: {
+        marginTop: 20,
+        gap: 10,
+    },
+    productSectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    viewProductsText: {
+        color: theme.colors.primary,
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    productCard: {
+        minHeight: 64,
+        borderRadius: 8,
+        padding: 10,
+        backgroundColor: theme.colors.bgCard,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    productIcon: {
+        width: 38,
+        height: 38,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.primaryPale,
+    },
+    productInfo: {
+        flex: 1,
+        minWidth: 0,
+    },
+    productName: {
+        color: theme.colors.textPrimary,
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    productPartner: {
+        marginTop: 3,
+        color: theme.colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '600',
     },
     noticeCard: {
         marginTop: 20,

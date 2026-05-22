@@ -1,6 +1,6 @@
 import { API_BASE_URL, API_V1_URL } from './config';
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface RequestOptions {
   method?: HttpMethod;
@@ -52,7 +52,13 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   const maybeJson = await tryParseJson(response);
   if (!response.ok) {
     const detail = (maybeJson as any)?.detail || `HTTP ${response.status}`;
-    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    const error = new Error(typeof detail === 'string' ? detail : detail?.message || JSON.stringify(detail)) as Error & {
+      status?: number;
+      detail?: unknown;
+    };
+    error.status = response.status;
+    error.detail = detail;
+    throw error;
   }
   return maybeJson as T;
 }

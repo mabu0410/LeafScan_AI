@@ -33,10 +33,11 @@ npm install
 
 # 2. Cấu hình API backend
 cp .env.example .env
-# sửa EXPO_PUBLIC_API_BASE_URL theo máy chạy backend
+# dùng auto cho Expo LAN, hoặc sửa thành http://<your-lan-ip>:8000
+EXPO_PUBLIC_API_BASE_URL=auto
 
 # 3. Chạy ứng dụng
-npx expo start
+npx expo start --host lan -c
 
 # 4. Build
 npm run build            # export đa nền tảng (static bundle)
@@ -44,3 +45,12 @@ npm run build:web        # export web
 npm run build:android    # EAS Android build
 npm run build:ios        # EAS iOS build
 ```
+
+## Giới hạn nhận diện hiện tại
+
+- App đang dùng model PlantVillage 38 class ở backend.
+- Trước khi quét, người dùng cần chọn loại cây để giảm ép nhãn sai.
+- App chỉ hiển thị kết quả khi backend trả `success=true`.
+- Không hỗ trợ nhận diện riêng `Strawberry Leaf Spot`; hiện chỉ có:
+  - `Strawberry___Leaf_scorch`
+  - `Strawberry___healthy`

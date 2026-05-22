@@ -1,5 +1,5 @@
 # ──────────────────────────────
-# OS generated files
+# OS files
 # ──────────────────────────────
 .DS_Store
 .DS_Store?
@@ -11,7 +11,7 @@ Thumbs.db
 Thumbs.db:encryptable
 
 # ──────────────────────────────
-# IDEs and Editors
+# Editors / IDEs
 # ──────────────────────────────
 .idea/
 .vscode/
@@ -32,8 +32,69 @@ Thumbs.db:encryptable
 *.tar
 *.zip
 
-# ignore notebook chứa token
-backend/training/train_plantvillage.ipynb
+# ──────────────────────────────
+# Python
+# ──────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyc
+.venv/
+venv/
+env/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
 
-# ignore model nặng
+# ──────────────────────────────
+# Node / Expo
+# ──────────────────────────────
+node_modules/
+leafscan-ai/dist/
+leafscan-ai/.expo/
+leafscan-ai/web-build/
+
+# ──────────────────────────────
+# Secrets / env
+# ──────────────────────────────
+backend/.env
+backend/.env.*
+!backend/.env.example
+leafscan-ai/.env
+leafscan-ai/.env.*
+!leafscan-ai/.env.example
+
+# ──────────────────────────────
+# Runtime artifacts
+# ──────────────────────────────
+backend/leafscan.db
+backend/*.db
+backend/*.sqlite3
+backend/*.log
+backend/app/uploads/*
+!backend/app/uploads/.gitkeep
+
+# ──────────────────────────────
+# Heavy model weights / personal files
+# ──────────────────────────────
 backend/app/models/efficientnetv2s_plantvillage.onnx
+backend/app/models/best_model.pth
+backend/app/models/*.pth
+backend/training/train_plantvillage.ipynb
+lenh.md
+.codex
+
+# ──────────────────────────────
+# Test artifacts (local only)
+# ──────────────────────────────
+backend/test_results/
+backend/test_images/plantvillage_test_0/
+backend/app/data/embedding_cache.json
+
+# ──────────────────────────────
+# Retain explicitly (defensive)
+# ──────────────────────────────
+!backend/app/data/disease_db.json
+backend/app/models/*.pth
+*.pth

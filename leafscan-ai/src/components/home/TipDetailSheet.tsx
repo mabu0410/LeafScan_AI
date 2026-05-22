@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   Extrapolation,
@@ -44,48 +44,66 @@ export function TipDetailSheet({ visible, tip, onClose }: TipDetailSheetProps) {
   }));
 
   return (
-    <View pointerEvents={visible ? 'auto' : 'none'} style={StyleSheet.absoluteFillObject}>
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-      </Animated.View>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalRoot}>
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        </Animated.View>
 
-      <Animated.View style={[styles.sheet, sheetStyle, { paddingBottom: Math.max(18, insets.bottom + 12) }]}>
-        <View style={styles.handle} />
-        <View style={styles.header}>
-          <Text style={styles.title}>{tip?.title || 'Mẹo chăm sóc'}</Text>
-          <Pressable onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={18} color={theme.colors.textPrimary} />
-          </Pressable>
-        </View>
-
-        <View style={styles.metaRow}>
-          <View style={styles.metaTag}>
-            <Text style={styles.metaTagText}>{tip?.category || 'Chăm sóc cơ bản'}</Text>
+        <Animated.View style={[styles.sheet, sheetStyle, { paddingBottom: Math.max(18, insets.bottom + 14) }]}>
+          <View style={styles.handle} />
+          <View style={styles.header}>
+            <Text style={styles.title}>{tip?.title || 'Mẹo chăm sóc'}</Text>
+            <Pressable onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={18} color={theme.colors.textPrimary} />
+            </Pressable>
           </View>
-        </View>
 
-        <Text style={styles.contentText}>{tip?.content || ''}</Text>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cây phù hợp</Text>
-          <View style={styles.chipsWrap}>
-            {(tip?.suitablePlants || []).map((plant) => (
-              <View key={plant} style={styles.plantChip}>
-                <Text style={styles.plantChipText}>{plant}</Text>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.sheetContent}
+          >
+            <View style={styles.metaRow}>
+              <View style={styles.metaTag}>
+                <Text style={styles.metaTagText}>{tip?.category || 'Chăm sóc cơ bản'}</Text>
               </View>
-            ))}
-          </View>
-        </View>
+            </View>
 
-        <Pressable onPress={onClose} style={({ pressed }) => [styles.doneButton, pressed && styles.doneButtonPressed]}>
-          <Text style={styles.doneButtonText}>Đã hiểu</Text>
-        </Pressable>
-      </Animated.View>
-    </View>
+            <Text style={styles.contentText}>{tip?.content || ''}</Text>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Cây phù hợp</Text>
+              <View style={styles.chipsWrap}>
+                {(tip?.suitablePlants || []).map((plant) => (
+                  <View key={plant} style={styles.plantChip}>
+                    <Text style={styles.plantChipText}>{plant}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          <Pressable onPress={onClose} style={({ pressed }) => [styles.doneButton, pressed && styles.doneButtonPressed]}>
+            <Text style={styles.doneButtonText}>Đã hiểu</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalRoot: {
+    flex: 1,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.32)',
@@ -102,6 +120,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderWidth: 1,
     borderColor: '#E8E3DC',
+    maxHeight: '78%',
   },
   handle: {
     alignSelf: 'center',
@@ -136,6 +155,9 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     marginBottom: 10,
+  },
+  sheetContent: {
+    paddingBottom: 2,
   },
   metaTag: {
     alignSelf: 'flex-start',

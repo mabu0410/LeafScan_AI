@@ -19,7 +19,9 @@ export interface Plant {
 }
 
 export interface Disease {
+  success?: boolean;
   id: string;
+  diseaseKey?: string;
   name: string;
   severity: DiseaseSeverity;
   confidence: number;
@@ -33,6 +35,9 @@ export interface Disease {
   prevention: string[];
   affectedArea: number;
   image: string;
+  imageUri?: string;
+  uploadedImageUrl?: string;
+  referenceImage?: string;
   predictedStage?: DiseaseStage;
   forecastStage7d?: DiseaseStage;
   forecastConfidence?: number;
@@ -62,6 +67,110 @@ export interface DiseaseLibraryItem {
   image: string;
 }
 
+export interface PartnerMembership {
+  id: string;
+  status: string;
+  priceVnd: number;
+  durationDays: number;
+  maxActiveProducts: number;
+  startedAt: string;
+  expiresAt: string;
+}
+
+export interface PartnerStore {
+  id: string;
+  userId?: string;
+  companyName: string;
+  storeName?: string;
+  description?: string;
+  address?: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  contactEmail: string;
+  phone: string;
+  businessLicense: string;
+  businessLicenseFileUrl?: string;
+  representativeName?: string;
+  representativeRole?: string;
+  serviceArea?: string;
+  mainProducts?: string;
+  advertisingCommitmentAccepted?: boolean;
+  advertisingCommitmentAt?: string;
+  productCategories: string[];
+  websiteUrl?: string;
+  contactUrl?: string;
+  status: 'pending_review' | 'active' | 'suspended' | 'rejected' | string;
+  rejectionReason?: string;
+  activeMembership?: PartnerMembership;
+  activeProductCount: number;
+  createdAt: string;
+}
+
+export interface PartnerProduct {
+  id: string;
+  partnerId: string;
+  partnerName?: string;
+  partnerStatus?: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  priceRange?: string;
+  targetDiseases: string[];
+  targetCategories: string[];
+  productUrl?: string;
+  isActive: boolean;
+  moderationStatus: 'pending_review' | 'approved' | 'rejected' | string;
+  rejectionReason?: string;
+  createdAt: string;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  partnerId: string;
+  provider: string;
+  txnRef: string;
+  amountVnd: number;
+  status: string;
+  paymentUrl?: string;
+  vnpTransactionNo?: string;
+  providerResponseCode?: string;
+  providerTransactionStatus?: string;
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+}
+
+export type UserSubscriptionTier = 'free' | 'personal' | 'pro' | string;
+export type UserPlanKey = 'personal_monthly' | 'personal_yearly' | 'pro_monthly' | 'pro_yearly';
+
+export interface SubscriptionStatus {
+  tier: UserSubscriptionTier;
+  remainingScans: number;
+  dailyScanLimit: number;
+  usedScansToday: number;
+  expiresAt?: string;
+}
+
+export interface UserPaymentTransaction {
+  id: string;
+  userId: string;
+  provider: string;
+  txnRef: string;
+  planKey: string;
+  tier: UserSubscriptionTier;
+  amountVnd: number;
+  durationDays: number;
+  dailyScanLimit: number;
+  status: string;
+  paymentUrl?: string;
+  vnpTransactionNo?: string;
+  providerResponseCode?: string;
+  providerTransactionStatus?: string;
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+}
+
 // Navigation Types
 export type RootStackParamList = {
   Splash: undefined;
@@ -70,7 +179,7 @@ export type RootStackParamList = {
   Register: undefined;
   ForgotPassword: undefined;
   MainTabs: undefined;
-  Scan: undefined;
+  Scan: { plantId?: string; selectedPlantKey?: string } | undefined;
   Result: { result: Disease };
   Chat: { disease: Disease };
   DiseaseDetail: { diseaseId: string };
@@ -80,12 +189,21 @@ export type RootStackParamList = {
   EditProfile: undefined;
   ChangePassword: undefined;
   Search: undefined;
+  History: undefined;
+  UpgradePlan: undefined;
+  Marketplace: { diseaseKey?: string; category?: string } | undefined;
+  PartnerStore: { partnerId: string };
+  PartnerProductDetail: { product: PartnerProduct };
+  PartnerChannel: undefined;
+  AdminModeration: undefined;
+  PrivacyPolicy: undefined;
+  TermsOfUse: undefined;
 };
 
 export type BottomTabParamList = {
   Home: undefined;
   Garden: undefined;
   ScanTab: undefined;
-  History: undefined;
+  MarketplaceTab: undefined;
   Profile: undefined;
 };

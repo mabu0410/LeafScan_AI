@@ -127,6 +127,7 @@ export default function AddPlantScreen({ navigation }: Props) {
         category: category.trim() || undefined,
         location: location.trim() || undefined,
         notes: note.trim() || undefined,
+        imageUri: image || undefined,
       });
 
       setShowSuccessToast(true);
