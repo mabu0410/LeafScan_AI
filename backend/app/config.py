@@ -3,6 +3,13 @@ Cấu hình chung cho Backend LeafScan AI.
 Tập trung tất cả hằng số và cấu hình tại đây để dễ quản lý.
 """
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
 
 
 def _env_or_default(key: str, default: str) -> str:
@@ -121,6 +128,22 @@ VNPAY_PAYMENT_URL: str = _env_or_default(
 )
 VNPAY_RETURN_URL: str = os.getenv("VNPAY_RETURN_URL", "").strip()
 VNPAY_IPN_URL: str = os.getenv("VNPAY_IPN_URL", "").strip()
+
+# ──────────────────────────────────────────────
+# Push Notifications
+# ──────────────────────────────────────────────
+
+EXPO_PUSH_URL: str = _env_or_default("EXPO_PUSH_URL", "https://exp.host/--/api/v2/push/send")
+NOTIFICATION_SCHEDULER_ENABLED: bool = os.getenv("NOTIFICATION_SCHEDULER_ENABLED", "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+NOTIFICATION_SCHEDULER_INTERVAL_SECONDS: int = int(os.getenv("NOTIFICATION_SCHEDULER_INTERVAL_SECONDS", "300"))
+NOTIFICATION_SCHEDULER_INITIAL_DELAY_SECONDS: int = int(os.getenv("NOTIFICATION_SCHEDULER_INITIAL_DELAY_SECONDS", "5"))
+NOTIFICATION_TASK_LOOKAHEAD_MINUTES: int = int(os.getenv("NOTIFICATION_TASK_LOOKAHEAD_MINUTES", "30"))
+NOTIFICATION_TASK_PAST_DUE_GRACE_MINUTES: int = int(os.getenv("NOTIFICATION_TASK_PAST_DUE_GRACE_MINUTES", "15"))
 
 # ──────────────────────────────────────────────
 # Home Dashboard / Weather Configuration

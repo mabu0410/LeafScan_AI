@@ -193,6 +193,54 @@ class CareLog(Base):
     plant = relationship("Plant", backref="care_logs")
 
 
+class PushToken(Base):
+    """Expo push token của thiết bị người dùng."""
+    __tablename__ = "push_tokens"
+    __table_args__ = (
+        Index("ix_push_tokens_user_active", "user_id", "is_active"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    platform = Column(String(20), nullable=True)
+    device_id = Column(String(128), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    last_registered_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user = relationship("User", backref="push_tokens")
+
+
+class NotificationDelivery(Base):
+    """Log gửi thông báo để tránh gửi trùng các reminder tự động."""
+    __tablename__ = "notification_deliveries"
+    __table_args__ = (
+        Index("ix_notification_deliveries_user_status", "user_id", "status"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    push_token_id = Column(Integer, ForeignKey("push_tokens.id", ondelete="SET NULL"), nullable=True)
+    event_key = Column(String(255), unique=True, nullable=True, index=True)
+    title = Column(String(255), nullable=False)
+    body = Column(Text, nullable=False)
+    data = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    status = Column(String(20), nullable=False, default="pending")  # pending | sent | failed | skipped
+    provider_response = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", backref="notification_deliveries")
+    push_token = relationship("PushToken")
+
+
 # ══════════════════════════════════════════════════════════════
 # Subscription & Partners Models
 # ══════════════════════════════════════════════════════════════
