@@ -88,4 +88,4 @@ def build_vnpay_payment_url(
 
 
 def get_vnpay_ipn_url() -> str:
-    return VNPAY_IPN_URL or f"{PUBLIC_BASE_URL}/api/v1/partner-payments/vnpay/ipn"
+    return VNPAY_IPN_URL or f"{PUBLIC_BASE_URL}/api/v1/vnpay/ipn"

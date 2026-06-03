@@ -19,6 +19,7 @@ from app.config import (
     PARTNER_MONTHLY_PLAN_PRICE_VND,
     PARTNER_YEARLY_PLAN_DURATION_DAYS,
     PARTNER_YEARLY_PLAN_PRICE_VND,
+    PUBLIC_BASE_URL,
     UPLOAD_DIR,
 )
 from app.database import get_db
@@ -608,6 +609,7 @@ def create_vnpay_payment(
             amount_vnd=plan["price_vnd"],
             order_info=f"Thanh toan goi {plan_type} dai ly LeafScan {txn_ref}",
             client_ip=_client_ip(request),
+            return_url=f"{PUBLIC_BASE_URL}/api/v1/partner-payments/vnpay/return",
         )
     except ValueError as exc:
         db.rollback()

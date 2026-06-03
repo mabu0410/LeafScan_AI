@@ -14,8 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import CORS_ORIGINS, UPLOAD_DIR
-from app.routers import diagnosis, auth, plants, history, chat, diseases, care_tips, home, partners, subscriptions
+from app.routers import diagnosis, auth, users, plants, history, chat, diseases, care_tips, home, partners, subscriptions, notifications, vnpay
 from app.database import init_db
+from app.services.notification_service import start_notification_scheduler, stop_notification_scheduler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,6 +87,7 @@ async def request_log_middleware(request: Request, call_next):
 # ──────────────────────────────────────────────
 
 app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(plants.router)
 app.include_router(history.router)
 app.include_router(diseases.router)
@@ -95,6 +97,8 @@ app.include_router(diagnosis.router)
 app.include_router(chat.router)
 app.include_router(partners.router)
 app.include_router(subscriptions.router)
+app.include_router(notifications.router)
+app.include_router(vnpay.router)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
@@ -117,3 +121,9 @@ async def root():
 def on_startup() -> None:
     """Khởi tạo schema cho môi trường local demo."""
     init_db()
+    start_notification_scheduler()
+
+
+@app.on_event("shutdown")
+def on_shutdown() -> None:
+    stop_notification_scheduler()

@@ -8,7 +8,8 @@ services:
     runtime: docker
     plan: free  # hoặc "starter" ($7/mo) nếu cần luôn chạy
     rootDir: backend
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
     healthCheckPath: /api/v1/health
     autoDeploy: true
 
@@ -28,6 +29,10 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.5-flash
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: ADMIN_EMAILS
+        value: admin@example.com
 
       # Optional: SMTP
       - key: SMTP_HOST
@@ -45,9 +50,63 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
 
+      # VNPAY sandbox/production credentials (set thủ công trong Render dashboard)
+      - key: VNPAY_TMN_CODE
+        sync: false
+      - key: VNPAY_HASH_SECRET
+        sync: false
+      - key: VNPAY_PAYMENT_URL
+        value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      - key: VNPAY_RETURN_URL
+        sync: false
+      - key: VNPAY_IPN_URL
+        sync: false
+
+      # Partner marketplace plan
+      - key: PARTNER_MONTHLY_PLAN_PRICE_VND
+        value: "99000"
+      - key: PARTNER_MONTHLY_PLAN_DURATION_DAYS
+        value: "30"
+      - key: PARTNER_YEARLY_PLAN_PRICE_VND
+        value: "990000"
+      - key: PARTNER_YEARLY_PLAN_DURATION_DAYS
+        value: "365"
+      - key: PARTNER_PLAN_MAX_ACTIVE_PRODUCTS
+        value: "20"
+
+      # User subscription / scan quota plan
+      - key: FREE_DAILY_SCAN_LIMIT
+        value: "5"
+      - key: PERSONAL_DAILY_SCAN_LIMIT
+        value: "30"
+      - key: PRO_DAILY_SCAN_LIMIT
+        value: "100"
+      - key: PERSONAL_MONTHLY_PRICE_VND
+        value: "39000"
+      - key: PERSONAL_YEARLY_PRICE_VND
+        value: "390000"
+      - key: PRO_MONTHLY_PRICE_VND
+        value: "99000"
+      - key: PRO_YEARLY_PRICE_VND
+        value: "990000"
+      - key: USER_MONTHLY_PLAN_DURATION_DAYS
+        value: "30"
+      - key: USER_YEARLY_PLAN_DURATION_DAYS
+        value: "365"
+
       # AI thresholds (có default trong code)
       - key: MIN_DIAGNOSIS_CONFIDENCE
         value: "70.0"
+      - key: MIN_HEALTHY_CLASS_CONFIDENCE
+        value: "80.0"
+      - key: MIN_TOP1_MARGIN
+        value: "8.0"
+      - key: PLANT_SCOPE_MIN_TOP1_CONFIDENCE
+        value: "0.75"
+      - key: PLANT_SCOPE_MIN_MARGIN
+        value: "0.20"
+      - key: PLANT_SCOPE_MIN_TOP5_SAME_PLANT_COUNT
+        value: "2"
       - key: CORS_ORIGINS
         value: "*"
 

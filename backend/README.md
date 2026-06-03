@@ -73,9 +73,62 @@ make run                         # equivalent to: python -m uvicorn app.main:app
 
 Open Swagger UI at http://localhost:8000/docs.
 
+For local demo data, run:
+
+```bash
+python database/run_seeds.py
+```
+
+The demo accounts created by seeds are:
+
+| Role | Login | Password | Email |
+| ---- | ----- | -------- | ----- |
+| Admin | `admin` | `admin123` | `admin@example.com` |
+| Partner | `doitac` | `doitac123` | `doitac@example.com` |
+
+Admin endpoints still require `ADMIN_EMAILS` to include `admin@example.com`.
+
 > **Note — secret file discipline.** `backend/.env` is gitignored. Never commit
 > it. If you rotate a key or DB password, update `backend/.env` locally and
 > do **not** touch `.env.example`.
+
+## Cloud deploy
+
+### Render
+
+The backend already includes [`render.yaml`](./render.yaml). Create a Render
+Blueprint from this repository and use `backend/render.yaml` as the Blueprint
+file path. Render will create the web service and Postgres database, then
+redeploy automatically when you push to the linked branch.
+
+Set the following secret values in the Render dashboard before using production
+flows:
+
+- `PUBLIC_BASE_URL` = your Render backend URL, for example
+  `https://leafscan-backend.onrender.com`
+- `GEMINI_API_KEY`
+- `SMTP_USER`, `SMTP_PASSWORD`
+- `GOOGLE_CLIENT_ID`
+- `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`
+- `VNPAY_IPN_URL` = `${PUBLIC_BASE_URL}/api/v1/vnpay/ipn`
+
+VNPAY must receive a public IPN URL. Do not use a LAN URL such as
+`http://192.168.x.x:8000` for deployed payment callbacks.
+The app has separate return URLs for user subscriptions and partner plans, but
+both payment flows can share the public IPN URL above.
+
+### Railway
+
+Railway can also deploy this backend from GitHub. Configure the service with:
+
+- Root directory: `backend`
+- Dockerfile: `Dockerfile`
+- Postgres plugin/database attached to the service
+- The same environment variables listed above
+
+After deploy, point the mobile app to the cloud backend by setting
+`EXPO_PUBLIC_API_BASE_URL` in `leafscan-ai/.env` to the deployed backend URL,
+then restart Expo.
 
 ## API endpoints
 
@@ -86,6 +139,8 @@ Open Swagger UI at http://localhost:8000/docs.
 | POST   | `/api/v1/auth/register`               | Sign up                                                  |
 | POST   | `/api/v1/auth/login`                  | Login, returns JWT                                       |
 | GET    | `/api/v1/auth/me`                     | Current user profile                                     |
+| GET    | `/api/v1/users/me`                    | Current user profile for mobile profile flows            |
+| PUT    | `/api/v1/users/me`                    | Update current user's name, email, phone and avatar      |
 | POST   | `/api/v1/auth/change-password`        | Change password (requires current password + JWT)        |
 | POST   | `/api/v1/auth/forgot-password`        | Request OTP via email                                    |
 | POST   | `/api/v1/auth/reset-password`         | Verify OTP + set new password                            |
@@ -103,6 +158,7 @@ Open Swagger UI at http://localhost:8000/docs.
 | POST   | `/api/v1/diagnose`                    | AI diagnosis from image + stage/forecast                 |
 | POST   | `/api/v1/chat`                        | RAG+Gemini chat (non-stream)                             |
 | POST   | `/api/v1/chat/stream`                 | RAG+Gemini chat (SSE stream)                             |
+| *      | `/api/v1/admin/care-tips/*`           | Admin-only care tip management                           |
 
 ## Uploads cleanup CLI
 
