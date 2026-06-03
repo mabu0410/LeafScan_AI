@@ -8,8 +8,8 @@ services:
     runtime: docker
     plan: free  # hoặc "starter" ($7/mo) nếu cần luôn chạy
     rootDir: backend
-    dockerfilePath: backend/Dockerfile
-    dockerContext: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /api/v1/health
     autoDeploy: true
 

@@ -7,6 +7,14 @@ test_images/
 test_results/
 test_api.http
 training/
+app/uploads/*
+!app/uploads/.gitkeep
+app/models/*.onnx
+app/models/*.pth
+app/models/*.pt
+app/models/*.ckpt
+app/models/*.h5
+app/models/*.tflite
 *.db
 *.sqlite3
 *.log
