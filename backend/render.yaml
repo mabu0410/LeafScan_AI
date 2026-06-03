@@ -7,9 +7,8 @@ services:
     name: leafscan-backend
     runtime: docker
     plan: free  # hoặc "starter" ($7/mo) nếu cần luôn chạy
-    rootDir: backend
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
     healthCheckPath: /api/v1/health
     autoDeploy: true
 
