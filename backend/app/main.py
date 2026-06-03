@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import CORS_ORIGINS, UPLOAD_DIR
-from app.routers import diagnosis, auth, users, plants, history, chat, diseases, care_tips, home, partners, subscriptions, notifications, vnpay
+from app.routers import diagnosis, auth, users, plants, history, chat, diseases, care_tips, home, partners, subscriptions, notifications, vnpay, admin
 from app.database import init_db
 from app.services.notification_service import start_notification_scheduler, stop_notification_scheduler
 
@@ -99,6 +99,7 @@ app.include_router(partners.router)
 app.include_router(subscriptions.router)
 app.include_router(notifications.router)
 app.include_router(vnpay.router)
+app.include_router(admin.router)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
