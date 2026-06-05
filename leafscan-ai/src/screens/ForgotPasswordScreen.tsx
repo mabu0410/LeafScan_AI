@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { theme } from '../theme/theme';
@@ -25,6 +26,7 @@ type Props = {
 const OTP_LENGTH = 6;
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
@@ -34,16 +36,16 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   const handleSendOtp = async () => {
     if (!email.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email.');
+      Alert.alert(t('common.error'), t('auth.forgotPassword.emailRequired'));
       return;
     }
     setLoading(true);
     try {
       await forgotPasswordApi(email.trim());
-      Alert.alert('Đã gửi', 'Nếu email tồn tại, mã OTP đã được gửi. Kiểm tra hộp thư (hoặc log backend).');
+      Alert.alert(t('auth.forgotPassword.otpSentTitle'), t('auth.forgotPassword.otpSentBody'));
       setStep(2);
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Không thể gửi OTP.');
+      Alert.alert(t('common.error'), error.message || t('auth.forgotPassword.sendOtpFailed'));
     } finally {
       setLoading(false);
     }
@@ -52,21 +54,21 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   const handleReset = async () => {
     const otpString = otp.join('');
     if (otpString.length < OTP_LENGTH) {
-      Alert.alert('Lỗi', `Vui lòng nhập đủ ${OTP_LENGTH} chữ số OTP.`);
+      Alert.alert(t('common.error'), t('auth.forgotPassword.otpRequired', { count: OTP_LENGTH }));
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert('Lỗi', 'Mật khẩu mới phải có ít nhất 8 ký tự.');
+      Alert.alert(t('common.error'), t('auth.forgotPassword.passwordMin'));
       return;
     }
     setLoading(true);
     try {
       await resetPasswordApi(email.trim(), otpString, newPassword);
-      Alert.alert('Thành công', 'Mật khẩu đã được đặt lại. Vui lòng đăng nhập lại.', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      Alert.alert(t('auth.forgotPassword.resetSuccessTitle'), t('auth.forgotPassword.resetSuccessBody'), [
+        { text: t('common.ok'), onPress: () => navigation.navigate('Login') },
       ]);
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Đặt lại mật khẩu thất bại.');
+      Alert.alert(t('common.error'), error.message || t('auth.forgotPassword.resetFailed'));
     } finally {
       setLoading(false);
     }
@@ -101,15 +103,15 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           >
             <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Quên mật khẩu</Text>
+          <Text style={styles.headerTitle}>{t('auth.forgotPassword.header')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         {step === 1 ? (
           <View style={styles.stepContent}>
-            <Text style={styles.title}>Nhập email của bạn</Text>
+            <Text style={styles.title}>{t('auth.forgotPassword.enterEmailTitle')}</Text>
             <Text style={styles.subtitle}>
-              Chúng tôi sẽ gửi mã xác nhận đến email của bạn để đặt lại mật khẩu.
+              {t('auth.forgotPassword.enterEmailSubtitle')}
             </Text>
 
             <View style={styles.inputGroup}>
@@ -126,13 +128,13 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             </View>
 
             <AnimatedButton onPress={handleSendOtp} size="lg" style={styles.button} disabled={loading}>
-              {loading ? <ActivityIndicator color={theme.colors.white} size="small" /> : 'Gửi mã xác nhận'}
+              {loading ? <ActivityIndicator color={theme.colors.white} size="small" /> : t('auth.forgotPassword.sendCode')}
             </AnimatedButton>
           </View>
         ) : (
           <View style={styles.stepContent}>
-            <Text style={styles.title}>Nhập mã xác nhận</Text>
-            <Text style={styles.subtitle}>Mã {OTP_LENGTH} số đã được gửi đến {email}</Text>
+            <Text style={styles.title}>{t('auth.forgotPassword.verifyTitle')}</Text>
+            <Text style={styles.subtitle}>{t('auth.forgotPassword.codeSent', { count: OTP_LENGTH, email })}</Text>
 
             <View style={styles.otpRow}>
               {otp.map((digit, index) => (
@@ -160,7 +162,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Mật khẩu mới (tối thiểu 8 ký tự)"
+                placeholder={t('auth.forgotPassword.newPasswordPlaceholder')}
                 placeholderTextColor={theme.colors.textMuted}
                 secureTextEntry
                 value={newPassword}
@@ -169,11 +171,11 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             </View>
 
             <AnimatedButton onPress={handleReset} size="lg" style={styles.button} disabled={loading}>
-              {loading ? <ActivityIndicator color={theme.colors.white} size="small" /> : 'Đặt lại mật khẩu'}
+              {loading ? <ActivityIndicator color={theme.colors.white} size="small" /> : t('auth.forgotPassword.resetPassword')}
             </AnimatedButton>
 
             <TouchableOpacity onPress={handleSendOtp} style={styles.resendLink}>
-              <Text style={styles.resendText}>Gửi lại mã OTP</Text>
+              <Text style={styles.resendText}>{t('auth.forgotPassword.resendOtp')}</Text>
             </TouchableOpacity>
           </View>
         )}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Plant } from '../../types';
 import { theme } from '../../theme/theme';
 
@@ -9,23 +10,24 @@ interface AttentionPlantsProps {
   onPressPlant: (plantId: string) => void;
 }
 
-const STATUS_TEXT: Record<Plant['status'], string> = {
-  healthy: 'Ổn định',
-  warning: 'Cần theo dõi',
-  critical: 'Cần xử lý',
-};
-
 export function AttentionPlants({ plants, onPressPlant }: AttentionPlantsProps) {
+  const { t } = useTranslation();
+  const statusText: Record<Plant['status'], string> = {
+    healthy: t('home.attentionPlants.healthy'),
+    warning: t('home.attentionPlants.warning'),
+    critical: t('home.attentionPlants.critical'),
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Cây cần theo dõi</Text>
+        <Text style={styles.title}>{t('home.attentionPlants.title')}</Text>
       </View>
 
       {plants.length === 0 ? (
         <View style={styles.emptyCard}>
           <Ionicons name="checkmark-circle-outline" size={18} color={theme.colors.healthy} />
-          <Text style={styles.emptyText}>Không có cây cần chú ý</Text>
+          <Text style={styles.emptyText}>{t('home.attentionPlants.empty')}</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
@@ -49,9 +51,9 @@ export function AttentionPlants({ plants, onPressPlant }: AttentionPlantsProps) 
                 {plant.name}
               </Text>
               <Text style={styles.status} numberOfLines={1}>
-                {STATUS_TEXT[plant.status]}
+                {statusText[plant.status]}
               </Text>
-              <Text style={styles.meta}>Điểm khỏe: {plant.healthScore}%</Text>
+              <Text style={styles.meta}>{t('home.attentionPlants.healthScore', { score: plant.healthScore })}</Text>
             </Pressable>
           ))}
         </ScrollView>

@@ -66,6 +66,7 @@ class DiagnosisResponse(BaseModel):
     error_code: DiagnosisErrorCode | None = None
     message: str
     debug: dict[str, Any] | None = None
+    scan_id: int | None = None
     scan_image_url: str | None = None
     uploaded_image_url: str | None = None
     prediction: PredictionSummary | None = None

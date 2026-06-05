@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies.auth import get_current_user
-from app.models.domain import User
+from app.models.domain import Notification, User
 from app.schemas.notification import (
+    NotificationItemDTO,
+    NotificationItemEnvelope,
+    NotificationListData,
+    NotificationListEnvelope,
     NotificationSendEnvelope,
     NotificationSendResultDTO,
     NotificationStatusDTO,
@@ -31,6 +38,67 @@ def _status_envelope(db: Session, user_id: int, message: str = "Thành công") -
         message=message,
         data=NotificationStatusDTO(**notification_status(db, user_id=user_id)),
     )
+
+
+@router.get("", response_model=NotificationListEnvelope)
+def list_my_notifications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = (
+        db.query(Notification)
+        .filter(Notification.user_id == current_user.id)
+        .order_by(desc(Notification.created_at))
+        .limit(80)
+        .all()
+    )
+    unread_count = (
+        db.query(Notification)
+        .filter(Notification.user_id == current_user.id, Notification.read_at.is_(None))
+        .count()
+    )
+    return NotificationListEnvelope(
+        success=True,
+        message="Thành công",
+        data=NotificationListData(
+            items=[NotificationItemDTO.model_validate(row) for row in rows],
+            unread_count=int(unread_count or 0),
+        ),
+    )
+
+
+@router.patch("/{notification_id}/read", response_model=NotificationItemEnvelope)
+def mark_notification_read(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    row = (
+        db.query(Notification)
+        .filter(Notification.id == notification_id, Notification.user_id == current_user.id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Không tìm thấy thông báo.")
+    if row.read_at is None:
+        row.read_at = datetime.utcnow()
+        db.commit()
+        db.refresh(row)
+    return NotificationItemEnvelope(success=True, message="Đã đánh dấu đã đọc.", data=NotificationItemDTO.model_validate(row))
+
+
+@router.patch("/read-all", response_model=NotificationListEnvelope)
+def mark_all_notifications_read(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    now = datetime.utcnow()
+    db.query(Notification).filter(Notification.user_id == current_user.id, Notification.read_at.is_(None)).update(
+        {Notification.read_at: now},
+        synchronize_session=False,
+    )
+    db.commit()
+    return list_my_notifications(db=db, current_user=current_user)
 
 
 @router.get("/status", response_model=NotificationStatusEnvelope)

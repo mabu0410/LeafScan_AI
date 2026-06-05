@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { usePlantsStore } from '../stores/plantsStore';
 import { PLANT_CATEGORIES } from '../constants/plants';
@@ -14,7 +15,18 @@ type Props = {
     route: RouteProp<RootStackParamList, 'EditPlant'>;
 };
 
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+    veggie: 'garden.filters.vegetables',
+    fruit: 'garden.filters.fruitTrees',
+    cereal: 'garden.filters.grains',
+    herb: 'garden.filters.herbs',
+    flower: 'garden.filters.ornamentals',
+    leaf: 'garden.filters.leafy',
+    other: 'garden.filters.other',
+};
+
 export default function EditPlantScreen({ navigation, route }: Props) {
+    const { t } = useTranslation();
     const { plantId } = route.params;
     const plants = usePlantsStore(state => state.plants);
     const updatePlant = usePlantsStore(state => state.updatePlant);
@@ -39,13 +51,20 @@ export default function EditPlantScreen({ navigation, route }: Props) {
             });
             navigation.goBack();
         } catch (error: any) {
-            Alert.alert('Không thể cập nhật', error?.message || 'Vui lòng thử lại.');
+            Alert.alert(t('plant.updateFailedTitle'), error?.message || t('common.tryAgain'));
         } finally {
             setLoading(false);
         }
     };
 
-    const categories = PLANT_CATEGORIES;
+    const categories = useMemo(
+        () =>
+            PLANT_CATEGORIES.map((cat) => ({
+                ...cat,
+                displayLabel: CATEGORY_LABEL_KEYS[cat.id] ? t(CATEGORY_LABEL_KEYS[cat.id]) : cat.label,
+            })),
+        [t]
+    );
 
     return (
         <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -53,46 +72,46 @@ export default function EditPlantScreen({ navigation, route }: Props) {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Chỉnh sửa</Text>
+                <Text style={styles.headerTitle}>{t('plant.editTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Tên cây *</Text>
+                        <Text style={styles.label}>{t('plant.name')}</Text>
                         <TextInput style={styles.input} value={name} onChangeText={setName} placeholderTextColor={theme.colors.textMuted} />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Tên khoa học</Text>
+                        <Text style={styles.label}>{t('plant.latinName')}</Text>
                         <TextInput style={styles.input} value={latinName} onChangeText={setLatinName} placeholderTextColor={theme.colors.textMuted} />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Danh mục</Text>
+                        <Text style={styles.label}>{t('plant.category')}</Text>
                         <View style={styles.chipGrid}>
                             {categories.map(cat => (
                                 <TouchableOpacity key={cat.id} onPress={() => setCategory(cat.label)} style={[styles.chip, category === cat.label && styles.chipActive]}>
-                                    <Text style={[styles.chipText, category === cat.label && styles.chipTextActive]}>{cat.label}</Text>
+                                    <Text style={[styles.chipText, category === cat.label && styles.chipTextActive]}>{cat.displayLabel}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Vị trí</Text>
+                        <Text style={styles.label}>{t('plant.location')}</Text>
                         <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholderTextColor={theme.colors.textMuted} />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Ghi chú</Text>
+                        <Text style={styles.label}>{t('plant.notes')}</Text>
                         <TextInput style={[styles.input, styles.textArea]} value={notes} onChangeText={setNotes} multiline numberOfLines={4} textAlignVertical="top" placeholderTextColor={theme.colors.textMuted} />
                     </View>
                 </View>
 
                 <AnimatedButton onPress={handleSave} loading={loading} size="lg" style={styles.submitButton} disabled={!name}>
-                    Lưu thay đổi
+                    {t('plant.saveChanges')}
                 </AnimatedButton>
             </ScrollView>
         </KeyboardAvoidingView>

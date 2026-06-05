@@ -35,3 +35,26 @@ class ScanHistoryListResponse(BaseModel):
     success: bool
     data: list[ScanHistoryResponse]
     message: str
+
+
+class ScanFeedbackRequest(BaseModel):
+    feedback: str
+    note: Optional[str] = None
+
+
+class ScanFeedbackResponse(BaseModel):
+    id: int
+    scan_id: int
+    user_id: int
+    feedback: str
+    note: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ScanFeedbackEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: ScanFeedbackResponse

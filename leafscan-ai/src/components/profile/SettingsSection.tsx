@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface SettingsSectionProps {
@@ -11,6 +12,7 @@ interface SettingsSectionProps {
   scanQuality: 'normal' | 'high' | 'ultra';
   cameraPermissionLabel: string;
   onToggleNotifications: () => void;
+  onOpenNotifications: () => void;
   onToggleAutoSave: () => void;
   onToggleDarkMode: () => void;
   onLanguagePress: () => void;
@@ -81,6 +83,7 @@ export function SettingsSection({
   scanQuality,
   cameraPermissionLabel,
   onToggleNotifications,
+  onOpenNotifications,
   onToggleAutoSave,
   onToggleDarkMode,
   onLanguagePress,
@@ -90,46 +93,53 @@ export function SettingsSection({
   onHistoryPress,
   onUpgradePlanPress,
 }: SettingsSectionProps) {
-  const languageLabel = language === 'vi' ? 'Tiếng Việt' : 'English';
-  const qualityLabel = scanQuality === 'ultra' ? 'Siêu cao' : scanQuality === 'high' ? 'Cao' : 'Tiêu chuẩn';
+  const { t } = useTranslation();
+  const languageLabel = language === 'vi' ? t('profile.settings.languageVi') : t('profile.settings.languageEn');
+  const qualityLabel =
+    scanQuality === 'ultra'
+      ? t('profile.settings.qualityUltra')
+      : scanQuality === 'high'
+        ? t('profile.settings.qualityHigh')
+        : t('profile.settings.qualityNormal');
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Cài đặt</Text>
-      <SettingsRow icon="time-outline" label="Lịch sử quét" onPress={onHistoryPress} />
-      <SettingsRow icon="diamond-outline" label="Gói quét AI" onPress={onUpgradePlanPress} />
+      <Text style={styles.title}>{t('profile.settings.title')}</Text>
+      <SettingsRow icon="time-outline" label={t('profile.settings.scan_history')} onPress={onHistoryPress} />
+      <SettingsRow icon="diamond-outline" label={t('profile.settings.ai_scan_plan')} onPress={onUpgradePlanPress} />
+      <SettingsRow icon="notifications-outline" label={t('profile.settings.notifications')} value={notifications ? t('profile.settings.enabled') : t('profile.settings.disabled')} onPress={onOpenNotifications} />
       <ToggleRow
         icon="notifications-outline"
-        label="Thông báo"
+        label={t('profile.settings.push_notifications')}
         value={notifications}
         onToggle={onToggleNotifications}
       />
       <ToggleRow
         icon="moon-outline"
-        label="Chế độ tối"
+        label={t('profile.settings.dark_mode')}
         value={darkMode}
         onToggle={onToggleDarkMode}
       />
       <ToggleRow
         icon="save-outline"
-        label="Tự động lưu ảnh quét"
+        label={t('profile.settings.auto_save_scan')}
         value={autoSaveScanImages}
         onToggle={onToggleAutoSave}
       />
-      <SettingsRow icon="language-outline" label="Ngôn ngữ" value={languageLabel} onPress={onLanguagePress} />
+      <SettingsRow icon="language-outline" label={t('profile.settings.language')} value={languageLabel} onPress={onLanguagePress} />
       <SettingsRow
         icon="camera-outline"
-        label="Quyền camera"
+        label={t('profile.settings.camera_permission')}
         value={cameraPermissionLabel}
         onPress={onCameraPermissionPress}
       />
       <SettingsRow
         icon="sparkles-outline"
-        label="Chất lượng ảnh khi quét"
+        label={t('profile.settings.scan_quality')}
         value={qualityLabel}
         onPress={onScanQualityPress}
       />
-      <SettingsRow icon="trash-outline" label="Xóa bộ nhớ cache" onPress={onClearCachePress} />
+      <SettingsRow icon="trash-outline" label={t('profile.settings.clear_cache')} onPress={onClearCachePress} />
     </View>
   );
 }

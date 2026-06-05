@@ -209,7 +209,7 @@ class TestPartnerMarketplace:
         approved = _approve_partner(app_client, admin_token, partner["id"])
         assert approved["status"] == "active"
 
-    def test_product_public_visibility_requires_membership_and_approval(self, app_client, db_session):
+    def test_product_public_visibility_requires_membership_and_hides_after_rejection(self, app_client, db_session):
         disease_key = f"test_disease_{uuid.uuid4().hex[:8]}"
         _, token = _register_user(app_client)
         partner = _register_partner(app_client, token)
@@ -226,21 +226,41 @@ class TestPartnerMarketplace:
 
         _add_membership(db_session, partner["id"])
         product = _create_product(app_client, token, disease_key=disease_key)
+        assert product["moderation_status"] == "pending_review"
 
-        public_before = app_client.get(f"/api/v1/marketplace/products?disease_key={disease_key}")
-        assert public_before.status_code == 200
-        assert public_before.json()["data"] == []
+        public_pending = app_client.get(f"/api/v1/marketplace/products?disease_key={disease_key}")
+        assert public_pending.status_code == 200
+        assert any(item["id"] == product["id"] for item in public_pending.json()["data"])
 
-        approve_product = app_client.patch(
+        click_pending = app_client.post(
+            f"/api/v1/marketplace/products/{product['id']}/click",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert click_pending.status_code == 200, click_pending.text
+
+        inquiry_pending = app_client.post(
+            "/api/v1/marketplace/inquiries",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"product_id": product["id"], "name": "Nguoi mua", "message": "Can tu van san pham"},
+        )
+        assert inquiry_pending.status_code == 200, inquiry_pending.text
+
+        reject_product = app_client.patch(
             f"/api/v1/admin/products/{product['id']}/status",
             headers={"Authorization": f"Bearer {admin_token}"},
-            json={"status": "approved"},
+            json={"status": "rejected", "rejection_reason": "Noi dung chua phu hop"},
         )
-        assert approve_product.status_code == 200, approve_product.text
+        assert reject_product.status_code == 200, reject_product.text
 
-        public_after = app_client.get(f"/api/v1/marketplace/products?disease_key={disease_key}")
-        assert public_after.status_code == 200
-        assert any(item["id"] == product["id"] for item in public_after.json()["data"])
+        public_rejected = app_client.get(f"/api/v1/marketplace/products?disease_key={disease_key}")
+        assert public_rejected.status_code == 200
+        assert all(item["id"] != product["id"] for item in public_rejected.json()["data"])
+
+        click_rejected = app_client.post(
+            f"/api/v1/marketplace/products/{product['id']}/click",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert click_rejected.status_code == 404
 
     def test_active_product_limit_is_enforced(self, app_client, db_session):
         _, token = _register_user(app_client)

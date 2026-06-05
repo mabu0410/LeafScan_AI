@@ -6,6 +6,7 @@ from __future__ import annotations
 import io
 import uuid
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -29,6 +30,10 @@ def _black_png() -> bytes:
     buffer = io.BytesIO()
     Image.new("RGB", (96, 96), color=(0, 0, 0)).save(buffer, format="PNG")
     return buffer.getvalue()
+
+
+def _sample_apple_leaf() -> bytes:
+    return (Path(__file__).resolve().parent.parent / "test_images" / "1apple.JPG").read_bytes()
 
 
 def _user_id_by_email(db_session, email: str) -> int:
@@ -78,6 +83,37 @@ class TestUserScanQuota:
         status = app_client.get("/api/v1/subscription/status", headers={"Authorization": f"Bearer {token}"})
         assert status.status_code == 200
         assert status.json()["data"]["remaining_scans"] == 5
+
+    def test_valid_leaf_scan_with_selected_plant_saves_scan_and_consumes_quota(self, app_client, monkeypatch):
+        from app.routers import diagnosis as diagnosis_router
+        from app.schemas.disease import PredictionItem
+
+        def fake_predict(_image_path: str) -> list[PredictionItem]:
+            return [
+                PredictionItem(class_index=0, class_name="Apple___Apple_scab", disease_key="apple_scab", confidence=0.95),
+                PredictionItem(class_index=3, class_name="Apple___healthy", disease_key="apple_healthy", confidence=0.03),
+                PredictionItem(class_index=4, class_name="Blueberry___healthy", disease_key="blueberry_healthy", confidence=0.01),
+            ]
+
+        monkeypatch.setattr(diagnosis_router.model_service, "predict", fake_predict)
+
+        _, token = _register_user(app_client)
+        valid_scan = app_client.post(
+            "/api/v1/diagnose",
+            headers={"Authorization": f"Bearer {token}"},
+            data={"selected_plant_key": "apple"},
+            files={"file": ("1apple.JPG", _sample_apple_leaf(), "image/jpeg")},
+        )
+        assert valid_scan.status_code == 200, valid_scan.text
+        body = valid_scan.json()
+        assert body["success"] is True
+        assert body["error_code"] is None
+        assert body["scan_id"] is not None
+        assert body["prediction"]["class_name"] == "Apple___Apple_scab"
+
+        status = app_client.get("/api/v1/subscription/status", headers={"Authorization": f"Bearer {token}"})
+        assert status.status_code == 200
+        assert status.json()["data"]["remaining_scans"] == 4
 
     def test_expired_paid_plan_falls_back_to_free(self, app_client, db_session):
         from app.models.domain import Subscription
@@ -136,6 +172,48 @@ class TestUserVnpayPayments:
         second = app_client.get("/api/v1/user-payments/vnpay/ipn", params=params)
         assert second.status_code == 200
         assert second.json()["RspCode"] == "02"
+
+        status = app_client.get("/api/v1/subscription/status", headers={"Authorization": f"Bearer {token}"})
+        assert status.status_code == 200
+        assert status.json()["data"]["tier"] == "personal"
+        assert status.json()["data"]["daily_scan_limit"] == 30
+
+    def test_shared_vnpay_return_success_activates_plan_when_ipn_is_missing(self, app_client, monkeypatch):
+        from app.services import vnpay_service
+        from app.services.vnpay_service import _sign_data
+
+        monkeypatch.setattr(vnpay_service, "VNPAY_TMN_CODE", "TESTCODE")
+        monkeypatch.setattr(vnpay_service, "VNPAY_HASH_SECRET", "secret")
+
+        _, token = _register_user(app_client)
+        create = app_client.post(
+            "/api/v1/user-payments/vnpay/create",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"plan_key": "personal_monthly"},
+        )
+        assert create.status_code == 200, create.text
+        tx = create.json()["data"]
+
+        params = {
+            "vnp_TmnCode": "TESTCODE",
+            "vnp_TxnRef": tx["txn_ref"],
+            "vnp_Amount": "3900000",
+            "vnp_ResponseCode": "00",
+            "vnp_TransactionStatus": "00",
+            "vnp_TransactionNo": "123456789",
+        }
+        params["vnp_SecureHash"] = _sign_data(params, "secret")
+
+        returned = app_client.get("/api/v1/vnpay/return", params=params)
+        assert returned.status_code == 200
+        assert "Thanh toán thành công" in returned.text
+
+        payment_status = app_client.get(
+            f"/api/v1/user-payments/status/{tx['txn_ref']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert payment_status.status_code == 200
+        assert payment_status.json()["data"]["status"] == "success"
 
         status = app_client.get("/api/v1/subscription/status", headers={"Authorization": f"Bearer {token}"})
         assert status.status_code == 200

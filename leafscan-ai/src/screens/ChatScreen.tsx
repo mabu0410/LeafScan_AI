@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { chatApi, chatStreamApi, ChatMessage } from '../api/chat';
@@ -29,22 +30,35 @@ interface DisplayMessage {
   content: string;
 }
 
-const SUGGESTED_QUESTIONS = [
-  'Bệnh này nguy hiểm không?',
-  'Cách điều trị hiệu quả nhất?',
-  'Làm sao phòng ngừa tái phát?',
-  'Thuốc nào nên dùng?',
-];
-
 export default function ChatScreen({ navigation, route }: Props) {
   const { disease } = route.params;
+  const { t } = useTranslation();
   const accessToken = useAuthStore((s) => s.accessToken);
 
-  const [messages, setMessages] = useState<DisplayMessage[]>([
+  const suggestedQuestions = React.useMemo(
+    () => [
+      t('chat.suggested.danger'),
+      t('chat.suggested.treatment'),
+      t('chat.suggested.prevent'),
+      t('chat.suggested.medicine'),
+    ],
+    [t]
+  );
+
+  const initialGreeting = React.useMemo(
+    () =>
+      t('chat.greeting', {
+        diseaseName: disease.name,
+        confidence: disease.confidence,
+      }),
+    [disease.confidence, disease.name, t]
+  );
+
+  const [messages, setMessages] = useState<DisplayMessage[]>(() => [
     {
       id: '0',
       role: 'assistant',
-      content: `Xin chào! Tôi là LeafScan AI Assistant.\n\nTôi đã phân tích kết quả chẩn đoán bệnh "${disease.name}" trên cây của bạn (độ tin cậy ${disease.confidence}%).\n\nBạn có câu hỏi gì về bệnh này không? Tôi sẵn sàng tư vấn!`,
+      content: initialGreeting,
     },
   ]);
   const [inputText, setInputText] = useState('');
@@ -54,6 +68,14 @@ export default function ChatScreen({ navigation, route }: Props) {
   useEffect(() => {
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages]);
+
+  useEffect(() => {
+    setMessages((prev) =>
+      prev.length === 1 && prev[0]?.id === '0'
+        ? [{ ...prev[0], content: initialGreeting }]
+        : prev
+    );
+  }, [initialGreeting]);
 
   const sendMessage = async (text?: string) => {
     const messageText = (text || inputText).trim();
@@ -118,7 +140,7 @@ export default function ChatScreen({ navigation, route }: Props) {
           )
         );
       } catch (err: any) {
-        const errorText = `Xin lỗi, đã xảy ra lỗi: ${err.message || 'Không thể kết nối'}. Vui lòng thử lại.`;
+        const errorText = t('chat.errorReply', { message: err.message || t('chat.connectionFailed') });
         setMessages((prev) =>
           prev.map((message) =>
             message.id === assistantMessageId ? { ...message, content: errorText } : message
@@ -189,7 +211,7 @@ export default function ChatScreen({ navigation, route }: Props) {
                 </View>
                 <View style={styles.typingRow}>
                   <ActivityIndicator size="small" color={theme.colors.primary} />
-                  <Text style={styles.typingText}>Đang suy nghĩ...</Text>
+                  <Text style={styles.typingText}>{t('chat.thinking')}</Text>
                 </View>
               </View>
             )}
@@ -197,8 +219,8 @@ export default function ChatScreen({ navigation, route }: Props) {
             {/* Suggested questions */}
             {showSuggestions && (
               <View style={styles.suggestionsContainer}>
-                <Text style={styles.suggestionsTitle}>Gợi ý câu hỏi:</Text>
-                {SUGGESTED_QUESTIONS.map((q, i) => (
+                <Text style={styles.suggestionsTitle}>{t('chat.suggestionsTitle')}</Text>
+                {suggestedQuestions.map((q, i) => (
                   <TouchableOpacity
                     key={i}
                     style={styles.suggestionChip}
@@ -218,7 +240,7 @@ export default function ChatScreen({ navigation, route }: Props) {
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.textInput}
-          placeholder="Hỏi về bệnh cây..."
+          placeholder={t('chat.placeholder')}
           placeholderTextColor={theme.colors.textMuted}
           value={inputText}
           onChangeText={setInputText}

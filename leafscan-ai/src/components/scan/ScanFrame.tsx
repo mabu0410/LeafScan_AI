@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -27,69 +28,69 @@ type StateConfig = {
   color: string;
 };
 
-function stateConfig(state: ScanState): StateConfig {
+function stateConfig(state: ScanState, t: (key: string) => string): StateConfig {
   switch (state) {
     case 'plant_required':
       return {
-        label: 'Chưa chọn loại cây',
-        guide: 'Chọn loại cây để bắt đầu quét',
+        label: t('scan.frame.plant_required.label'),
+        guide: t('scan.frame.plant_required.guide'),
         icon: 'leaf-outline',
         color: '#FFD88A',
       };
     case 'aligning':
       return {
-        label: 'Đang căn chỉnh',
-        guide: 'Đưa lá vào trong khung để bắt đầu quét',
+        label: t('scan.frame.aligning.label'),
+        guide: t('scan.frame.aligning.guide'),
         icon: 'scan-outline',
         color: '#D8FFEA',
       };
     case 'out_of_frame':
       return {
-        label: 'Lá chưa đúng khung',
-        guide: 'Đưa lá chiếm phần lớn khung hình',
+        label: t('scan.frame.out_of_frame.label'),
+        guide: t('scan.frame.out_of_frame.guide'),
         icon: 'resize-outline',
         color: '#FFE8A8',
       };
     case 'optimal':
       return {
-        label: 'Sẵn sàng quét',
-        guide: 'Căn chỉnh tốt, nhấn nút quét để phân tích',
+        label: t('scan.frame.optimal.label'),
+        guide: t('scan.frame.optimal.guide'),
         icon: 'checkmark-circle-outline',
         color: '#B9FFD1',
       };
     case 'too_dark':
       return {
-        label: 'Ảnh quá tối',
-        guide: 'Tăng ánh sáng hoặc bật flash rồi thử lại',
+        label: t('scan.frame.too_dark.label'),
+        guide: t('scan.frame.too_dark.guide'),
         icon: 'moon-outline',
         color: '#FFD3A5',
       };
     case 'no_leaf_detected':
       return {
-        label: 'Không phát hiện lá',
-        guide: 'Đưa lá gần hơn, tránh nền quá rối',
+        label: t('scan.frame.no_leaf_detected.label'),
+        guide: t('scan.frame.no_leaf_detected.guide'),
         icon: 'alert-circle-outline',
         color: '#FFC6C6',
       };
     case 'processing':
       return {
-        label: 'Đang quét',
-        guide: 'AI đang phân tích ảnh lá cây',
+        label: t('scan.frame.processing.label'),
+        guide: t('scan.frame.processing.guide'),
         icon: 'sparkles-outline',
         color: '#C8FFE4',
       };
     case 'scan_success':
       return {
-        label: 'Quét thành công',
-        guide: 'Đang chuyển sang màn hình kết quả',
+        label: t('scan.frame.scan_success.label'),
+        guide: t('scan.frame.scan_success.guide'),
         icon: 'checkmark-done-circle-outline',
         color: '#B8FFC7',
       };
     case 'scan_failed':
     default:
       return {
-        label: 'Quét thất bại',
-        guide: 'Vui lòng thử lại với ảnh rõ hơn',
+        label: t('scan.frame.scan_failed.label'),
+        guide: t('scan.frame.scan_failed.guide'),
         icon: 'close-circle-outline',
         color: '#FFC5C5',
       };
@@ -101,6 +102,7 @@ function isPositiveState(state: ScanState) {
 }
 
 export function ScanFrame({ state, topInset, bottomInset }: ScanFrameProps) {
+  const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const compact = height < 700;
 
@@ -143,7 +145,7 @@ export function ScanFrame({ state, topInset, bottomInset }: ScanFrameProps) {
     opacity: 0.2 + glowPulse.value * 0.3,
   }));
 
-  const config = stateConfig(state);
+  const config = stateConfig(state, t);
   const strongFrame = isPositiveState(state) || state === 'processing';
   const overlayTopHeight = frameTop;
   const overlayBottomTop = frameTop + frameHeight;

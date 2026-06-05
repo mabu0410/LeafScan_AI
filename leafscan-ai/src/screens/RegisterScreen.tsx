@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { useGoogleAuth } from '../api/google-auth';
 import { useAuthStore } from '../stores/authStore';
@@ -26,6 +27,7 @@ type AccountRole = 'farmer' | 'dealer';
 
 export default function RegisterScreen({ navigation }: Props) {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
     const [role, setRole] = useState<AccountRole>('farmer');
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
@@ -50,7 +52,7 @@ export default function RegisterScreen({ navigation }: Props) {
             setGoogleLoading(true);
             loginWithGoogle(googleResponse.authentication.idToken)
                 .catch((error: any) => {
-                    Alert.alert('Đăng ký Google thất bại', error?.message || 'Vui lòng thử lại.');
+                    Alert.alert(t('auth.googleRegisterFailed'), error?.message || t('common.tryAgain'));
                 })
                 .finally(() => setGoogleLoading(false));
             return;
@@ -61,7 +63,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
     const handleRegister = async () => {
         if (!name.trim() || !email.trim() || !password) {
-            Alert.alert('Thiếu thông tin', 'Vui lòng nhập họ tên, email và mật khẩu.');
+            Alert.alert(t('auth.missingInfo'), t('auth.registerMissingInfo'));
             return;
         }
 
@@ -75,7 +77,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 role: role === 'dealer' ? 'partner' : 'farmer',
             });
         } catch (error: any) {
-            Alert.alert('Đăng ký thất bại', error?.message || 'Vui lòng thử lại.');
+            Alert.alert(t('auth.register_failed'), error?.message || t('common.tryAgain'));
         } finally {
             setLoading(false);
         }
@@ -84,14 +86,14 @@ export default function RegisterScreen({ navigation }: Props) {
     const handleGoogleRegister = async () => {
         if (!isGoogleAuthConfigured) {
             Alert.alert(
-                'Chưa cấu hình Google OAuth',
-                'Thiếu Google client ID. Vui lòng cấu hình EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID trong leafscan-ai/.env.'
+                t('auth.googleNotConfigured'),
+                t('auth.googleMissingClient')
             );
             return;
         }
 
         if (!googleRequest) {
-            Alert.alert('Vui lòng thử lại', 'Google OAuth chưa sẵn sàng.');
+            Alert.alert(t('common.retry'), t('auth.googleNotReady'));
             return;
         }
 
@@ -103,7 +105,7 @@ export default function RegisterScreen({ navigation }: Props) {
     };
 
     const handleAppleRegister = () => {
-        Alert.alert('Chưa hỗ trợ', 'Ứng dụng hiện chưa cấu hình đăng ký Apple.');
+        Alert.alert(t('common.notSupported'), t('auth.appleRegisterUnsupported'));
     };
 
     return (
@@ -123,20 +125,20 @@ export default function RegisterScreen({ navigation }: Props) {
                             <Ionicons name="leaf-outline" size={28} color="#00460E" />
                         </View>
                         <Text style={styles.brand}>Leaf AI</Text>
-                        <Text style={styles.subtitle}>Tạo tài khoản để bắt đầu quản lý</Text>
+                        <Text style={styles.subtitle}>{t('auth.registerSubtitle')}</Text>
                     </View>
 
                     <View style={styles.content}>
-                        <Text style={styles.sectionLabel}>Bạn là:</Text>
+                        <Text style={styles.sectionLabel}>{t('auth.youAre')}</Text>
                         <View style={styles.roleRow}>
                             <RoleButton
-                                label="Nông dân"
+                                label={t('auth.farmer')}
                                 icon="leaf-outline"
                                 active={role === 'farmer'}
                                 onPress={() => setRole('farmer')}
                             />
                             <RoleButton
-                                label="Đại lý vật tư"
+                                label={t('auth.dealer')}
                                 icon="storefront-outline"
                                 active={role === 'dealer'}
                                 onPress={() => setRole('dealer')}
@@ -145,14 +147,14 @@ export default function RegisterScreen({ navigation }: Props) {
 
                         <View style={styles.form}>
                             <InputField
-                                label="Họ tên"
+                                label={t('auth.fullName')}
                                 icon="person-outline"
-                                placeholder="Nhập họ và tên"
+                                placeholder={t('auth.fullNamePlaceholder')}
                                 value={name}
                                 onChangeText={setName}
                             />
                             <InputField
-                                label="Email"
+                                label={t('auth.email')}
                                 icon="mail-outline"
                                 placeholder="example@leafai.com"
                                 keyboardType="email-address"
@@ -161,15 +163,15 @@ export default function RegisterScreen({ navigation }: Props) {
                                 onChangeText={setEmail}
                             />
                             <InputField
-                                label="Số điện thoại"
+                                label={t('auth.phone')}
                                 icon="call-outline"
-                                placeholder="09xx xxx xxx"
+                                placeholder={t('auth.phonePlaceholder')}
                                 keyboardType="phone-pad"
                                 value={phone}
                                 onChangeText={setPhone}
                             />
                             <InputField
-                                label="Mật khẩu"
+                                label={t('auth.password')}
                                 icon="lock-closed-outline"
                                 placeholder="••••••••"
                                 secureTextEntry={!showPassword}
@@ -180,9 +182,9 @@ export default function RegisterScreen({ navigation }: Props) {
                             />
                         </View>
 
-                        <PrimaryButton label="Đăng ký" loading={loading} onPress={handleRegister} />
+                        <PrimaryButton label={t('auth.register')} loading={loading} onPress={handleRegister} />
 
-                        <Divider label="Hoặc đăng ký bằng" />
+                        <Divider label={t('auth.socialRegisterDivider')} />
 
                         <View style={styles.socialRow}>
                             <SocialButton
@@ -202,9 +204,9 @@ export default function RegisterScreen({ navigation }: Props) {
                     </View>
 
                     <View style={styles.footer}>
-                        <Text style={styles.footerText}>Đã có tài khoản?</Text>
+                        <Text style={styles.footerText}>{t('auth.hasAccount')}</Text>
                         <TouchableOpacity activeOpacity={0.72} onPress={() => navigation.navigate('Login')}>
-                            <Text style={styles.footerLink}>Đăng nhập</Text>
+                            <Text style={styles.footerLink}>{t('auth.login')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

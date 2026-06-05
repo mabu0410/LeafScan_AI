@@ -7,6 +7,7 @@ import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { ScanHeader } from '../components/scan/ScanHeader';
 import { ScanFrame } from '../components/scan/ScanFrame';
@@ -34,49 +35,6 @@ type PlantOption = {
   source: 'garden' | 'supported';
 };
 
-const DIAGNOSIS_ERROR_MESSAGES: Record<
-  DiagnoseErrorCode,
-  { title: string; message: string }
-> = {
-  NO_LEAF_DETECTED: {
-    title: 'Không phát hiện lá cây',
-    message:
-      'Vui lòng chụp rõ phần lá cây, tránh chụp màn hình, laptop, đồ vật, đất hoặc nền xung quanh.',
-  },
-  IMAGE_TOO_DARK: {
-    title: 'Ảnh quá tối',
-    message: 'Vui lòng chụp ở nơi đủ ánh sáng.',
-  },
-  IMAGE_TOO_BLURRY: {
-    title: 'Ảnh bị mờ',
-    message: 'Vui lòng giữ máy ổn định và chụp gần lá hơn.',
-  },
-  UNSUPPORTED_PLANT: {
-    title: 'Cây chưa được hỗ trợ',
-    message: 'Loại cây này chưa nằm trong dữ liệu nhận diện của LeafScan.',
-  },
-  PLANT_MISMATCH: {
-    title: 'Không khớp loại cây',
-    message: 'Ảnh quét không giống loại cây bạn đã chọn.',
-  },
-  LOW_CONFIDENCE: {
-    title: 'Chưa nhận diện rõ',
-    message: 'Vui lòng chụp gần hơn vào vùng lá bị bệnh.',
-  },
-  QUOTA_EXCEEDED: {
-    title: 'Hết lượt quét hôm nay',
-    message: 'Vui lòng nâng cấp gói để tiếp tục quét bằng AI.',
-  },
-  REQUEST_FAILED: {
-    title: 'Quét thất bại',
-    message: 'Không thể kết nối dịch vụ chẩn đoán. Vui lòng thử lại.',
-  },
-  DIAGNOSIS_FAILED: {
-    title: 'Quét thất bại',
-    message: 'Không thể phân tích ảnh lúc này.',
-  },
-};
-
 const DIAGNOSIS_ERROR_STATES: Partial<Record<DiagnoseErrorCode, ScanState>> = {
   NO_LEAF_DETECTED: 'no_leaf_detected',
   IMAGE_TOO_DARK: 'too_dark',
@@ -94,6 +52,7 @@ const FLOW_STATES: ScanState[] = ['aligning', 'out_of_frame', 'optimal'];
 export default function ScanScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'Scan'>>();
+  const { t } = useTranslation();
   const cameraRef = useRef<CameraView | null>(null);
   const tempStateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,7 +79,7 @@ export default function ScanScreen() {
 
   const selectedPlantLabel = selectedPlantKey
     ? plantKeyLabel(selectedPlantKey)
-    : 'Chọn loại cây';
+    : t('scan.select_plant');
 
   useEffect(() => {
     loadPlants().catch(() => undefined);
@@ -232,15 +191,13 @@ export default function ScanScreen() {
     return (
       <View style={styles.permissionContainer}>
         <Ionicons name="camera-outline" size={64} color={theme.colors.primary} />
-        <Text style={styles.permissionTitle}>Cần quyền camera để quét lá cây</Text>
-        <Text style={styles.permissionDescription}>
-          LeafScan chỉ dùng camera khi bạn quét bệnh và không tự chụp nền.
-        </Text>
+        <Text style={styles.permissionTitle}>{t('scan.permissionTitle')}</Text>
+        <Text style={styles.permissionDescription}>{t('scan.permissionDescription')}</Text>
         <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
-          <Text style={styles.permissionButtonText}>Cho phép truy cập</Text>
+          <Text style={styles.permissionButtonText}>{t('scan.allowCamera')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Quay lại</Text>
+          <Text style={styles.backButtonText}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -254,8 +211,8 @@ export default function ScanScreen() {
     if (!selectedPlantKey) {
       showTemporaryState('plant_required', 2200);
       Alert.alert(
-        'Chưa chọn loại cây',
-        'Vui lòng chọn loại cây trước khi quét để tránh nhận diện sai ngoài phạm vi PlantVillage.'
+        t('scan.plantRequiredTitle'),
+        t('scan.plantRequiredMessage')
       );
       setSelectorVisible(true);
       return;
@@ -302,30 +259,33 @@ export default function ScanScreen() {
           message: error.message,
           details: error.details,
         });
-        const matched = DIAGNOSIS_ERROR_MESSAGES[error.code];
+        const matched = {
+          title: t(`scan.errors.${error.code}.title`),
+          message: t(`scan.errors.${error.code}.message`),
+        };
         const nextState = DIAGNOSIS_ERROR_STATES[error.code] ?? 'scan_failed';
         showTemporaryState(nextState);
         if (error.code === 'QUOTA_EXCEEDED') {
           Alert.alert(
-            'Hết lượt quét hôm nay',
-            error.message || 'Vui lòng nâng cấp gói để tiếp tục quét bằng AI.',
+            t('scan.errors.QUOTA_EXCEEDED.title'),
+            error.message || t('scan.errors.QUOTA_EXCEEDED.message'),
             [
-              { text: 'Để sau', style: 'cancel' },
-              { text: 'Nâng cấp gói', onPress: () => navigation.navigate('UpgradePlan') },
+              { text: t('scan.upgradeLater'), style: 'cancel' },
+              { text: t('scan.upgradePlan'), onPress: () => navigation.navigate('UpgradePlan') },
             ]
           );
           return;
         }
         Alert.alert(
-          matched?.title || 'Quét thất bại',
-          error.message || matched?.message || 'Không thể phân tích ảnh lúc này.'
+          matched?.title || t('scan.scan_failed'),
+          error.message || matched?.message || t('scan.analyzeFailed')
         );
         return;
       }
 
       console.log('[ScanScreen] diagnose_unknown_error', error);
       showTemporaryState('scan_failed');
-      Alert.alert('Quét thất bại', error?.message || 'Không thể phân tích ảnh lúc này.');
+      Alert.alert(t('scan.scan_failed'), error?.message || t('scan.analyzeFailed'));
     } finally {
       setIsScanning(false);
     }
@@ -344,14 +304,14 @@ export default function ScanScreen() {
 
       if (!photo?.uri) {
         showTemporaryState('scan_failed');
-        Alert.alert('Quét thất bại', 'Không thể chụp ảnh, vui lòng thử lại.');
+        Alert.alert(t('scan.scan_failed'), t('scan.captureFailed'));
         return;
       }
 
       await runDiagnosis(photo.uri);
     } catch (error: any) {
       showTemporaryState('scan_failed');
-      Alert.alert('Quét thất bại', error?.message || 'Không thể chụp ảnh lúc này.');
+      Alert.alert(t('scan.scan_failed'), error?.message || t('scan.captureUnavailable'));
     }
   };
 
@@ -373,7 +333,7 @@ export default function ScanScreen() {
       await runDiagnosis(result.assets[0].uri);
     } catch (error: any) {
       showTemporaryState('scan_failed');
-      Alert.alert('Không thể chọn ảnh', error?.message || 'Vui lòng thử lại.');
+      Alert.alert(t('scan.pickImageFailedTitle'), error?.message || t('common.tryAgain'));
     }
   };
 
@@ -451,14 +411,12 @@ export default function ScanScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn loại cây để quét</Text>
+              <Text style={styles.modalTitle}>{t('scan.modal.title')}</Text>
               <TouchableOpacity onPress={() => setSelectorVisible(false)} style={styles.modalCloseButton}>
                 <Ionicons name="close" size={18} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalHint}>
-              Chọn đúng loại cây để tăng độ chính xác nhận diện theo mô hình PlantVillage 38 class.
-            </Text>
+            <Text style={styles.modalHint}>{t('scan.modal.hint')}</Text>
             <ScrollView style={styles.modalList}>
               {plantOptions.map(option => {
                 const active = selectedPlantKey === option.key;
@@ -471,7 +429,7 @@ export default function ScanScreen() {
                     <View style={styles.optionRowTextWrap}>
                       <Text style={styles.optionTitle}>{option.label}</Text>
                       <Text style={styles.optionSubtitle}>
-                        {option.source === 'garden' ? 'Từ Vườn của tôi' : 'Danh sách PlantVillage'}
+                        {option.source === 'garden' ? t('scan.modal.gardenSource') : t('scan.modal.supportedSource')}
                       </Text>
                     </View>
                     {active ? (

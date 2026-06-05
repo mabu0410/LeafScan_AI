@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { HomeTodayTip } from '../../types/home';
 import { theme } from '../../theme/theme';
 
@@ -20,6 +21,7 @@ interface TipDetailSheetProps {
 
 export function TipDetailSheet({ visible, tip, onClose }: TipDetailSheetProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const progress = useSharedValue(0);
 
   React.useEffect(() => {
@@ -60,7 +62,7 @@ export function TipDetailSheet({ visible, tip, onClose }: TipDetailSheetProps) {
         <Animated.View style={[styles.sheet, sheetStyle, { paddingBottom: Math.max(18, insets.bottom + 14) }]}>
           <View style={styles.handle} />
           <View style={styles.header}>
-            <Text style={styles.title}>{tip?.title || 'Mẹo chăm sóc'}</Text>
+            <Text style={styles.title}>{tip?.title || t('home.tip.fallbackTitle')}</Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={18} color={theme.colors.textPrimary} />
             </Pressable>
@@ -73,14 +75,14 @@ export function TipDetailSheet({ visible, tip, onClose }: TipDetailSheetProps) {
           >
             <View style={styles.metaRow}>
               <View style={styles.metaTag}>
-                <Text style={styles.metaTagText}>{tip?.category || 'Chăm sóc cơ bản'}</Text>
+                <Text style={styles.metaTagText}>{tip?.category || t('home.tip.fallbackCategory')}</Text>
               </View>
             </View>
 
             <Text style={styles.contentText}>{tip?.content || ''}</Text>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cây phù hợp</Text>
+              <Text style={styles.sectionTitle}>{t('home.tip.suitablePlants')}</Text>
               <View style={styles.chipsWrap}>
                 {(tip?.suitablePlants || []).map((plant) => (
                   <View key={plant} style={styles.plantChip}>
@@ -92,7 +94,7 @@ export function TipDetailSheet({ visible, tip, onClose }: TipDetailSheetProps) {
           </ScrollView>
 
           <Pressable onPress={onClose} style={({ pressed }) => [styles.doneButton, pressed && styles.doneButtonPressed]}>
-            <Text style={styles.doneButtonText}>Đã hiểu</Text>
+            <Text style={styles.doneButtonText}>{t('home.tip.understood')}</Text>
           </Pressable>
         </Animated.View>
       </View>

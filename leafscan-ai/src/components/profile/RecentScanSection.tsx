@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { ScanHistory } from '../../types';
 import { theme } from '../../theme/theme';
 import { SeverityBadge } from '../SeverityBadge';
@@ -11,7 +12,7 @@ interface RecentScanSectionProps {
   onPressViewAll: () => void;
 }
 
-function formatScanTime(scan: ScanHistory): string {
+function formatScanTime(scan: ScanHistory, t: (key: string, options?: Record<string, unknown>) => string, locale: string): string {
   if (!scan.scanDateISO) {
     return scan.date;
   }
@@ -24,31 +25,32 @@ function formatScanTime(scan: ScanHistory): string {
   const diffMs = now.getTime() - date.getTime();
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-  if (diffHours < 1) return 'Vừa xong';
-  if (diffHours < 24) return `${diffHours} giờ trước`;
+  if (diffHours < 1) return t('home.time.justNow');
+  if (diffHours < 24) return t('home.time.hoursAgo', { count: diffHours });
 
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffDays < 7) return t('home.time.daysAgo', { count: diffDays });
 
-  return date.toLocaleDateString('vi-VN');
+  return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'vi-VN');
 }
 
 export function RecentScanSection({ scans, onPressScan, onPressViewAll }: RecentScanSectionProps) {
+  const { t, i18n } = useTranslation();
   const recentScans = scans.slice(0, 3);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Lịch sử quét gần đây</Text>
+        <Text style={styles.title}>{t('profile.recentScansSection.title')}</Text>
         <Pressable onPress={onPressViewAll}>
-          <Text style={styles.viewAll}>Xem tất cả</Text>
+          <Text style={styles.viewAll}>{t('profile.recentScansSection.viewAll')}</Text>
         </Pressable>
       </View>
 
       {recentScans.length === 0 ? (
         <View style={styles.emptyCard}>
           <Ionicons name="scan-outline" size={18} color={theme.colors.primaryLight} />
-          <Text style={styles.emptyText}>Chưa có dữ liệu quét gần đây.</Text>
+          <Text style={styles.emptyText}>{t('profile.recentScansSection.empty')}</Text>
         </View>
       ) : (
         <View style={styles.list}>
@@ -62,7 +64,7 @@ export function RecentScanSection({ scans, onPressScan, onPressViewAll }: Recent
                 <Text style={styles.result} numberOfLines={1}>
                   {scan.result}
                 </Text>
-                <Text style={styles.time}>{formatScanTime(scan)}</Text>
+                <Text style={styles.time}>{formatScanTime(scan, t, i18n.language)}</Text>
               </View>
               <View style={styles.right}>
                 <SeverityBadge severity={scan.severity} size="sm" />

@@ -54,6 +54,8 @@ htmlcov/
 # ──────────────────────────────
 node_modules/
 leafscan-ai/dist/
+admin-web/dist/
+admin-web/tsconfig.tsbuildinfo
 leafscan-ai/.expo/
 leafscan-ai/web-build/
 
@@ -63,9 +65,13 @@ leafscan-ai/web-build/
 backend/.env
 backend/.env.*
 !backend/.env.example
+dev-domain.env
 leafscan-ai/.env
 leafscan-ai/.env.*
 !leafscan-ai/.env.example
+admin-web/.env
+admin-web/.env.*
+!admin-web/.env.example
 
 # ──────────────────────────────
 # Runtime artifacts
@@ -84,6 +90,7 @@ backend/app/models/efficientnetv2s_plantvillage.onnx
 backend/app/models/best_model.pth
 backend/app/models/*.pth
 backend/training/train_plantvillage.ipynb
+backend/training/evaluate_existing_plantvillage_model.ipynb
 lenh.md
 .codex
 

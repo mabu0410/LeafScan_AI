@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface ReadOnlyInfoCardProps {
@@ -29,11 +30,13 @@ function InfoRow({
 }
 
 export function ReadOnlyInfoCard({ accountId, joinedAt }: ReadOnlyInfoCardProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Thông tin tài khoản</Text>
-      <InfoRow icon="id-card-outline" label="ID tài khoản" value={accountId} />
-      <InfoRow icon="calendar-outline" label="Ngày tham gia" value={joinedAt} />
+      <Text style={styles.cardTitle}>{t('profile.edit.accountInfo')}</Text>
+      <InfoRow icon="id-card-outline" label={t('profile.edit.accountId')} value={accountId} />
+      <InfoRow icon="calendar-outline" label={t('profile.edit.joinedAt')} value={joinedAt} />
     </View>
   );
 }

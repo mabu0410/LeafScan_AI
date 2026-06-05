@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface HistoryHeaderProps {
@@ -11,6 +12,7 @@ interface HistoryHeaderProps {
 }
 
 export function HistoryHeader({ totalScans, searchVisible, onToggleSearch }: HistoryHeaderProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const buttonAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -19,8 +21,8 @@ export function HistoryHeader({ totalScans, searchVisible, onToggleSearch }: His
   return (
     <View style={styles.container}>
       <View>
-        <Text style={styles.title}>Lịch sử quét</Text>
-        <Text style={styles.subtitle}>{totalScans} lần quét</Text>
+        <Text style={styles.title}>{t('history.title')}</Text>
+        <Text style={styles.subtitle}>{t('history.scanCount', { count: totalScans })}</Text>
       </View>
 
       <Animated.View style={buttonAnimatedStyle}>

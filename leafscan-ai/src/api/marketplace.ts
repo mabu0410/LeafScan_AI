@@ -1,4 +1,4 @@
-import { PartnerMembership, PartnerProduct, PartnerStore, PaymentTransaction } from '../types';
+import { MarketplaceInquiry, PartnerMembership, PartnerOutlet, PartnerProduct, PartnerStore, PaymentTransaction } from '../types';
 import { requestJson } from './client';
 import { toApiAssetUrl } from './config';
 
@@ -21,6 +21,7 @@ export interface PartnerRegistrationInput {
 }
 
 export interface ProductInput {
+  storeId?: string;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -29,6 +30,25 @@ export interface ProductInput {
   targetCategories: string[];
   productUrl?: string;
   isActive?: boolean;
+}
+
+export interface StoreInput {
+  name: string;
+  description?: string;
+  address?: string;
+  contactEmail?: string;
+  phone?: string;
+  isActive?: boolean;
+}
+
+export interface MarketplaceInquiryInput {
+  partnerId?: string;
+  productId?: string;
+  storeId?: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  message: string;
 }
 
 export type PartnerPlanType = 'monthly' | 'yearly';
@@ -77,12 +97,31 @@ export function mapPartner(raw: any): PartnerStore {
   };
 }
 
+export function mapPartnerOutlet(raw: any): PartnerOutlet {
+  return {
+    id: String(raw.id),
+    partnerId: String(raw.partner_id),
+    name: raw.name || '',
+    description: raw.description || undefined,
+    address: raw.address || undefined,
+    contactEmail: raw.contact_email || undefined,
+    phone: raw.phone || undefined,
+    logoUrl: toApiAssetUrl(raw.logo_url),
+    coverUrl: toApiAssetUrl(raw.cover_url),
+    isActive: Boolean(raw.is_active),
+    isPrimary: Boolean(raw.is_primary),
+    createdAt: raw.created_at || '',
+  };
+}
+
 export function mapProduct(raw: any): PartnerProduct {
   return {
     id: String(raw.id),
     partnerId: String(raw.partner_id),
+    storeId: raw.store_id == null ? undefined : String(raw.store_id),
     partnerName: raw.partner_name || undefined,
     partnerStatus: raw.partner_status || undefined,
+    storeName: raw.store_name || undefined,
     name: raw.name || '',
     description: raw.description || undefined,
     imageUrl: toApiAssetUrl(raw.image_url),
@@ -112,6 +151,26 @@ function mapPayment(raw: any): PaymentTransaction {
     createdAt: raw.created_at || '',
     updatedAt: raw.updated_at || '',
     paidAt: raw.paid_at || undefined,
+  };
+}
+
+function mapInquiry(raw: any): MarketplaceInquiry {
+  return {
+    id: String(raw.id),
+    userId: String(raw.user_id),
+    partnerId: String(raw.partner_id),
+    productId: raw.product_id == null ? undefined : String(raw.product_id),
+    storeId: raw.store_id == null ? undefined : String(raw.store_id),
+    partnerName: raw.partner_name || undefined,
+    productName: raw.product_name || undefined,
+    storeName: raw.store_name || undefined,
+    name: raw.name || '',
+    phone: raw.phone || undefined,
+    email: raw.email || undefined,
+    message: raw.message || '',
+    status: raw.status || 'new',
+    createdAt: raw.created_at || '',
+    updatedAt: raw.updated_at || '',
   };
 }
 
@@ -156,6 +215,7 @@ function partialPartnerPayload(input: Partial<PartnerRegistrationInput>) {
 
 function productPayload(input: ProductInput) {
   return {
+    store_id: input.storeId ? Number(input.storeId) : undefined,
     name: input.name,
     description: input.description,
     image_url: input.imageUrl,
@@ -169,6 +229,7 @@ function productPayload(input: ProductInput) {
 
 function partialProductPayload(input: Partial<ProductInput>) {
   const payload: Record<string, unknown> = {};
+  if (input.storeId !== undefined) payload.store_id = input.storeId ? Number(input.storeId) : null;
   if (input.name !== undefined) payload.name = input.name;
   if (input.description !== undefined) payload.description = input.description;
   if (input.imageUrl !== undefined) payload.image_url = input.imageUrl;
@@ -176,6 +237,28 @@ function partialProductPayload(input: Partial<ProductInput>) {
   if (input.targetDiseases !== undefined) payload.target_diseases = input.targetDiseases;
   if (input.targetCategories !== undefined) payload.target_categories = input.targetCategories;
   if (input.productUrl !== undefined) payload.product_url = input.productUrl;
+  if (input.isActive !== undefined) payload.is_active = input.isActive;
+  return payload;
+}
+
+function storePayload(input: StoreInput) {
+  return {
+    name: input.name,
+    description: input.description,
+    address: input.address,
+    contact_email: input.contactEmail,
+    phone: input.phone,
+    is_active: input.isActive,
+  };
+}
+
+function partialStorePayload(input: Partial<StoreInput>) {
+  const payload: Record<string, unknown> = {};
+  if (input.name !== undefined) payload.name = input.name;
+  if (input.description !== undefined) payload.description = input.description;
+  if (input.address !== undefined) payload.address = input.address;
+  if (input.contactEmail !== undefined) payload.contact_email = input.contactEmail;
+  if (input.phone !== undefined) payload.phone = input.phone;
   if (input.isActive !== undefined) payload.is_active = input.isActive;
   return payload;
 }
@@ -261,6 +344,64 @@ export async function uploadPartnerBusinessLicenseApi(
   return mapPartner(response.data);
 }
 
+export async function listMyStoresApi(token: string): Promise<PartnerOutlet[]> {
+  const response = await requestJson<any>('/partners/me/stores', { token });
+  if (!response.success) throw new Error(response.message || 'Không lấy được danh sách cửa hàng');
+  return (response.data || []).map(mapPartnerOutlet);
+}
+
+export async function createStoreApi(token: string, input: StoreInput): Promise<PartnerOutlet> {
+  const response = await requestJson<any>('/partners/me/stores', {
+    method: 'POST',
+    token,
+    body: storePayload(input),
+  });
+  if (!response.success || !response.data) throw new Error(response.message || 'Tạo cửa hàng thất bại');
+  return mapPartnerOutlet(response.data);
+}
+
+export async function updateStoreApi(token: string, storeId: string, input: Partial<StoreInput>): Promise<PartnerOutlet> {
+  const response = await requestJson<any>(`/partners/me/stores/${storeId}`, {
+    method: 'PUT',
+    token,
+    body: partialStorePayload(input),
+  });
+  if (!response.success || !response.data) throw new Error(response.message || 'Cập nhật cửa hàng thất bại');
+  return mapPartnerOutlet(response.data);
+}
+
+export async function deleteStoreApi(token: string, storeId: string): Promise<void> {
+  const response = await requestJson<any>(`/partners/me/stores/${storeId}`, {
+    method: 'DELETE',
+    token,
+  });
+  if (!response.success) throw new Error(response.message || 'Xóa cửa hàng thất bại');
+}
+
+export async function uploadStoreLogoApi(token: string, storeId: string, imageUri: string): Promise<PartnerOutlet> {
+  const form = new FormData();
+  form.append('file', {
+    uri: imageUri,
+    type: 'image/jpeg',
+    name: `store_logo_${Date.now()}.jpg`,
+  } as any);
+  const response = await requestJson<any>(`/partners/me/stores/${storeId}/logo`, { method: 'POST', token, body: form });
+  if (!response.success || !response.data) throw new Error(response.message || 'Upload logo cửa hàng thất bại');
+  return mapPartnerOutlet(response.data);
+}
+
+export async function uploadStoreCoverApi(token: string, storeId: string, imageUri: string): Promise<PartnerOutlet> {
+  const form = new FormData();
+  form.append('file', {
+    uri: imageUri,
+    type: 'image/jpeg',
+    name: `store_cover_${Date.now()}.jpg`,
+  } as any);
+  const response = await requestJson<any>(`/partners/me/stores/${storeId}/cover`, { method: 'POST', token, body: form });
+  if (!response.success || !response.data) throw new Error(response.message || 'Upload ảnh cửa hàng thất bại');
+  return mapPartnerOutlet(response.data);
+}
+
 export async function listMyProductsApi(token: string): Promise<PartnerProduct[]> {
   const response = await requestJson<any>('/partners/me/products', { token });
   if (!response.success) throw new Error(response.message || 'Không lấy được sản phẩm');
@@ -342,6 +483,41 @@ export async function listMarketplaceProductsApi(params: {
 
 export async function trackProductClickApi(token: string, productId: string): Promise<void> {
   await requestJson<any>(`/marketplace/products/${productId}/click`, { method: 'POST', token });
+}
+
+export async function createMarketplaceInquiryApi(token: string, input: MarketplaceInquiryInput): Promise<MarketplaceInquiry> {
+  const response = await requestJson<any>('/marketplace/inquiries', {
+    method: 'POST',
+    token,
+    body: {
+      partner_id: input.partnerId ? Number(input.partnerId) : undefined,
+      product_id: input.productId ? Number(input.productId) : undefined,
+      store_id: input.storeId ? Number(input.storeId) : undefined,
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
+      message: input.message,
+    },
+  });
+  if (!response.success || !response.data) throw new Error(response.message || 'Không gửi được yêu cầu tư vấn.');
+  return mapInquiry(response.data);
+}
+
+export async function listMyPartnerInquiriesApi(token: string, status?: string): Promise<MarketplaceInquiry[]> {
+  const suffix = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+  const response = await requestJson<any>(`/partners/me/inquiries${suffix}`, { token });
+  if (!response.success) throw new Error(response.message || 'Không tải được yêu cầu tư vấn.');
+  return (response.data || []).map(mapInquiry);
+}
+
+export async function updateMyPartnerInquiryStatusApi(token: string, inquiryId: string, status: 'new' | 'contacted' | 'closed'): Promise<MarketplaceInquiry> {
+  const response = await requestJson<any>(`/partners/me/inquiries/${inquiryId}/status`, {
+    method: 'PATCH',
+    token,
+    body: { status },
+  });
+  if (!response.success || !response.data) throw new Error(response.message || 'Không cập nhật được yêu cầu tư vấn.');
+  return mapInquiry(response.data);
 }
 
 export async function createVnpayPartnerPaymentApi(

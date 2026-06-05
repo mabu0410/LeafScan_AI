@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { DiseaseLibraryItem, RootStackParamList } from '../types';
 import { usePlantsStore } from '../stores/plantsStore';
 import { listDiseasesApi } from '../api/diseases';
@@ -12,9 +13,10 @@ type Props = {
 };
 
 export default function SearchScreen({ navigation }: Props) {
+    const { t } = useTranslation();
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
-    const [recentSearches, setRecentSearches] = useState(['Cà chua', 'Đốm lá', 'Bệnh nấm']);
+    const [recentSearches, setRecentSearches] = useState(['tomato', 'leafSpot', 'fungalDisease']);
     const [matchedDiseases, setMatchedDiseases] = useState<DiseaseLibraryItem[]>([]);
     const [loadingDiseases, setLoadingDiseases] = useState(false);
     const plants = usePlantsStore(state => state.plants);
@@ -89,7 +91,7 @@ export default function SearchScreen({ navigation }: Props) {
                         autoFocus
                         value={query}
                         onChangeText={setQuery}
-                        placeholder="Tìm kiếm cây, bệnh..."
+                        placeholder={t('search.placeholder')}
                         placeholderTextColor={theme.colors.textMuted}
                     />
                     {query ? (
@@ -104,10 +106,10 @@ export default function SearchScreen({ navigation }: Props) {
             {!debouncedQuery ? (
                 <View style={styles.recentSection}>
                     <View style={styles.recentHeader}>
-                        <Text style={styles.recentTitle}>Tìm kiếm gần đây</Text>
+                        <Text style={styles.recentTitle}>{t('search.recentTitle')}</Text>
                         {recentSearches.length > 0 && (
                             <TouchableOpacity onPress={() => setRecentSearches([])}>
-                                <Text style={styles.clearButton}>Xóa tất cả</Text>
+                                <Text style={styles.clearButton}>{t('common.clearAll')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -115,8 +117,8 @@ export default function SearchScreen({ navigation }: Props) {
                         {recentSearches.map(item => (
                             <View key={item} style={styles.recentChip}>
                                 <Ionicons name="time-outline" size={14} color={theme.colors.textMuted} />
-                                <TouchableOpacity onPress={() => setQuery(item)}>
-                                    <Text style={styles.recentChipText}>{item}</Text>
+                                <TouchableOpacity onPress={() => setQuery(t(`search.defaultRecent.${item}`))}>
+                                    <Text style={styles.recentChipText}>{t(`search.defaultRecent.${item}`)}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => removeRecent(item)}>
                                     <Ionicons name="close" size={14} color={theme.colors.textMuted} />
@@ -128,7 +130,7 @@ export default function SearchScreen({ navigation }: Props) {
             ) : loadingDiseases ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color={theme.colors.primary} />
-                    <Text style={styles.loadingText}>Đang tìm kiếm...</Text>
+                    <Text style={styles.loadingText}>{t('search.searching')}</Text>
                 </View>
             ) : (
                 <FlatList
@@ -138,8 +140,8 @@ export default function SearchScreen({ navigation }: Props) {
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Ionicons name="leaf" size={48} color={theme.colors.textMuted} style={{ opacity: 0.5 }} />
-                            <Text style={styles.emptyTitle}>Không tìm thấy kết quả</Text>
-                            <Text style={styles.emptyText}>Thử tìm kiếm với từ khóa khác</Text>
+                            <Text style={styles.emptyTitle}>{t('search.emptyTitle')}</Text>
+                            <Text style={styles.emptyText}>{t('search.emptyText')}</Text>
                         </View>
                     }
                     renderItem={({ item }) => (

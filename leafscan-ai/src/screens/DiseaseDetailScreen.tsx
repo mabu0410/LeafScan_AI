@@ -3,6 +3,7 @@ import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, ActivityIn
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Disease, DiseaseLibraryItem, RootStackParamList } from '../types';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { DiseaseCard } from '../components/DiseaseCard';
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function DiseaseDetailScreen({ navigation, route }: Props) {
+    const { t } = useTranslation();
     const [disease, setDisease] = useState<Disease | null>(null);
     const [relatedDiseases, setRelatedDiseases] = useState<DiseaseLibraryItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
                 setRelatedDiseases(related.filter(item => item.id !== route.params.diseaseId).slice(0, 3));
             } catch (err: any) {
                 if (!cancelled) {
-                    setError(err?.message || 'Không thể tải thông tin bệnh.');
+                    setError(err?.message || t('diseaseDetail.loadFailed'));
                     setDisease(null);
                     setRelatedDiseases([]);
                 }
@@ -54,7 +56,7 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
         return () => {
             cancelled = true;
         };
-    }, [route.params.diseaseId]);
+    }, [route.params.diseaseId, t]);
 
     return (
         <View style={styles.container}>
@@ -62,7 +64,7 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Chi tiết bệnh</Text>
+                <Text style={styles.headerTitle}>{t('diseaseDetail.title')}</Text>
                 <TouchableOpacity style={styles.backButton}>
                     <Ionicons name="bookmark-outline" size={22} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
@@ -71,17 +73,17 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
             {loading ? (
                 <View style={styles.centerState}>
                     <ActivityIndicator size="small" color={theme.colors.primary} />
-                    <Text style={styles.stateText}>Đang tải dữ liệu bệnh...</Text>
+                    <Text style={styles.stateText}>{t('diseaseDetail.loading')}</Text>
                 </View>
             ) : error || !disease ? (
                 <View style={styles.centerState}>
                     <Ionicons name="warning-outline" size={36} color={theme.colors.severe} />
-                    <Text style={styles.stateText}>{error || 'Không tìm thấy dữ liệu bệnh.'}</Text>
+                    <Text style={styles.stateText}>{error || t('diseaseDetail.notFound')}</Text>
                     <TouchableOpacity
                         onPress={() => navigation.replace('DiseaseDetail', { diseaseId: route.params.diseaseId })}
                         style={styles.retryButton}
                     >
-                        <Text style={styles.retryText}>Thử lại</Text>
+                        <Text style={styles.retryText}>{t('common.retry')}</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -95,7 +97,7 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
 
                     <Text style={styles.description}>{disease.description}</Text>
 
-                    <Text style={styles.sectionTitle}>Triệu chứng</Text>
+                    <Text style={styles.sectionTitle}>{t('diseaseDetail.symptoms')}</Text>
                     {disease.symptoms.map((item, index) => (
                         <View key={index} style={styles.bulletRow}>
                             <View style={styles.bullet} />
@@ -103,7 +105,7 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
                         </View>
                     ))}
 
-                    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Cách điều trị</Text>
+                    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('diseaseDetail.treatment')}</Text>
                     {(disease.treatmentPlan?.length ? disease.treatmentPlan : disease.treatment).map((item, index) => (
                         <View key={index} style={styles.stepCard}>
                             <View style={styles.stepNumber}>
@@ -113,7 +115,7 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
                         </View>
                     ))}
 
-                    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Phòng ngừa</Text>
+                    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('diseaseDetail.prevention')}</Text>
                     {disease.prevention.map((item, index) => (
                         <View key={index} style={styles.bulletRow}>
                             <Ionicons name="shield-checkmark" size={16} color={theme.colors.primary} />
@@ -123,7 +125,7 @@ export default function DiseaseDetailScreen({ navigation, route }: Props) {
 
                     {relatedDiseases.length > 0 && (
                         <>
-                            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Bệnh tương tự</Text>
+                            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t('diseaseDetail.similar')}</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.relatedRow}>
                                 {relatedDiseases.map(item => (
                                     <View key={item.id} style={styles.relatedCard}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { ScanHistory } from '../../types';
 import { theme } from '../../theme/theme';
 import { SeverityBadge } from '../SeverityBadge';
@@ -12,7 +13,9 @@ interface RecentScansProps {
   onPressFirstScan: () => void;
 }
 
-function formatRelativeTime(scan: ScanHistory): string {
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function formatRelativeTime(scan: ScanHistory, t: Translate, locale: string): string {
   if (!scan.scanDateISO) {
     return scan.date;
   }
@@ -25,12 +28,12 @@ function formatRelativeTime(scan: ScanHistory): string {
   const diffMs = now - dt.getTime();
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
 
-  if (hours < 1) return 'Vừa xong';
-  if (hours < 24) return `${hours} giờ trước`;
+  if (hours < 1) return t('home.time.justNow');
+  if (hours < 24) return t('home.time.hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ngày trước`;
+  if (days < 7) return t('home.time.daysAgo', { count: days });
 
-  return dt.toLocaleDateString('vi-VN');
+  return dt.toLocaleDateString(locale);
 }
 
 export function RecentScans({
@@ -39,15 +42,17 @@ export function RecentScans({
   onPressScan,
   onPressFirstScan,
 }: RecentScansProps) {
+  const { t, i18n } = useTranslation();
+  const locale = (i18n.resolvedLanguage || i18n.language).startsWith('en') ? 'en-US' : 'vi-VN';
   const data = scans.slice(0, 3);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Lịch sử gần đây</Text>
+        <Text style={styles.title}>{t('home.recentScans.title')}</Text>
         {data.length > 0 ? (
           <Pressable onPress={onPressViewAll}>
-            <Text style={styles.seeAll}>Xem tất cả</Text>
+            <Text style={styles.seeAll}>{t('home.sections.viewAll')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -57,10 +62,10 @@ export function RecentScans({
           <View style={styles.emptyIcon}>
             <Ionicons name="scan-outline" size={20} color={theme.colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Bạn chưa có lần quét nào</Text>
-          <Text style={styles.emptySubtitle}>Quét lá đầu tiên để xem kết quả chẩn đoán tại đây.</Text>
+          <Text style={styles.emptyTitle}>{t('home.recentScans.emptyTitle')}</Text>
+          <Text style={styles.emptySubtitle}>{t('home.recentScans.emptySubtitle')}</Text>
           <Pressable onPress={onPressFirstScan} style={styles.emptyButton}>
-            <Text style={styles.emptyButtonText}>Quét ngay</Text>
+            <Text style={styles.emptyButtonText}>{t('scan.scanNow')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -83,18 +88,18 @@ export function RecentScans({
 
               <View style={styles.content}>
                 <Text style={styles.plantName} numberOfLines={1}>
-                  {item.plantName || 'Cây chưa đặt tên'}
+                  {item.plantName || t('home.recentScans.unnamedPlant')}
                 </Text>
                 <Text style={styles.result} numberOfLines={1}>
                   {item.result}
                 </Text>
-                <Text style={styles.time}>{formatRelativeTime(item)}</Text>
+                <Text style={styles.time}>{formatRelativeTime(item, t, locale)}</Text>
               </View>
 
               <View style={styles.right}>
                 <SeverityBadge severity={item.severity} size="sm" />
                 <Text style={styles.confidence}>{item.confidence.toFixed(0)}%</Text>
-                <Text style={styles.confLabel}>Độ tin cậy</Text>
+                <Text style={styles.confLabel}>{t('home.recentScans.confidence')}</Text>
               </View>
             </Pressable>
           ))}

@@ -5,9 +5,10 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.admin import require_admin
 from app.models.domain import CareTip, User
 from app.schemas.care_tip import (
+    CareTipAdminListResponse,
     CareTipCreate,
     CareTipDetailItem,
     CareTipDetailResponse,
@@ -86,14 +87,27 @@ def get_care_tip_detail(
     )
 
 
+@router.get("/api/admin/care-tips", response_model=CareTipAdminListResponse)
+@router.get("/api/v1/admin/care-tips", response_model=CareTipAdminListResponse, include_in_schema=False)
+def list_admin_care_tips(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    tips = db.query(CareTip).order_by(desc(CareTip.priority), desc(CareTip.created_at)).all()
+    return CareTipAdminListResponse(
+        success=True,
+        message="Thành công",
+        data=[_to_detail_item(tip) for tip in tips],
+    )
+
+
 @router.post("/api/admin/care-tips", response_model=CareTipDetailResponse)
 @router.post("/api/v1/admin/care-tips", response_model=CareTipDetailResponse, include_in_schema=False)
 def create_care_tip(
     payload: CareTipCreate,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
+    _current_user: User = Depends(require_admin),
 ):
-    # TODO: Bổ sung quyền admin thực tế khi hệ thống roles hoàn thiện.
     if not validate_related_disease_exists(db, payload.related_disease_id):
         raise HTTPException(status_code=400, detail="related_disease_id không tồn tại.")
 
@@ -121,9 +135,8 @@ def update_care_tip(
     tip_id: int,
     payload: CareTipUpdate,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
+    _current_user: User = Depends(require_admin),
 ):
-    # TODO: Bổ sung quyền admin thực tế khi hệ thống roles hoàn thiện.
     tip = db.query(CareTip).filter(CareTip.id == tip_id).first()
     if not tip:
         raise HTTPException(status_code=404, detail="Không tìm thấy mẹo chăm sóc.")
@@ -159,9 +172,8 @@ def update_care_tip(
 def delete_care_tip(
     tip_id: int,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
+    _current_user: User = Depends(require_admin),
 ):
-    # TODO: Bổ sung quyền admin thực tế khi hệ thống roles hoàn thiện.
     tip = db.query(CareTip).filter(CareTip.id == tip_id).first()
     if not tip:
         raise HTTPException(status_code=404, detail="Không tìm thấy mẹo chăm sóc.")

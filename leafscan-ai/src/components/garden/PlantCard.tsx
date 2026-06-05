@@ -2,15 +2,16 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Plant } from '../../types';
 import { theme } from '../../theme/theme';
 
 type PlantHealthState = 'healthy' | 'attention' | 'unscanned';
 
-const STATE_LABEL: Record<PlantHealthState, string> = {
-  healthy: 'Khỏe mạnh',
-  attention: 'Cần chú ý',
-  unscanned: 'Chưa quét',
+const STATE_LABEL_KEY: Record<PlantHealthState, string> = {
+  healthy: 'garden.plantCard.healthy',
+  attention: 'garden.plantCard.attention',
+  unscanned: 'garden.plantCard.unscanned',
 };
 
 const STATE_COLORS: Record<PlantHealthState, { text: string; bg: string; border: string }> = {
@@ -31,6 +32,7 @@ interface PlantCardProps {
 }
 
 export function PlantCard({ plant, onPress }: PlantCardProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -38,7 +40,7 @@ export function PlantCard({ plant, onPress }: PlantCardProps) {
 
   const healthState = getPlantHealthState(plant);
   const stateStyle = STATE_COLORS[healthState];
-  const scannedText = plant.totalScans > 0 ? plant.lastScanned : 'Chưa có dữ liệu quét';
+  const scannedText = plant.totalScans > 0 ? plant.lastScanned : t('garden.plantCard.noScanData');
 
   return (
     <Animated.View style={animatedStyle}>
@@ -75,26 +77,26 @@ export function PlantCard({ plant, onPress }: PlantCardProps) {
           <View style={styles.metaRow}>
             <Ionicons name="grid-outline" size={13} color={theme.colors.textMuted} />
             <Text style={styles.metaText} numberOfLines={1}>
-              {plant.category || 'Khác'}
+              {plant.category || t('garden.plantCard.otherCategory')}
             </Text>
           </View>
 
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={13} color={theme.colors.textMuted} />
             <Text style={styles.metaText} numberOfLines={1}>
-              {plant.location || 'Chưa đặt vị trí'}
+              {plant.location || t('garden.plantCard.noLocation')}
             </Text>
           </View>
 
           <View style={[styles.statusBadge, { backgroundColor: stateStyle.bg, borderColor: stateStyle.border }]}>
-            <Text style={[styles.statusText, { color: stateStyle.text }]}>{STATE_LABEL[healthState]}</Text>
+            <Text style={[styles.statusText, { color: stateStyle.text }]}>{t(STATE_LABEL_KEY[healthState])}</Text>
           </View>
 
           <View style={styles.footer}>
             <Text style={styles.scanInfo} numberOfLines={1}>
               {scannedText}
             </Text>
-            <Text style={styles.scanCount}>{plant.totalScans} lần quét</Text>
+            <Text style={styles.scanCount}>{t('garden.plantCard.scanCount', { count: plant.totalScans })}</Text>
           </View>
         </View>
       </Pressable>

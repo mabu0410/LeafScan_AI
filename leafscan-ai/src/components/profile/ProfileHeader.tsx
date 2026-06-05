@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface ProfileHeaderProps {
@@ -12,6 +13,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ name, email, onEditPress }: ProfileHeaderProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const buttonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -50,7 +52,7 @@ export function ProfileHeader({ name, email, onEditPress }: ProfileHeaderProps) 
           style={({ pressed }) => [styles.editButton, pressed && styles.editButtonPressed]}
         >
           <Ionicons name="create-outline" size={16} color={theme.colors.white} />
-          <Text style={styles.editText}>Chỉnh sửa hồ sơ</Text>
+          <Text style={styles.editText}>{t('profile.editProfile')}</Text>
         </Pressable>
       </Animated.View>
     </LinearGradient>

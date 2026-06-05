@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 import { HomeTodayTip } from '../../types/home';
 
@@ -11,6 +12,7 @@ interface TodayTipCardProps {
 }
 
 export function TodayTipCard({ tip, onPress }: TodayTipCardProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -43,7 +45,7 @@ export function TodayTipCard({ tip, onPress }: TodayTipCardProps) {
             {tip.summary}
           </Text>
           <View style={styles.readMoreRow}>
-            <Text style={styles.readMore}>Xem thêm</Text>
+            <Text style={styles.readMore}>{t('home.tip.readMore')}</Text>
             <Ionicons name="arrow-forward" size={14} color={theme.colors.accent} />
           </View>
         </View>

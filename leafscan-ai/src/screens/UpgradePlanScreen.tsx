@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList, SubscriptionStatus, UserPlanKey } from '../types';
 import { createUserVnpayPaymentApi, getSubscriptionStatusApi, getUserPaymentStatusApi } from '../api/subscription';
 import { useAuthStore } from '../stores/authStore';
@@ -22,46 +23,56 @@ const MUTED = '#6F7180';
 
 const PLAN_DATA = {
   free: {
-    title: 'Miễn phí',
+    titleKey: 'upgrade.plans.free.title',
     price: 0,
     scanLimit: 5,
-    features: ['5 lượt quét/ngày', 'Lưu lịch sử quét', 'Gợi ý chăm sóc cơ bản'],
+    featureKeys: [
+      'upgrade.plans.free.features.scanLimit',
+      'upgrade.plans.free.features.history',
+      'upgrade.plans.free.features.basicTips',
+    ],
   },
   personal: {
-    title: 'Cá nhân',
+    titleKey: 'upgrade.plans.personal.title',
     monthlyPrice: 39000,
     yearlyPrice: 390000,
     scanLimit: 30,
-    badge: 'Phổ biến',
-    features: [
-      '30 lượt quét/ngày',
-      'Phân tích AI đầy đủ',
-      'Gợi ý chăm sóc theo giai đoạn bệnh',
-      'Ưu tiên gợi ý sản phẩm phù hợp',
+    badgeKey: 'upgrade.popular',
+    featureKeys: [
+      'upgrade.plans.personal.features.scanLimit',
+      'upgrade.plans.personal.features.fullAi',
+      'upgrade.plans.personal.features.stageTips',
+      'upgrade.plans.personal.features.productPriority',
     ],
   },
   pro: {
-    title: 'Pro',
+    titleKey: 'upgrade.plans.pro.title',
     monthlyPrice: 99000,
     yearlyPrice: 990000,
     scanLimit: 100,
-    features: [
-      '100 lượt quét/ngày',
-      'Phù hợp nhà vườn dùng thường xuyên',
-      'Theo dõi nhiều cây hơn',
-      'Báo cáo lịch sử chi tiết',
+    featureKeys: [
+      'upgrade.plans.pro.features.scanLimit',
+      'upgrade.plans.pro.features.frequentGarden',
+      'upgrade.plans.pro.features.morePlants',
+      'upgrade.plans.pro.features.detailedReports',
     ],
   },
 };
 
-function formatVnd(value: number): string {
-  return `${new Intl.NumberFormat('vi-VN').format(value)}đ`;
+function formatVnd(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
-function tierLabel(tier?: string): string {
-  if (tier === 'personal') return 'Cá nhân';
-  if (tier === 'pro') return 'Pro';
-  return 'Miễn phí';
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function tierLabel(tier: string | undefined, t: Translate): string {
+  if (tier === 'personal') return t('upgrade.plans.personal.title');
+  if (tier === 'pro') return t('upgrade.plans.pro.title');
+  return t('upgrade.plans.free.title');
 }
 
 function planKeyFor(plan: PaidPlan, cycle: BillingCycle): UserPlanKey {
@@ -70,6 +81,8 @@ function planKeyFor(plan: PaidPlan, cycle: BillingCycle): UserPlanKey {
 
 export default function UpgradePlanScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { t, i18n } = useTranslation();
+  const locale = (i18n.resolvedLanguage || i18n.language).startsWith('en') ? 'en-US' : 'vi-VN';
   const token = useAuthStore((state) => state.accessToken);
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
@@ -88,11 +101,11 @@ export default function UpgradePlanScreen() {
       if (nextStatus.tier === 'personal') setSelectedPlan('pro');
       else setSelectedPlan('personal');
     } catch (err: any) {
-      setError(err?.message || 'Không tải được trạng thái gói.');
+      setError(err?.message || t('upgrade.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     loadStatus().catch(() => undefined);
@@ -111,7 +124,10 @@ export default function UpgradePlanScreen() {
   const startPayment = async () => {
     if (!token || paying) return;
     if (isSelectedCurrentPlan) {
-      Alert.alert('Gói đang hoạt động', `Bạn đang dùng gói ${tierLabel(currentTier)}.`);
+      Alert.alert(
+        t('upgrade.activeTitle'),
+        t('upgrade.activeBody', { tier: tierLabel(currentTier, t) })
+      );
       return;
     }
     setPaying(true);
@@ -121,14 +137,16 @@ export default function UpgradePlanScreen() {
       const tx = await getUserPaymentStatusApi(token, payment.txnRef);
       const nextStatus = await getSubscriptionStatusApi(token);
       setSubscription(nextStatus);
-      Alert.alert(
-        'Trạng thái thanh toán',
-        tx.status === 'success'
-          ? `Thanh toán thành công. Gói ${tierLabel(payment.tier)} đã được kích hoạt.`
-          : 'Giao dịch chưa hoàn tất. Vui lòng kiểm tra lại sau khi VNPAY gửi IPN.'
-      );
+      navigation.navigate('PaymentResult', {
+        paymentType: 'user',
+        txnRef: payment.txnRef,
+        responseCode: tx.providerResponseCode,
+        transactionStatus: tx.providerTransactionStatus,
+        transactionNo: tx.vnpTransactionNo,
+        status: tx.status,
+      });
     } catch (err: any) {
-      Alert.alert('Lỗi thanh toán', err?.message || 'Không tạo được thanh toán VNPAY.');
+      Alert.alert(t('upgrade.paymentErrorTitle'), err?.message || t('upgrade.paymentErrorBody'));
     } finally {
       setPaying(false);
     }
@@ -140,7 +158,7 @@ export default function UpgradePlanScreen() {
         <Pressable onPress={() => navigation.goBack()} style={styles.iconButton}>
           <Ionicons name="chevron-back" size={22} color={DARK} />
         </Pressable>
-        <Text style={styles.headerTitle}>Nâng cấp gói</Text>
+        <Text style={styles.headerTitle}>{t('upgrade.title')}</Text>
         <Pressable onPress={() => loadStatus().catch(() => undefined)} style={styles.iconButton}>
           <Ionicons name="refresh-outline" size={19} color={DARK} />
         </Pressable>
@@ -149,13 +167,13 @@ export default function UpgradePlanScreen() {
       {loading ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={GREEN} />
-          <Text style={styles.stateText}>Đang tải gói quét AI...</Text>
+          <Text style={styles.stateText}>{t('upgrade.loading')}</Text>
         </View>
       ) : error ? (
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={() => loadStatus().catch(() => undefined)} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Thử lại</Text>
+            <Text style={styles.primaryButtonText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -165,11 +183,14 @@ export default function UpgradePlanScreen() {
               <View style={styles.heroIcon}>
                 <Ionicons name="scan-outline" size={24} color={GREEN} />
               </View>
-              <Text style={styles.heroTitle}>Quét nhiều hơn, chăm cây tốt hơn</Text>
-              <Text style={styles.heroText}>Mở thêm lượt quét AI mỗi ngày để theo dõi sức khỏe cây trồng liên tục.</Text>
+              <Text style={styles.heroTitle}>{t('upgrade.heroTitle')}</Text>
+              <Text style={styles.heroText}>{t('upgrade.heroText')}</Text>
               <View style={styles.quotaRow}>
                 <Text style={styles.quotaText}>
-                  Còn {subscription?.remainingScans ?? 0}/{subscription?.dailyScanLimit ?? PLAN_DATA.free.scanLimit} lượt {currentTier === 'free' ? 'miễn phí ' : ''}hôm nay
+                  {t(currentTier === 'free' ? 'upgrade.quotaFree' : 'upgrade.quotaPaid', {
+                    remaining: subscription?.remainingScans ?? 0,
+                    limit: subscription?.dailyScanLimit ?? PLAN_DATA.free.scanLimit,
+                  })}
                 </Text>
                 <Text style={styles.quotaPercent}>{progress}%</Text>
               </View>
@@ -179,12 +200,12 @@ export default function UpgradePlanScreen() {
             </View>
 
             <View style={styles.segment}>
-              <SegmentButton label="Theo tháng" active={billingCycle === 'monthly'} onPress={() => setBillingCycle('monthly')} />
-              <SegmentButton label="Theo năm" active={billingCycle === 'yearly'} onPress={() => setBillingCycle('yearly')} />
+              <SegmentButton label={t('upgrade.monthly')} active={billingCycle === 'monthly'} onPress={() => setBillingCycle('monthly')} />
+              <SegmentButton label={t('upgrade.yearly')} active={billingCycle === 'yearly'} onPress={() => setBillingCycle('yearly')} />
             </View>
 
-            <Text style={styles.sectionTitle}>Chọn gói phù hợp</Text>
-            <FreePlanCard currentTier={currentTier} />
+            <Text style={styles.sectionTitle}>{t('upgrade.choosePlan')}</Text>
+            <FreePlanCard currentTier={currentTier} t={t} locale={locale} />
             <PaidPlanCard
               plan="personal"
               icon="leaf-outline"
@@ -192,6 +213,8 @@ export default function UpgradePlanScreen() {
               current={currentTier === 'personal' && Boolean(subscription?.expiresAt)}
               cycle={billingCycle}
               onPress={() => setSelectedPlan('personal')}
+              t={t}
+              locale={locale}
             />
             <PaidPlanCard
               plan="pro"
@@ -200,6 +223,8 @@ export default function UpgradePlanScreen() {
               current={currentTier === 'pro' && Boolean(subscription?.expiresAt)}
               cycle={billingCycle}
               onPress={() => setSelectedPlan('pro')}
+              t={t}
+              locale={locale}
             />
 
             <View style={styles.paymentCard}>
@@ -207,8 +232,8 @@ export default function UpgradePlanScreen() {
                 <Ionicons name="card-outline" size={20} color={GREEN} />
               </View>
               <View style={styles.fill}>
-                <Text style={styles.paymentTitle}>Thanh toán an toàn qua VNPAY</Text>
-                <Text style={styles.paymentText}>Hỗ trợ thẻ ngân hàng, ví điện tử và mã QR.</Text>
+                <Text style={styles.paymentTitle}>{t('upgrade.paymentTitle')}</Text>
+                <Text style={styles.paymentText}>{t('upgrade.paymentText')}</Text>
               </View>
             </View>
           </ScrollView>
@@ -221,13 +246,13 @@ export default function UpgradePlanScreen() {
             >
               <Text style={styles.ctaText}>
                 {paying
-                  ? 'Đang tạo thanh toán...'
+                  ? t('upgrade.creatingPayment')
                   : isSelectedCurrentPlan
-                    ? `Đang dùng gói ${tierLabel(selectedPlan)}`
-                    : `Nâng cấp gói ${selectedPlanData.title}`}
+                    ? t('upgrade.currentPlanCta', { tier: tierLabel(selectedPlan, t) })
+                    : t('upgrade.upgradeCta', { tier: t(selectedPlanData.titleKey) })}
               </Text>
             </Pressable>
-            <Text style={styles.footerNote}>Gói hết hạn có thể gia hạn bất cứ lúc nào.</Text>
+            <Text style={styles.footerNote}>{t('upgrade.footerNote')}</Text>
           </View>
         </>
       )}
@@ -243,13 +268,13 @@ function SegmentButton({ label, active, onPress }: { label: string; active: bool
   );
 }
 
-function FreePlanCard({ currentTier }: { currentTier: string }) {
+function FreePlanCard({ currentTier, t, locale }: { currentTier: string; t: Translate; locale: string }) {
   return (
     <View style={styles.freeCard}>
-      <PlanHeader title="Miễn phí" price="0đ" />
-      <FeatureList features={PLAN_DATA.free.features} />
+      <PlanHeader title={t(PLAN_DATA.free.titleKey)} price={formatVnd(PLAN_DATA.free.price, locale)} />
+      <FeatureList featureKeys={PLAN_DATA.free.featureKeys} t={t} />
       <View style={styles.currentPill}>
-        <Text style={styles.currentPillText}>{currentTier === 'free' ? 'Đang dùng' : 'Gói mặc định'}</Text>
+        <Text style={styles.currentPillText}>{currentTier === 'free' ? t('upgrade.current') : t('upgrade.defaultPlan')}</Text>
       </View>
     </View>
   );
@@ -262,6 +287,8 @@ function PaidPlanCard({
   current,
   cycle,
   onPress,
+  t,
+  locale,
 }: {
   plan: PaidPlan;
   icon: IconName;
@@ -269,6 +296,8 @@ function PaidPlanCard({
   current: boolean;
   cycle: BillingCycle;
   onPress: () => void;
+  t: Translate;
+  locale: string;
 }) {
   const data = PLAN_DATA[plan];
   const price = cycle === 'yearly' ? data.yearlyPrice : data.monthlyPrice;
@@ -280,18 +309,18 @@ function PaidPlanCard({
         </View>
         <View style={styles.fill}>
           <View style={styles.planTitleRow}>
-            <Text style={styles.planTitle}>{data.title}</Text>
-            {'badge' in data && <Text style={styles.popularBadge}>{data.badge}</Text>}
-            {current && <Text style={styles.currentBadge}>Đang dùng</Text>}
+            <Text style={styles.planTitle}>{t(data.titleKey)}</Text>
+            {'badgeKey' in data && <Text style={styles.popularBadge}>{t(data.badgeKey)}</Text>}
+            {current && <Text style={styles.currentBadge}>{t('upgrade.current')}</Text>}
           </View>
-          <Text style={styles.planPrice}>{formatVnd(price)} <Text style={styles.priceSuffix}>/{cycle === 'yearly' ? 'năm' : 'tháng'}</Text></Text>
-          {cycle === 'yearly' && <Text style={styles.savingText}>Tiết kiệm 2 tháng</Text>}
+          <Text style={styles.planPrice}>{formatVnd(price, locale)} <Text style={styles.priceSuffix}>/{cycle === 'yearly' ? t('upgrade.year') : t('upgrade.month')}</Text></Text>
+          {cycle === 'yearly' && <Text style={styles.savingText}>{t('upgrade.yearlySaving')}</Text>}
         </View>
       </View>
-      <FeatureList features={data.features} />
+      <FeatureList featureKeys={data.featureKeys} t={t} />
       <View style={[styles.planButton, selected && styles.planButtonSelected]}>
         <Text style={[styles.planButtonText, selected && styles.planButtonTextSelected]}>
-          {current ? 'Đang dùng' : plan === 'personal' ? 'Nâng cấp gói Cá nhân' : 'Chọn gói Pro'}
+          {current ? t('upgrade.current') : plan === 'personal' ? t('upgrade.upgradeCta', { tier: t(data.titleKey) }) : t('upgrade.choosePro')}
         </Text>
       </View>
     </Pressable>
@@ -307,13 +336,13 @@ function PlanHeader({ title, price }: { title: string; price: string }) {
   );
 }
 
-function FeatureList({ features }: { features: string[] }) {
+function FeatureList({ featureKeys, t }: { featureKeys: string[]; t: Translate }) {
   return (
     <View style={styles.featureList}>
-      {features.map((feature) => (
-        <View key={feature} style={styles.featureRow}>
+      {featureKeys.map((featureKey) => (
+        <View key={featureKey} style={styles.featureRow}>
           <Text style={styles.featureBullet}>·</Text>
-          <Text style={styles.featureText}>{feature}</Text>
+          <Text style={styles.featureText}>{t(featureKey)}</Text>
         </View>
       ))}
     </View>

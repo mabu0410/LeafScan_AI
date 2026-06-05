@@ -36,6 +36,10 @@ cp .env.example .env
 # dùng auto cho Expo LAN, hoặc sửa thành http://<your-lan-ip>:8000
 EXPO_PUBLIC_API_BASE_URL=auto
 
+# Android push notifications cần EAS project id và development/production build
+# Expo Go Android không hỗ trợ push notifications từ SDK 53+
+EXPO_PUBLIC_EAS_PROJECT_ID=<project-id-from-npx-eas-project-info>
+
 # 3. Chạy ứng dụng
 npx expo start --host lan -c
 

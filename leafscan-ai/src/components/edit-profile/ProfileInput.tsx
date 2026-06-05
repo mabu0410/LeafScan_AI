@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface ProfileInputProps extends Omit<TextInputProps, 'style'> {
@@ -14,13 +15,14 @@ export function ProfileInput({
   optional = false,
   ...textInputProps
 }: ProfileInputProps) {
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
 
   return (
     <View style={styles.group}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
-        {optional ? <Text style={styles.optionalText}>(không bắt buộc)</Text> : null}
+        {optional ? <Text style={styles.optionalText}>({t('common.optional')})</Text> : null}
       </View>
       <TextInput
         {...textInputProps}

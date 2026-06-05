@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 export type HistoryFilterValue = 'all' | 'healthy' | 'moderate' | 'severe';
@@ -14,13 +15,6 @@ interface HistoryFilterChipsProps {
   activeFilter: HistoryFilterValue;
   onSelectFilter: (value: HistoryFilterValue) => void;
 }
-
-const FILTERS: FilterItem[] = [
-  { id: 'all', label: 'Tất cả' },
-  { id: 'healthy', label: 'Khỏe mạnh' },
-  { id: 'moderate', label: 'Cảnh báo' },
-  { id: 'severe', label: 'Nguy hiểm' },
-];
 
 const CHIP_TINT: Record<HistoryFilterValue, { bg: string; border: string; text: string }> = {
   all: { bg: '#F1EFEA', border: '#E4E0D8', text: theme.colors.textSecondary },
@@ -76,11 +70,19 @@ function FilterChip({
 }
 
 export function HistoryFilterChips({ activeFilter, onSelectFilter }: HistoryFilterChipsProps) {
+  const { t } = useTranslation();
+  const filters: FilterItem[] = [
+    { id: 'all', label: t('history.severity.all') },
+    { id: 'healthy', label: t('history.severity.healthyTitle') },
+    { id: 'moderate', label: t('history.severity.moderateTitle') },
+    { id: 'severe', label: t('history.severity.severeTitle') },
+  ];
+
   return (
     <View style={styles.container}>
       <FlatList
         horizontal
-        data={FILTERS}
+        data={filters}
         keyExtractor={(item) => item.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.content}

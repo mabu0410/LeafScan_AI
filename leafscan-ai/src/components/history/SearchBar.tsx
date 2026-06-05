@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface SearchBarProps {
@@ -12,6 +13,8 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ visible, value, onChangeText, onClear }: SearchBarProps) {
+  const { t } = useTranslation();
+
   if (!visible) {
     return null;
   }
@@ -24,7 +27,7 @@ export function SearchBar({ visible, value, onChangeText, onClear }: SearchBarPr
           value={value}
           onChangeText={onChangeText}
           style={styles.input}
-          placeholder="Tìm theo cây, bệnh hoặc trạng thái"
+          placeholder={t('history.searchPlaceholder')}
           placeholderTextColor={theme.colors.textMuted}
           autoCorrect={false}
           autoCapitalize="none"

@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList, Plant } from '../types';
 import { usePlantsStore } from '../stores/plantsStore';
 import { theme } from '../theme/theme';
@@ -16,21 +17,6 @@ import { FloatingAddButton } from '../components/garden/FloatingAddButton';
 
 type GardenSortMode = 'recent' | 'name' | 'health';
 type GardenFilterId = 'all' | 'attention' | 'Rau củ' | 'Cây ăn quả' | 'Ngũ cốc' | 'Hoa cảnh';
-
-const FILTER_CHIPS: GardenFilterChipItem[] = [
-  { id: 'all', label: 'Tất cả' },
-  { id: 'Rau củ', label: 'Rau củ' },
-  { id: 'Cây ăn quả', label: 'Cây ăn quả' },
-  { id: 'Ngũ cốc', label: 'Ngũ cốc' },
-  { id: 'Hoa cảnh', label: 'Hoa cảnh' },
-  { id: 'attention', label: 'Cần chú ý' },
-];
-
-const SORT_LABEL: Record<GardenSortMode, string> = {
-  recent: 'Mới quét gần đây',
-  name: 'Tên cây A → Z',
-  health: 'Điểm sức khỏe cao',
-};
 
 const ENABLE_GARDEN_MOCK_PREVIEW = false;
 
@@ -70,11 +56,33 @@ const GARDEN_MOCK_PLANTS: Plant[] = [
 export default function MyGardenScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [activeFilter, setActiveFilter] = useState<GardenFilterId>('all');
   const [sortMode, setSortMode] = useState<GardenSortMode>('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const plants = usePlantsStore((state) => state.plants);
   const loadPlants = usePlantsStore((state) => state.loadPlants);
+
+  const filterChips = useMemo<GardenFilterChipItem[]>(
+    () => [
+      { id: 'all', label: t('garden.filters.all') },
+      { id: 'Rau củ', label: t('garden.filters.vegetables') },
+      { id: 'Cây ăn quả', label: t('garden.filters.fruitTrees') },
+      { id: 'Ngũ cốc', label: t('garden.filters.grains') },
+      { id: 'Hoa cảnh', label: t('garden.filters.ornamentals') },
+      { id: 'attention', label: t('garden.filters.attention') },
+    ],
+    [t]
+  );
+
+  const sortLabel = useMemo<Record<GardenSortMode, string>>(
+    () => ({
+      recent: t('garden.sort.recent'),
+      name: t('garden.sort.name'),
+      health: t('garden.sort.health'),
+    }),
+    [t]
+  );
 
   useEffect(() => {
     loadPlants().catch(() => undefined);
@@ -130,15 +138,15 @@ export default function MyGardenScreen() {
 
   const subtitle =
     totalPlants === 0
-      ? 'Bắt đầu thêm cây để theo dõi sức khỏe cây trồng'
-      : `Bạn đang theo dõi ${totalPlants} cây`;
+      ? t('garden.emptySubtitle')
+      : t('garden.trackingCount', { count: totalPlants });
 
   const cycleSortMode = () => {
     setSortMode((prev) => (prev === 'recent' ? 'name' : prev === 'name' ? 'health' : 'recent'));
   };
 
   const handlePressFilter = () => {
-    Alert.alert('Bộ lọc hiện tại', FILTER_CHIPS.find((chip) => chip.id === activeFilter)?.label || 'Tất cả');
+    Alert.alert(t('garden.activeFilterTitle'), filterChips.find((chip) => chip.id === activeFilter)?.label || t('garden.filters.all'));
   };
 
   const renderPlantItem = ({ item }: { item: Plant }) => (
@@ -157,7 +165,7 @@ export default function MyGardenScreen() {
       <View style={styles.container}>
         <Animated.View entering={FadeInDown.duration(420)} style={styles.headerTopSpace}>
           <GardenHeader
-            title="Vườn của tôi"
+            title={t('garden.title')}
             subtitle={subtitle}
             searchQuery={searchQuery}
             onChangeSearch={setSearchQuery}
@@ -168,7 +176,7 @@ export default function MyGardenScreen() {
 
         <Animated.View entering={FadeInDown.delay(70).duration(420)}>
           <GardenFilterChips
-            chips={FILTER_CHIPS}
+            chips={filterChips}
             activeChipId={activeFilter}
             onSelectChip={(chipId) => setActiveFilter(chipId as GardenFilterId)}
           />
@@ -186,7 +194,7 @@ export default function MyGardenScreen() {
 
         {!isTrulyEmpty ? (
           <View style={styles.sortHintWrap}>
-            <Text style={styles.sortHint}>Sắp xếp: {SORT_LABEL[sortMode]}</Text>
+            <Text style={styles.sortHint}>{t('garden.sortHint', { label: sortLabel[sortMode] })}</Text>
           </View>
         ) : null}
 
@@ -194,12 +202,10 @@ export default function MyGardenScreen() {
           <EmptyGardenState onAddFirstPlant={() => navigation.navigate('AddPlant')} />
         ) : filteredPlants.length === 0 ? (
           <View style={styles.filteredEmpty}>
-            <Text style={styles.filteredEmptyTitle}>Không có cây phù hợp</Text>
-            <Text style={styles.filteredEmptyText}>
-              Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để xem nhiều cây hơn.
-            </Text>
+            <Text style={styles.filteredEmptyTitle}>{t('garden.noFilteredTitle')}</Text>
+            <Text style={styles.filteredEmptyText}>{t('garden.noFilteredText')}</Text>
             <Pressable onPress={() => setSearchQuery('')} style={styles.filteredEmptyButton}>
-              <Text style={styles.filteredEmptyButtonText}>Xóa tìm kiếm</Text>
+              <Text style={styles.filteredEmptyButtonText}>{t('garden.clearSearch')}</Text>
             </Pressable>
           </View>
         ) : (

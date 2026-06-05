@@ -9,6 +9,7 @@ import {
   uploadPlantImageApi,
 } from '../api/plants';
 import { useAuthStore } from './authStore';
+import { fetchWithCache } from '../utils/offlineCache';
 
 type AddPlantPayload = PlantPayload & {
   imageUri?: string | null;
@@ -36,11 +37,12 @@ export const usePlantsStore = create<PlantsState>()((set, get) => ({
   loading: false,
   loadPlants: async () => {
     const token = useAuthStore.getState().accessToken;
+    const userId = useAuthStore.getState().user?.id || 'me';
     if (!token) return;
     set({ loading: true });
     try {
-      const plants = await fetchPlantsApi(token);
-      set({ plants });
+      const result = await fetchWithCache(`plants:${userId}`, () => fetchPlantsApi(token));
+      set({ plants: result.data });
     } finally {
       set({ loading: false });
     }

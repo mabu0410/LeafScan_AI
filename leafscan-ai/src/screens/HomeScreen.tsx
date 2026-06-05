@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList, SubscriptionStatus } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { fetchHomeSummaryApi } from '../api/home';
@@ -30,20 +31,22 @@ import {
   HomeWeather,
 } from '../types/home';
 import { TipDetailSheet } from '../components/home/TipDetailSheet';
+import { fetchWithCache } from '../utils/offlineCache';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 type IconName = keyof typeof Ionicons.glyphMap;
+type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 const GREEN = '#006B2D';
 const DEEP_GREEN = '#004F1C';
 const BG = '#FFFDF8';
 
-function getGreeting(): string {
+function getGreeting(t: Translate): string {
   const hour = new Date().getHours();
-  if (hour < 11) return 'Chào buổi sáng,';
-  if (hour < 14) return 'Chào buổi trưa,';
-  if (hour < 18) return 'Chào buổi chiều,';
-  return 'Chào buổi tối,';
+  if (hour < 11) return t('home.greeting.morning');
+  if (hour < 14) return t('home.greeting.noon');
+  if (hour < 18) return t('home.greeting.afternoon');
+  return t('home.greeting.evening');
 }
 
 function formatNumber(value: number | null | undefined, suffix = '', digits = 0): string {
@@ -51,23 +54,23 @@ function formatNumber(value: number | null | undefined, suffix = '', digits = 0)
   return `${Number(value).toFixed(digits)}${suffix}`;
 }
 
-function formatRelativeTime(value?: string | null): string {
-  if (!value) return 'Chưa có dữ liệu';
+function formatRelativeTime(value: string | null | undefined, t: Translate, locale: string): string {
+  if (!value) return t('common.noData');
   const dt = new Date(value);
-  if (Number.isNaN(dt.getTime())) return 'Chưa có dữ liệu';
+  if (Number.isNaN(dt.getTime())) return t('common.noData');
 
   const diffMs = Date.now() - dt.getTime();
   const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return 'Vừa xong';
-  if (minutes < 60) return `${minutes} phút trước`;
+  if (minutes < 1) return t('home.time.justNow');
+  if (minutes < 60) return t('home.time.minutesAgo', { count: minutes });
 
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} giờ trước`;
+  if (hours < 24) return t('home.time.hoursAgo', { count: hours });
 
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ngày trước`;
+  if (days < 7) return t('home.time.daysAgo', { count: days });
 
-  return dt.toLocaleDateString('vi-VN');
+  return dt.toLocaleDateString(locale === 'en' ? 'en-US' : 'vi-VN');
 }
 
 function formatClock(value?: string | null): string {
@@ -81,11 +84,15 @@ function Header({
   userName,
   avatar,
   onProfile,
+  onNotifications,
 }: {
   userName: string;
   avatar?: string | null;
   onProfile: () => void;
+  onNotifications: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.header}>
       <Pressable onPress={onProfile} style={styles.avatarShell}>
@@ -99,14 +106,14 @@ function Header({
       </Pressable>
 
       <View style={styles.headerText}>
-        <Text style={styles.greeting}>{getGreeting()}</Text>
+        <Text style={styles.greeting}>{getGreeting(t)}</Text>
         <Text numberOfLines={1} adjustsFontSizeToFit style={styles.userName}>
           {userName}
         </Text>
       </View>
 
       <Pressable
-        onPress={() => Alert.alert('Thông báo', 'Bạn chưa có thông báo mới.')}
+        onPress={onNotifications}
         style={styles.bellButton}
       >
         <Ionicons name="notifications-outline" size={23} color="#111827" />
@@ -122,9 +129,13 @@ function PremiumCard({
   subscription: SubscriptionStatus | null;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const quotaText = subscription
-    ? `Còn ${subscription.remainingScans}/${subscription.dailyScanLimit} lượt quét hôm nay`
-    : 'Mở thêm lượt quét AI mỗi ngày';
+    ? t('home.premium.quota', {
+      remaining: subscription.remainingScans,
+      limit: subscription.dailyScanLimit,
+    })
+    : t('home.premium.prompt');
   const isPaid = subscription?.tier && subscription.tier !== 'free';
 
   return (
@@ -136,17 +147,16 @@ function PremiumCard({
     >
       <View style={styles.premiumBadge}>
         <Ionicons name="diamond" size={17} color="#FFD94A" />
-        <Text style={styles.premiumBadgeText}>{isPaid ? String(subscription?.tier).toUpperCase() : 'PREMIUM'}</Text>
+        <Text style={styles.premiumBadgeText}>
+          {isPaid ? t('home.premium.badgePaid', { tier: String(subscription?.tier).toUpperCase() }) : t('home.premium.badgeFree')}
+        </Text>
       </View>
 
-      <Text style={styles.premiumTitle}>{isPaid ? 'Gói đang hoạt động' : 'Mở khóa tiềm năng'}</Text>
-      <Text style={styles.premiumDescription}>
-        {quotaText}
-        {'\n'}và gợi ý chăm sóc cây bằng AI.
-      </Text>
+      <Text style={styles.premiumTitle}>{isPaid ? t('home.premium.activeTitle') : t('home.premium.unlockTitle')}</Text>
+      <Text style={styles.premiumDescription}>{t('home.premium.description', { quota: quotaText })}</Text>
 
       <Pressable onPress={onPress} style={styles.upgradeButton}>
-        <Text style={styles.upgradeText}>{isPaid ? 'Xem gói của tôi' : 'Nâng cấp ngay'}</Text>
+        <Text style={styles.upgradeText}>{isPaid ? t('home.premium.viewPlan') : t('home.premium.upgrade')}</Text>
         <Ionicons name="arrow-forward" size={21} color={DEEP_GREEN} />
       </Pressable>
 
@@ -156,6 +166,8 @@ function PremiumCard({
 }
 
 function ScanCard({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <LinearGradient
       colors={['#F7FFE9', '#EEFFD9', '#F9FFF0']}
@@ -164,13 +176,11 @@ function ScanCard({ onPress }: { onPress: () => void }) {
       style={styles.scanCard}
     >
       <View style={styles.scanCopy}>
-        <Text style={styles.scanTitle}>Kiểm tra sức khỏe{'\n'}cây trồng</Text>
-        <Text style={styles.scanDescription}>
-          Quét lá hoặc đất để phát hiện nhanh sâu bệnh và nhận khuyến nghị.
-        </Text>
+        <Text style={styles.scanTitle}>{t('home.scanCard.title')}</Text>
+        <Text style={styles.scanDescription}>{t('home.scanCard.description')}</Text>
         <Pressable onPress={onPress} style={styles.scanButton}>
           <Ionicons name="camera" size={21} color={DEEP_GREEN} />
-          <Text style={styles.scanButtonText}>Bắt đầu quét</Text>
+          <Text style={styles.scanButtonText}>{t('home.scanCard.button')}</Text>
         </Pressable>
       </View>
 
@@ -194,6 +204,7 @@ function weatherIcon(code?: number | null): IconName {
 }
 
 function WeatherCard({ weather }: { weather: HomeWeather }) {
+  const { t } = useTranslation();
   const hasWeather = weather.temperatureC != null || weather.humidityPercent != null || weather.windSpeedKmh != null;
 
   return (
@@ -202,20 +213,20 @@ function WeatherCard({ weather }: { weather: HomeWeather }) {
         <Ionicons name={weatherIcon(weather.weatherCode)} size={44} color="#F6B900" />
       </View>
       <View style={styles.weatherMain}>
-        <Text style={styles.weatherTitle}>Thời tiết hôm nay</Text>
+        <Text style={styles.weatherTitle}>{t('home.weather.title')}</Text>
         <View style={styles.locationRow}>
           <Ionicons name="location" size={17} color="#8A8F98" />
           <Text style={styles.locationText}>{weather.location}</Text>
         </View>
         <View style={styles.tempRow}>
           <Text style={styles.tempText}>{formatNumber(weather.temperatureC, '°C', 0)}</Text>
-          <Text style={styles.weatherStatus}>{hasWeather ? weather.condition : 'Chưa có dữ liệu'}</Text>
+          <Text style={styles.weatherStatus}>{hasWeather ? weather.condition : t('common.noData')}</Text>
         </View>
       </View>
       <View style={styles.verticalDivider} />
-      <WeatherMetric icon="water-outline" value={formatNumber(weather.humidityPercent, '%', 0)} label="Độ ẩm" />
+      <WeatherMetric icon="water-outline" value={formatNumber(weather.humidityPercent, '%', 0)} label={t('home.weather.humidity')} />
       <View style={styles.verticalDivider} />
-      <WeatherMetric icon="speedometer-outline" value={formatNumber(weather.windSpeedKmh, ' km/h', 0)} label="Gió" />
+      <WeatherMetric icon="speedometer-outline" value={formatNumber(weather.windSpeedKmh, ' km/h', 0)} label={t('home.weather.wind')} />
     </View>
   );
 }
@@ -233,6 +244,8 @@ function WeatherMetric({ icon, value, label }: { icon: IconName; value: string; 
 }
 
 function SectionHeader({ title, onPress }: { title: string; onPress?: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.sectionHeader}>
       <Text numberOfLines={1} adjustsFontSizeToFit style={styles.sectionTitle}>
@@ -240,7 +253,7 @@ function SectionHeader({ title, onPress }: { title: string; onPress?: () => void
       </Text>
       {onPress ? (
         <Pressable onPress={onPress} style={styles.viewAllButton}>
-          <Text style={styles.viewAllText}>Xem tất cả</Text>
+          <Text style={styles.viewAllText}>{t('home.sections.viewAll')}</Text>
           <Ionicons name="chevron-forward" size={19} color={GREEN} />
         </Pressable>
       ) : null}
@@ -257,30 +270,31 @@ function GardenSummaryCard({
   stats: HomeStats;
   onViewAll: () => void;
 }) {
+  const { t, i18n } = useTranslation();
   const items = [
     {
       icon: 'pulse-outline' as IconName,
-      title: 'Sức khỏe trung bình',
+      title: t('home.stats.averageHealth'),
       value: formatNumber(stats.averageHealth, '%', 0),
-      state: stats.averageHealth == null ? 'Chưa có dữ liệu' : 'Từ vườn của bạn',
+      state: stats.averageHealth == null ? t('common.noData') : t('home.stats.fromGarden'),
       color: '#00A651',
       bg: '#F8FFF5',
       border: '#E2F1D7',
     },
     {
       icon: 'scan-outline' as IconName,
-      title: 'Cây đã quét',
-      value: `${stats.scannedPlants} cây`,
-      state: stats.scannedPlants > 0 ? 'Có lịch sử quét' : 'Chưa quét',
+      title: t('home.stats.scannedPlants'),
+      value: t('home.stats.scannedPlantsValue', { count: stats.scannedPlants }),
+      state: stats.scannedPlants > 0 ? t('home.stats.scanHistory') : t('home.stats.notScanned'),
       color: '#169CFF',
       bg: '#EFF9FF',
       border: '#D6EDFF',
     },
     {
       icon: 'leaf' as IconName,
-      title: 'Cây cần chú ý',
-      value: `${summary.attentionPlants} cây`,
-      state: summary.attentionPlants > 0 ? 'Cần kiểm tra' : 'Ổn định',
+      title: t('home.stats.attentionPlants'),
+      value: t('home.stats.scannedPlantsValue', { count: summary.attentionPlants }),
+      state: summary.attentionPlants > 0 ? t('home.stats.needsCheck') : t('home.stats.stable'),
       color: '#44A340',
       bg: '#F8FFF5',
       border: '#E2F1D7',
@@ -288,9 +302,9 @@ function GardenSummaryCard({
     },
     {
       icon: 'time' as IconName,
-      title: 'Lần quét gần nhất',
-      value: summary.lastScanAt ? formatRelativeTime(summary.lastScanAt) : '--',
-      state: summary.lastScanAt ? formatClock(summary.lastScanAt) : 'Chưa quét',
+      title: t('home.stats.latestScan'),
+      value: summary.lastScanAt ? formatRelativeTime(summary.lastScanAt, t, i18n.language) : '--',
+      state: summary.lastScanAt ? formatClock(summary.lastScanAt) : t('home.stats.notScanned'),
       color: '#7567FF',
       bg: '#FBF8FF',
       border: '#E6E0FB',
@@ -299,7 +313,7 @@ function GardenSummaryCard({
 
   return (
     <View style={styles.sectionBlock}>
-      <SectionHeader title="Tóm tắt khu vườn" onPress={onViewAll} />
+      <SectionHeader title={t('home.sections.gardenSummary')} onPress={onViewAll} />
       <View style={styles.summaryGrid}>
         {items.map((item) => (
           <View key={item.title} style={[styles.summaryCard, { backgroundColor: item.bg, borderColor: item.border }]}>
@@ -337,11 +351,13 @@ function EmptyInline({ icon, text }: { icon: IconName; text: string }) {
 }
 
 function RecentActivity({ activities }: { activities: HomeRecentActivity[] }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.sectionBlock}>
-      <Text style={styles.sectionTitle}>Hoạt động gần đây</Text>
+      <Text style={styles.sectionTitle}>{t('home.sections.recentActivity')}</Text>
       {activities.length === 0 ? (
-        <EmptyInline icon="time-outline" text="Chưa có hoạt động thật để hiển thị." />
+        <EmptyInline icon="time-outline" text={t('home.empty.noRealActivity')} />
       ) : (
         <View style={styles.listCard}>
           {activities.slice(0, 4).map((item, index) => (
@@ -357,6 +373,7 @@ function RecentActivity({ activities }: { activities: HomeRecentActivity[] }) {
 }
 
 function ActivityRow({ item }: { item: HomeRecentActivity }) {
+  const { t, i18n } = useTranslation();
   const isScan = item.activityType === 'scan';
   const tint = item.status === 'severe' ? '#D73333' : item.status === 'moderate' ? '#FF8A00' : '#00A651';
 
@@ -370,20 +387,22 @@ function ActivityRow({ item }: { item: HomeRecentActivity }) {
           {item.title}
         </Text>
         <Text numberOfLines={1} style={[styles.activitySubtitle, { color: tint }]}>
-          {item.subtitle || (isScan ? 'Lần quét mới' : 'Nhật ký chăm sóc')}
+          {item.subtitle || (isScan ? t('home.activity.scan') : t('home.activity.careLog'))}
         </Text>
       </View>
-      <Text style={styles.activityTime}>{formatRelativeTime(item.occurredAt)}</Text>
+      <Text style={styles.activityTime}>{formatRelativeTime(item.occurredAt, t, i18n.language)}</Text>
     </View>
   );
 }
 
-function TodayTasks({ tasks }: { tasks: HomeTask[] }) {
+function TodayTasks({ tasks, onViewAll }: { tasks: HomeTask[]; onViewAll: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.sectionBlock}>
-      <Text style={styles.sectionTitle}>Việc cần làm hôm nay</Text>
+      <SectionHeader title={t('home.sections.todayTasks')} onPress={onViewAll} />
       {tasks.length === 0 ? (
-        <EmptyInline icon="checkmark-circle-outline" text="Chưa có việc chăm sóc đến hạn hôm nay." />
+        <EmptyInline icon="checkmark-circle-outline" text={t('home.empty.noTasks')} />
       ) : (
         <View style={styles.taskRow}>
           {tasks.slice(0, 2).map((task) => (
@@ -403,14 +422,16 @@ function taskIcon(taskType: string): IconName {
 }
 
 function TaskCard({ task }: { task: HomeTask }) {
+  const { t } = useTranslation();
+
   return (
-    <Pressable style={styles.taskCard} onPress={() => Alert.alert('Việc chăm sóc', task.title)}>
+    <Pressable style={styles.taskCard} onPress={() => Alert.alert(t('home.task.alertTitle'), task.title)}>
       <Ionicons name={taskIcon(task.taskType)} size={21} color={GREEN} />
       <Text numberOfLines={1} style={styles.taskTitle}>
         {task.title}
       </Text>
       <Text numberOfLines={1} style={styles.taskPlant}>
-        {task.plantName || 'Không gắn cây'}
+        {task.plantName || t('home.task.noPlant')}
       </Text>
       <View style={styles.taskTimePill}>
         <Text style={styles.taskTime}>{formatClock(task.dueAt)}</Text>
@@ -420,6 +441,8 @@ function TaskCard({ task }: { task: HomeTask }) {
 }
 
 function AiTip({ tip, onPress }: { tip: HomeTodayTip | null; onPress: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <Pressable onPress={tip ? onPress : undefined}>
       <LinearGradient colors={['#F0FFE9', '#FBFFF4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.aiTipCard}>
@@ -427,9 +450,9 @@ function AiTip({ tip, onPress }: { tip: HomeTodayTip | null; onPress: () => void
           <Ionicons name="chatbubble-ellipses" size={22} color={GREEN} />
         </View>
         <View style={styles.aiTipText}>
-          <Text style={styles.aiTipTitle}>Mẹo AI hôm nay</Text>
+          <Text style={styles.aiTipTitle}>{t('home.tip.title')}</Text>
           <Text numberOfLines={2} style={styles.aiTipBody}>
-            {tip ? tip.summary : 'Chưa có mẹo chăm sóc thật cho hôm nay.'}
+            {tip ? tip.summary : t('home.empty.noTip')}
           </Text>
         </View>
         <Ionicons name={tip ? 'chevron-forward' : 'information-circle-outline'} size={23} color={GREEN} />
@@ -438,12 +461,14 @@ function AiTip({ tip, onPress }: { tip: HomeTodayTip | null; onPress: () => void
   );
 }
 
-function CareLog({ logs }: { logs: HomeCareLog[] }) {
+function CareLog({ logs, onViewAll }: { logs: HomeCareLog[]; onViewAll: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.sectionBlock}>
-      <SectionHeader title="Nhật ký chăm sóc" />
+      <SectionHeader title={t('home.sections.careLog')} onPress={onViewAll} />
       {logs.length === 0 ? (
-        <EmptyInline icon="journal-outline" text="Chưa có nhật ký chăm sóc thật." />
+        <EmptyInline icon="journal-outline" text={t('home.empty.noCareLog')} />
       ) : (
         <View style={styles.listCard}>
           {logs.slice(0, 4).map((item, index) => (
@@ -459,6 +484,8 @@ function CareLog({ logs }: { logs: HomeCareLog[] }) {
 }
 
 function CareLogRow({ item }: { item: HomeCareLog }) {
+  const { t, i18n } = useTranslation();
+
   return (
     <View style={styles.careRow}>
       <View style={styles.rowIcon}>
@@ -472,13 +499,14 @@ function CareLogRow({ item }: { item: HomeCareLog }) {
           {item.description || item.plantName || item.logType}
         </Text>
       </View>
-      <Text style={styles.careTime}>{formatRelativeTime(item.performedAt)}</Text>
+      <Text style={styles.careTime}>{formatRelativeTime(item.performedAt, t, i18n.language)}</Text>
     </View>
   );
 }
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
+  const { t } = useTranslation();
   const authUser = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const [home, setHome] = useState<HomeSummary | null>(null);
@@ -486,6 +514,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fromCache, setFromCache] = useState(false);
   const [tipVisible, setTipVisible] = useState(false);
 
   const loadHome = useCallback(
@@ -493,15 +522,21 @@ export default function HomeScreen() {
       if (!accessToken) return;
       if (showLoading) setLoading(true);
       setError(null);
+      setFromCache(false);
+      const cacheUserId = authUser?.id || 'me';
       const [homeResult, subscriptionResult] = await Promise.allSettled([
-        fetchHomeSummaryApi(accessToken),
+        fetchWithCache(`home-summary:${cacheUserId}`, () => fetchHomeSummaryApi(accessToken)),
         getSubscriptionStatusApi(accessToken),
       ]);
 
       if (homeResult.status === 'fulfilled') {
-        setHome(homeResult.value);
+        setHome(homeResult.value.data);
+        setFromCache(homeResult.value.fromCache);
+        if (homeResult.value.fromCache) {
+          setError('Đang hiển thị dữ liệu đã lưu gần nhất.');
+        }
       } else {
-        setError(homeResult.reason instanceof Error ? homeResult.reason.message : 'Không tải được dữ liệu trang chủ.');
+        setError(homeResult.reason instanceof Error ? homeResult.reason.message : t('home.alerts.loadFailed'));
       }
 
       if (subscriptionResult.status === 'fulfilled') {
@@ -510,15 +545,31 @@ export default function HomeScreen() {
 
       if (showLoading) setLoading(false);
     },
-    [accessToken]
+    [accessToken, authUser?.id, t]
   );
 
   useEffect(() => {
     loadHome(true).catch((err) => {
       setLoading(false);
-      setError(err instanceof Error ? err.message : 'Không tải được dữ liệu trang chủ.');
+      setError(err instanceof Error ? err.message : t('home.alerts.loadFailed'));
     });
-  }, [loadHome]);
+  }, [loadHome, t]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (accessToken) {
+        loadHome(false).catch(() => undefined);
+      }
+    }, [accessToken, loadHome])
+  );
+
+  const handleNotificationsPress = useCallback(() => {
+    if (!accessToken) {
+      Alert.alert(t('home.alerts.loginRequiredTitle'), t('home.alerts.loginRequiredBody'));
+      return;
+    }
+    navigation.navigate('Notifications');
+  }, [accessToken, navigation, t]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -530,9 +581,9 @@ export default function HomeScreen() {
   }, [loadHome]);
 
   const displayName = useMemo(() => {
-    const rawName = home?.user.name?.trim() || authUser?.name?.trim() || 'Người dùng';
+    const rawName = home?.user.name?.trim() || authUser?.name?.trim() || t('common.user');
     return rawName.length > 18 ? rawName.split(' ').slice(-3).join(' ') : rawName;
-  }, [authUser?.name, home?.user.name]);
+  }, [authUser?.name, home?.user.name, t]);
 
   const avatar = home?.user.avatar || authUser?.avatar || null;
 
@@ -548,12 +599,13 @@ export default function HomeScreen() {
           userName={displayName}
           avatar={avatar}
           onProfile={() => navigation.navigate('MainTabs', { screen: 'Profile' } as any)}
+          onNotifications={handleNotificationsPress}
         />
 
         {loading && !home ? (
           <View style={styles.statePanel}>
             <ActivityIndicator color={GREEN} />
-            <Text style={styles.stateText}>Đang tải dữ liệu trang chủ...</Text>
+            <Text style={styles.stateText}>{t('home.alerts.loading')}</Text>
           </View>
         ) : null}
 
@@ -562,13 +614,19 @@ export default function HomeScreen() {
             <Ionicons name="cloud-offline-outline" size={26} color="#B45309" />
             <Text style={styles.stateText}>{error}</Text>
             <Pressable onPress={() => loadHome(true)} style={styles.retryButton}>
-              <Text style={styles.retryText}>Thử lại</Text>
+              <Text style={styles.retryText}>{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : null}
 
         {home ? (
           <>
+            {fromCache ? (
+              <View style={styles.offlineBadge}>
+                <Ionicons name="cloud-offline-outline" size={16} color="#8A5A00" />
+                <Text style={styles.offlineBadgeText}>Dữ liệu đã lưu</Text>
+              </View>
+            ) : null}
             <PremiumCard subscription={subscription} onPress={() => navigation.navigate('UpgradePlan')} />
             <ScanCard onPress={() => navigation.navigate('Scan')} />
             <WeatherCard weather={home.weather} />
@@ -578,14 +636,14 @@ export default function HomeScreen() {
               onViewAll={() => navigation.navigate('MainTabs', { screen: 'Garden' } as any)}
             />
             <RecentActivity activities={home.recentActivities} />
-            <TodayTasks tasks={home.todayTasks} />
+            <TodayTasks tasks={home.todayTasks} onViewAll={() => navigation.navigate('CareCenter', { initialTab: 'tasks' })} />
             <AiTip
               tip={home.todayTip}
               onPress={() => {
                 if (home.todayTip) setTipVisible(true);
               }}
             />
-            <CareLog logs={home.careLogs} />
+            <CareLog logs={home.careLogs} onViewAll={() => navigation.navigate('CareCenter', { initialTab: 'logs' })} />
           </>
         ) : null}
       </ScrollView>
@@ -1133,6 +1191,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  offlineBadge: {
+    alignSelf: 'flex-start',
+    minHeight: 32,
+    borderRadius: 999,
+    backgroundColor: '#FFF7DB',
+    borderWidth: 1,
+    borderColor: '#F2D58D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 11,
+    marginBottom: 12,
+  },
+  offlineBadgeText: {
+    color: '#8A5A00',
+    fontSize: 12,
+    fontWeight: '800',
   },
   retryButton: {
     marginTop: 4,

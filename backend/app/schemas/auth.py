@@ -24,6 +24,7 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     avatar: Optional[str] = None
     role: str = "farmer"
+    status: str = "active"
     created_at: datetime
     
     class Config:

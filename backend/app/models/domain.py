@@ -30,6 +30,7 @@ class User(Base):
     phone = Column(String, nullable=True)
     avatar = Column(String, nullable=True)
     role = Column(String(20), nullable=False, default="farmer")  # farmer | partner
+    status = Column(String(20), nullable=False, default="active")  # active | suspended
     google_id = Column(String, unique=True, nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -241,6 +242,27 @@ class NotificationDelivery(Base):
     push_token = relationship("PushToken")
 
 
+class Notification(Base):
+    """Thông báo in-app cho người dùng/admin."""
+    __tablename__ = "notifications"
+    __table_args__ = (
+        Index("ix_notifications_user_read", "user_id", "read_at"),
+        Index("ix_notifications_type_created", "notification_type", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    notification_type = Column(String(40), nullable=False, default="system")
+    title = Column(String(255), nullable=False)
+    body = Column(Text, nullable=False)
+    data = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    event_key = Column(String(255), unique=True, nullable=True, index=True)
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", backref="notifications")
+
+
 # ══════════════════════════════════════════════════════════════
 # Subscription & Partners Models
 # ══════════════════════════════════════════════════════════════
@@ -367,9 +389,40 @@ class Partner(Base):
     )
 
     user = relationship("User", backref="partner_profile", uselist=False)
+    stores = relationship("PartnerOutlet", back_populates="partner", cascade="all, delete-orphan")
     products = relationship("PartnerProduct", back_populates="partner", cascade="all, delete-orphan")
     memberships = relationship("PartnerMembership", back_populates="partner", cascade="all, delete-orphan")
     payment_transactions = relationship("PaymentTransaction", back_populates="partner", cascade="all, delete-orphan")
+
+
+class PartnerOutlet(Base):
+    """Cửa hàng/chi nhánh con thuộc một tài khoản đối tác."""
+    __tablename__ = "partner_stores"
+    __table_args__ = (
+        Index("ix_partner_stores_partner_active", "partner_id", "is_active"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    partner_id = Column(Integer, ForeignKey("partners.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    address = Column(String(500), nullable=True)
+    contact_email = Column(String(255), nullable=True)
+    phone = Column(String(20), nullable=True)
+    logo_url = Column(String(500), nullable=True)
+    cover_url = Column(String(500), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    partner = relationship("Partner", back_populates="stores")
+    products = relationship("PartnerProduct", back_populates="store")
 
 
 class PartnerMembership(Base):
@@ -432,6 +485,7 @@ class PartnerProduct(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     partner_id = Column(Integer, ForeignKey("partners.id", ondelete="CASCADE"), nullable=False)
+    store_id = Column(Integer, ForeignKey("partner_stores.id", ondelete="SET NULL"), nullable=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     image_url = Column(String(500), nullable=True)
@@ -451,7 +505,40 @@ class PartnerProduct(Base):
     )
 
     partner = relationship("Partner", back_populates="products")
+    store = relationship("PartnerOutlet", back_populates="products")
     impressions = relationship("ProductImpression", back_populates="product", cascade="all, delete-orphan")
+
+
+class MarketplaceInquiry(Base):
+    """Yêu cầu tư vấn/mua hàng từ người dùng gửi cho đại lý."""
+    __tablename__ = "marketplace_inquiries"
+    __table_args__ = (
+        Index("ix_marketplace_inquiries_partner_status", "partner_id", "status"),
+        Index("ix_marketplace_inquiries_user_created", "user_id", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    partner_id = Column(Integer, ForeignKey("partners.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("partner_products.id", ondelete="SET NULL"), nullable=True, index=True)
+    store_id = Column(Integer, ForeignKey("partner_stores.id", ondelete="SET NULL"), nullable=True, index=True)
+    name = Column(String(255), nullable=False)
+    phone = Column(String(20), nullable=True)
+    email = Column(String(255), nullable=True)
+    message = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="new")  # new | contacted | closed
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user = relationship("User", backref="marketplace_inquiries")
+    partner = relationship("Partner", backref="marketplace_inquiries")
+    product = relationship("PartnerProduct")
+    store = relationship("PartnerOutlet")
 
 
 class ProductImpression(Base):
@@ -469,3 +556,22 @@ class ProductImpression(Base):
     clicked = Column(Boolean, nullable=False, default=False)
 
     product = relationship("PartnerProduct", back_populates="impressions")
+
+
+class ScanFeedback(Base):
+    """Phản hồi của người dùng về độ đúng của kết quả AI."""
+    __tablename__ = "scan_feedback"
+    __table_args__ = (
+        Index("ix_scan_feedback_scan_user", "scan_id", "user_id"),
+        Index("ix_scan_feedback_value_created", "feedback", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    scan_id = Column(Integer, ForeignKey("scan_history.id", ondelete="CASCADE"), nullable=False, index=True)
+    feedback = Column(String(20), nullable=False)  # correct | incorrect | unsure
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", backref="scan_feedback")
+    scan = relationship("ScanHistory", backref="feedback_rows")

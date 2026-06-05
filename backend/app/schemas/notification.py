@@ -27,6 +27,19 @@ class NotificationStatusDTO(BaseModel):
     latest_registered_at: datetime | None = None
 
 
+class NotificationItemDTO(BaseModel):
+    id: int
+    notification_type: str
+    title: str
+    body: str
+    data: dict[str, Any] | None = None
+    read_at: datetime | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class NotificationSendResultDTO(BaseModel):
     sent: int
     failed: int
@@ -43,3 +56,20 @@ class NotificationSendEnvelope(BaseModel):
     success: bool
     message: str
     data: NotificationSendResultDTO
+
+
+class NotificationListData(BaseModel):
+    items: list[NotificationItemDTO]
+    unread_count: int
+
+
+class NotificationListEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: NotificationListData
+
+
+class NotificationItemEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: NotificationItemDTO | None = None

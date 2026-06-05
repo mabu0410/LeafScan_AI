@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList, ScanHistory } from '../types';
 import { useHistoryStore } from '../stores/historyStore';
 import { theme } from '../theme/theme';
@@ -48,15 +49,16 @@ function parseScanMillis(scan: ScanHistory): number {
   return 0;
 }
 
-function severityLabel(severity: ScanHistory['severity']): string {
-  if (severity === 'healthy') return 'khỏe mạnh';
-  if (severity === 'moderate') return 'cảnh báo';
-  return 'nguy hiểm';
+function severityLabel(severity: ScanHistory['severity'], t: (key: string) => string): string {
+  if (severity === 'healthy') return t('history.severity.healthy');
+  if (severity === 'moderate') return t('history.severity.moderate');
+  return t('history.severity.severe');
 }
 
 export default function HistoryScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [activeFilter, setActiveFilter] = useState<HistoryFilterValue>('all');
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,14 +92,14 @@ export default function HistoryScreen() {
       const pool = [
         scan.plantName,
         scan.result,
-        severityLabel(scan.severity),
+        severityLabel(scan.severity, t),
       ]
         .join(' ')
         .toLowerCase();
 
       return pool.includes(keyword);
     });
-  }, [activeFilter, searchQuery, sortedScans]);
+  }, [activeFilter, searchQuery, sortedScans, t]);
 
   const groupedSections = useMemo(() => {
     const today = new Date();
@@ -107,9 +109,9 @@ export default function HistoryScreen() {
     yesterday.setDate(today.getDate() - 1);
 
     const buckets: HistorySection[] = [
-      { id: 'today', title: 'Hôm nay', items: [] },
-      { id: 'yesterday', title: 'Hôm qua', items: [] },
-      { id: 'older', title: 'Các ngày trước', items: [] },
+      { id: 'today', title: t('history.sections.today'), items: [] },
+      { id: 'yesterday', title: t('history.sections.yesterday'), items: [] },
+      { id: 'older', title: t('history.sections.older'), items: [] },
     ];
 
     filteredScans.forEach((scan) => {
@@ -136,7 +138,7 @@ export default function HistoryScreen() {
     });
 
     return buckets.filter((bucket) => bucket.items.length > 0);
-  }, [filteredScans]);
+  }, [filteredScans, t]);
 
   const monthScans = useMemo(() => {
     const now = new Date();
@@ -231,10 +233,8 @@ export default function HistoryScreen() {
           ListEmptyComponent={
             hasAnyHistory ? (
               <View style={styles.noResultWrap}>
-                <Text style={styles.noResultTitle}>Không tìm thấy kết quả phù hợp</Text>
-                <Text style={styles.noResultText}>
-                  Thử đổi bộ lọc hoặc từ khóa để xem lại lịch sử quét.
-                </Text>
+                <Text style={styles.noResultTitle}>{t('history.noResult.title')}</Text>
+                <Text style={styles.noResultText}>{t('history.noResult.description')}</Text>
                 <Pressable
                   onPress={() => {
                     setActiveFilter('all');
@@ -242,7 +242,7 @@ export default function HistoryScreen() {
                   }}
                   style={styles.resetButton}
                 >
-                  <Text style={styles.resetButtonText}>Đặt lại bộ lọc</Text>
+                  <Text style={styles.resetButtonText}>{t('history.noResult.reset')}</Text>
                 </Pressable>
               </View>
             ) : (

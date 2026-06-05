@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface HistoryStatsProps {
@@ -34,18 +35,20 @@ function StatCard({
 }
 
 export function HistoryStats({ monthScans, detectedDiseases, healthyRate }: HistoryStatsProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <StatCard icon="calendar-outline" label="Tháng này" value={`${monthScans} lần`} />
+      <StatCard icon="calendar-outline" label={t('history.stats.thisMonth')} value={t('history.stats.times', { count: monthScans })} />
       <StatCard
         icon="bug-outline"
-        label="Phát hiện"
-        value={`${detectedDiseases} bệnh`}
+        label={t('history.stats.detected')}
+        value={t('history.stats.diseases', { count: detectedDiseases })}
         tint="#FAEFE5"
       />
       <StatCard
         icon="leaf-outline"
-        label="Tỉ lệ khỏe"
+        label={t('history.stats.healthyRate')}
         value={`${healthyRate}%`}
         tint="#EBF6EE"
       />

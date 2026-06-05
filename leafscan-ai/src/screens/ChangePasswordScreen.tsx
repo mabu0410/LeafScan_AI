@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { theme } from '../theme/theme';
 import { changePasswordApi } from '../api/account';
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export default function ChangePasswordScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,11 +41,11 @@ export default function ChangePasswordScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await changePasswordApi(accessToken, currentPassword, newPassword);
-      Alert.alert('Thành công', 'Mật khẩu đã được cập nhật.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert(t('auth.changePassword.successTitle'), t('auth.changePassword.successBody'), [
+        { text: t('common.ok'), onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Đổi mật khẩu thất bại.');
+      Alert.alert(t('common.error'), error.message || t('auth.changePassword.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -59,19 +61,19 @@ export default function ChangePasswordScreen({ navigation }: Props) {
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={22} color={theme.colors.textPrimary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Đổi mật khẩu</Text>
+          <Text style={styles.headerTitle}>{t('auth.change_password')}</Text>
           <View style={styles.headerRightSpace} />
         </View>
 
         <View style={styles.formCard}>
           <Text style={styles.helperText}>
-            Màn này là luồng riêng để đổi mật khẩu, không cho sửa trực tiếp password hash.
+            {t('auth.changePassword.helper')}
           </Text>
 
           <TextInput
             value={currentPassword}
             onChangeText={setCurrentPassword}
-            placeholder="Mật khẩu hiện tại"
+            placeholder={t('auth.current_password')}
             placeholderTextColor={theme.colors.textMuted}
             secureTextEntry
             style={styles.input}
@@ -79,7 +81,7 @@ export default function ChangePasswordScreen({ navigation }: Props) {
           <TextInput
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="Mật khẩu mới"
+            placeholder={t('auth.new_password')}
             placeholderTextColor={theme.colors.textMuted}
             secureTextEntry
             style={styles.input}
@@ -87,7 +89,7 @@ export default function ChangePasswordScreen({ navigation }: Props) {
           <TextInput
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Xác nhận mật khẩu mới"
+            placeholder={t('auth.confirm_password')}
             placeholderTextColor={theme.colors.textMuted}
             secureTextEntry
             style={styles.input}
@@ -101,7 +103,7 @@ export default function ChangePasswordScreen({ navigation }: Props) {
             {loading ? (
               <ActivityIndicator color={theme.colors.white} size="small" />
             ) : (
-              <Text style={styles.submitText}>Cập nhật mật khẩu</Text>
+              <Text style={styles.submitText}>{t('auth.changePassword.submit')}</Text>
             )}
           </Pressable>
         </View>

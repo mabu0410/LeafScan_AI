@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { DiseaseLibraryItem } from '../types';
 import { SeverityBadge } from './SeverityBadge';
 import { theme } from '../theme/theme';
@@ -11,6 +12,8 @@ interface DiseaseCardProps {
 }
 
 export function DiseaseCard({ disease, onPress }: DiseaseCardProps) {
+  const { t } = useTranslation();
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -27,7 +30,7 @@ export function DiseaseCard({ disease, onPress }: DiseaseCardProps) {
         <Text style={styles.name} numberOfLines={1}>{disease.name}</Text>
         <Text style={styles.plant} numberOfLines={1}>{disease.plant}</Text>
         <View style={styles.footer}>
-          <Text style={styles.cases}>{disease.casesThisMonth} ca tháng này</Text>
+          <Text style={styles.cases}>{t('diseaseCard.casesThisMonth', { count: disease.casesThisMonth })}</Text>
           <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />
         </View>
       </View>

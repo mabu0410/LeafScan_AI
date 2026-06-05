@@ -181,6 +181,7 @@ WITH seed_products AS (
         'greenfarm-demo@leafscan.local',
         'Phân hữu cơ vi sinh GreenFarm 5kg',
         'Phân hữu cơ vi sinh dùng cải tạo đất, hỗ trợ rễ khỏe và phục hồi cây sau giai đoạn bệnh.',
+        'https://www.earthmedicineusa.com/cdn/shop/files/50D8FCFF-932F-4A9B-B034-CCA25DF2923E_1024x1024.jpg?v=1765312522',
         '85.000 - 120.000đ',
         '[]',
         '["Rau củ", "Hoa cảnh", "Cây ăn quả"]',
@@ -190,6 +191,7 @@ WITH seed_products AS (
         'greenfarm-demo@leafscan.local',
         'Chế phẩm nấm đối kháng Trichoderma',
         'Chế phẩm sinh học hỗ trợ hạn chế nấm đất, phù hợp xử lý giá thể và phòng bệnh vùng rễ.',
+        'https://www.bioprimeagri.com/assets/uploads/products/57dcd-trichonexus.png',
         '65.000 - 95.000đ',
         '["tomato_early_blight", "potato_early_blight", "tomato_late_blight"]',
         '["Rau củ", "Cây ăn quả"]',
@@ -199,6 +201,7 @@ WITH seed_products AS (
         'greenfarm-demo@leafscan.local',
         'Dung dịch đồng sinh học phòng đốm lá',
         'Sản phẩm hỗ trợ phòng đốm lá do vi khuẩn và nấm trên cà chua, ớt và rau màu.',
+        'https://www.greenhousemegastore.com/cdn/shop/files/bonide-copper-fungicide-5810948_1024x1024.jpg?v=1776327012',
         '110.000 - 150.000đ',
         '["tomato_bacterial_spot", "pepper_bacterial_spot", "tomato_septoria_leaf_spot"]',
         '["Rau củ"]',
@@ -208,6 +211,7 @@ WITH seed_products AS (
         'greenfarm-demo@leafscan.local',
         'Phân bón lá rong biển phục hồi cây',
         'Bổ sung amino acid và chiết xuất rong biển, hỗ trợ cây phục hồi sau khi cắt bỏ lá bệnh.',
+        'https://agricarecorp.com/cdn/shop/files/Basfoliar_Kelp_O_SL_Agricare_Corporation_600x.jpg?v=1766490457',
         '75.000 - 115.000đ',
         '[]',
         '["Rau củ", "Cây ăn quả", "Hoa cảnh"]',
@@ -217,6 +221,7 @@ WITH seed_products AS (
         'mekong-agri-demo@leafscan.local',
         'Dinh dưỡng Canxi Bo chống nứt trái',
         'Dinh dưỡng bổ sung Canxi Bo cho cà chua, ớt và cây ăn quả trong giai đoạn ra hoa đậu trái.',
+        'https://agricarecorp.com/cdn/shop/files/HydroSpeed_CaB-Max_water_soluble_fertilizer_with_calcium_and_boron.jpg?v=1758367291',
         '95.000 - 135.000đ',
         '["tomato_healthy", "pepper_healthy"]',
         '["Rau củ", "Cây ăn quả"]',
@@ -226,6 +231,7 @@ WITH seed_products AS (
         'mekong-agri-demo@leafscan.local',
         'Thuốc sinh học Neem Oil 500ml',
         'Dầu neem hỗ trợ quản lý sâu chích hút, rệp và nhện đỏ theo hướng sinh học.',
+        'https://www.plantonix.com/cdn/shop/files/neem-oil-16oz_800x.jpg?v=1720042355',
         '120.000 - 180.000đ',
         '["tomato_spider_mites"]',
         '["Rau củ", "Hoa cảnh", "Cây ăn quả"]',
@@ -235,6 +241,7 @@ WITH seed_products AS (
         'mekong-agri-demo@leafscan.local',
         'Gói xử lý mốc sương cho khoai tây',
         'Bộ sản phẩm hỗ trợ phòng và quản lý mốc sương trên khoai tây, cà chua trong điều kiện ẩm.',
+        'https://www.greenhousemegastore.com/cdn/shop/files/bonide-copper-fungicide-4330444.jpg?v=1776327011&width=1080',
         '180.000 - 260.000đ',
         '["potato_late_blight", "tomato_late_blight"]',
         '["Rau củ"]',
@@ -244,6 +251,7 @@ WITH seed_products AS (
         'mekong-agri-demo@leafscan.local',
         'Phân NPK cân đối cho rau màu',
         'Phân bón NPK cân đối dùng cho rau màu, ngũ cốc và cây vườn cần phục hồi sinh trưởng.',
+        'https://agricarecorp.com/cdn/shop/files/Tri20_600x.jpg?v=1740649617',
         '140.000 - 220.000đ',
         '[]',
         '["Rau củ", "Ngũ cốc", "Cây ăn quả"]',
@@ -253,6 +261,7 @@ WITH seed_products AS (
         'bioleaf-demo@leafscan.local',
         'BioLeaf Bacillus Subtilis',
         'Chế phẩm Bacillus subtilis hỗ trợ quản lý nấm bệnh trên lá theo hướng sinh học.',
+        'https://www.kisorganics.com/cdn/shop/files/ScreenShot2025-10-07at2.00.24PM_1024x1024.png?v=1759870855',
         '90.000 - 130.000đ',
         '["squash_powdery_mildew", "cherry_powdery_mildew", "tomato_leaf_mold"]',
         '["Rau củ", "Hoa cảnh", "Cây ăn quả"]',
@@ -262,6 +271,7 @@ WITH seed_products AS (
         'bioleaf-demo@leafscan.local',
         'Vi sinh đất BioRoot 1kg',
         'Vi sinh đất hỗ trợ hệ rễ, cải thiện đất trồng chậu và luống rau sau nhiều vụ canh tác.',
+        'https://www.plantonix.com/cdn/shop/files/myco-powder-200g_400x.jpg?v=1713376255',
         '70.000 - 110.000đ',
         '[]',
         '["Rau củ", "Hoa cảnh", "Cây ăn quả"]',
@@ -271,6 +281,7 @@ WITH seed_products AS (
         'bioleaf-demo@leafscan.local',
         'Bẫy dính vàng kiểm soát côn trùng',
         'Bẫy dính vàng giúp theo dõi và giảm mật số côn trùng bay trong vườn nhà.',
+        'https://cdn.commercev3.net/cdn.arbico-organics.com/images/uploads/1254300-stiky_strip-600x600.jpg',
         '35.000 - 55.000đ',
         '["tomato_yellow_leaf_curl_virus"]',
         '["Rau củ", "Hoa cảnh"]',
@@ -280,6 +291,7 @@ WITH seed_products AS (
         'bioleaf-demo@leafscan.local',
         'Dung dịch vệ sinh dụng cụ cắt tỉa',
         'Dung dịch dùng vệ sinh kéo cắt tỉa, hạn chế lây nhiễm chéo khi xử lý lá bệnh.',
+        'https://www.dictum.com/media/1d/1c/d9/1752884051/718633_01_P_WE_8-Barnel%20Reinigungsspray%20B%20Clean%20fr_Gartenscheren.jpg?ts=1780365985',
         '45.000 - 75.000đ',
         '["tomato_bacterial_spot", "pepper_bacterial_spot", "strawberry_leaf_scorch"]',
         '["Rau củ", "Hoa cảnh", "Cây ăn quả"]',
@@ -289,11 +301,24 @@ WITH seed_products AS (
     contact_email,
     name,
     description,
+    image_url,
     price_range,
     target_diseases,
     target_categories,
     product_url
   )
+),
+updated_products AS (
+  UPDATE partner_products existing
+  SET
+    image_url = product.image_url,
+    updated_at = NOW()
+  FROM seed_products product
+  JOIN partners partner ON partner.contact_email = product.contact_email
+  WHERE existing.partner_id = partner.id
+    AND existing.name = product.name
+    AND existing.image_url IS DISTINCT FROM product.image_url
+  RETURNING existing.id
 )
 INSERT INTO partner_products (
   partner_id,
@@ -314,7 +339,7 @@ SELECT
   partner.id,
   product.name,
   product.description,
-  NULL,
+  product.image_url,
   product.price_range,
   product.target_diseases::json,
   product.target_categories::json,
@@ -326,6 +351,7 @@ SELECT
   NOW()
 FROM seed_products product
 JOIN partners partner ON partner.contact_email = product.contact_email
+CROSS JOIN (SELECT COUNT(*) FROM updated_products) updated_count
 WHERE NOT EXISTS (
   SELECT 1
   FROM partner_products existing

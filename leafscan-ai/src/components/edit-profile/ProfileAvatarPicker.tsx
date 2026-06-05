@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface ProfileAvatarPickerProps {
@@ -10,6 +11,7 @@ interface ProfileAvatarPickerProps {
 }
 
 export function ProfileAvatarPicker({ avatarUri, onPressChange }: ProfileAvatarPickerProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -39,7 +41,7 @@ export function ProfileAvatarPicker({ avatarUri, onPressChange }: ProfileAvatarP
           style={({ pressed }) => [styles.changeButton, pressed && styles.changeButtonPressed]}
         >
           <Ionicons name="camera-outline" size={16} color={theme.colors.primary} />
-          <Text style={styles.changeText}>Đổi ảnh</Text>
+          <Text style={styles.changeText}>{t('profile.edit.changePhoto')}</Text>
         </Pressable>
       </Animated.View>
     </View>

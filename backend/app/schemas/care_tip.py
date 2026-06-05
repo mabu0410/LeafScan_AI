@@ -95,3 +95,9 @@ class CareTipDetailResponse(BaseModel):
     success: bool
     message: str
     data: CareTipDetailItem
+
+
+class CareTipAdminListResponse(BaseModel):
+    success: bool
+    message: str
+    data: list[CareTipDetailItem]

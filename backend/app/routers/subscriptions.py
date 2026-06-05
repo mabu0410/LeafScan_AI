@@ -9,7 +9,6 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.config import PUBLIC_BASE_URL
 from app.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.domain import User, UserPaymentTransaction
@@ -27,7 +26,9 @@ from app.services.subscription_service import (
     now_utc,
     sync_scan_quota,
 )
-from app.services.vnpay_service import build_vnpay_payment_url, verify_vnpay_signature
+from app.services.notification_service import create_notification
+from app.services.vnpay_return_page import render_vnpay_return_page
+from app.services.vnpay_service import build_vnpay_payment_url, get_vnpay_return_url, verify_vnpay_signature
 
 
 router = APIRouter(prefix="/api/v1", tags=["Subscriptions"])
@@ -81,7 +82,7 @@ def create_user_vnpay_payment(
             amount_vnd=spec.price_vnd,
             order_info=f"Thanh toan goi {spec.label} LeafScan {txn_ref}",
             client_ip=_client_ip(request),
-            return_url=f"{PUBLIC_BASE_URL}/api/v1/user-payments/vnpay/return",
+            return_url=get_vnpay_return_url(),
         )
     except ValueError as exc:
         db.rollback()
@@ -105,9 +106,7 @@ def create_user_vnpay_payment(
     )
 
 
-@router.get("/user-payments/vnpay/ipn")
-def user_vnpay_ipn(request: Request, db: Session = Depends(get_db)):
-    params = dict(request.query_params)
+def confirm_user_vnpay_payment(params: dict[str, object], db: Session) -> dict[str, str]:
     if not verify_vnpay_signature(params):
         return {"RspCode": "97", "Message": "Invalid signature"}
 
@@ -123,7 +122,7 @@ def user_vnpay_ipn(request: Request, db: Session = Depends(get_db)):
     if amount_vnd != tx.amount_vnd:
         return {"RspCode": "04", "Message": "Invalid amount"}
 
-    if tx.status == "success":
+    if tx.status in {"success", "refunded"}:
         return {"RspCode": "02", "Message": "Order already confirmed"}
 
     response_code = params.get("vnp_ResponseCode")
@@ -140,22 +139,34 @@ def user_vnpay_ipn(request: Request, db: Session = Depends(get_db)):
         tx.paid_at = now_utc()
         spec = get_user_plan_spec(tx.plan_key)
         activate_user_subscription(db, tx.user_id, spec, source_transaction_id=tx.id)
+    create_notification(
+        db,
+        user_id=tx.user_id,
+        notification_type="payment",
+        title="Thanh toán thành công" if success else "Thanh toán chưa thành công",
+        body=(
+            f"Gói {tx.plan_key} đã được kích hoạt."
+            if success
+            else "Giao dịch VNPAY chưa thành công. Bạn có thể thử thanh toán lại."
+        ),
+        data={"payment_type": "user", "txn_ref": tx.txn_ref, "status": tx.status, "plan_key": tx.plan_key},
+        event_key=f"user_payment:{tx.id}:{tx.status}",
+    )
 
     db.commit()
     return {"RspCode": "00", "Message": "Confirm Success"}
 
 
+@router.get("/user-payments/vnpay/ipn")
+def user_vnpay_ipn(request: Request, db: Session = Depends(get_db)):
+    return confirm_user_vnpay_payment(dict(request.query_params), db)
+
+
 @router.get("/user-payments/vnpay/return")
-def user_vnpay_return(request: Request):
+def user_vnpay_return(request: Request, db: Session = Depends(get_db)):
     params = dict(request.query_params)
-    txn_ref = params.get("vnp_TxnRef", "")
-    response_code = params.get("vnp_ResponseCode", "")
-    return {
-        "success": response_code == "00",
-        "message": "Đã nhận kết quả từ VNPAY. App sẽ kiểm tra trạng thái giao dịch từ server.",
-        "txn_ref": txn_ref,
-        "response_code": response_code,
-    }
+    confirm_user_vnpay_payment(params, db)
+    return render_vnpay_return_page(params, payment_type="user")
 
 
 @router.get("/user-payments/status/{txn_ref}", response_model=UserPaymentStatusEnvelope)

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface SaveButtonProps {
@@ -14,6 +15,7 @@ export function SaveButton({
   loading = false,
   disabled = false,
 }: SaveButtonProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -37,7 +39,7 @@ export function SaveButton({
         style={[styles.button, isDisabled ? styles.buttonDisabled : styles.buttonEnabled]}
       >
         {loading ? <ActivityIndicator color={theme.colors.white} style={styles.loader} /> : null}
-        <Text style={styles.text}>{loading ? 'Đang lưu...' : 'Lưu thay đổi'}</Text>
+        <Text style={styles.text}>{loading ? t('profile.edit.saving') : t('profile.edit.saveChanges')}</Text>
       </Pressable>
     </Animated.View>
   );

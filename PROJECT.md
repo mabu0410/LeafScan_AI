@@ -36,7 +36,12 @@ DO_AN_VMB/
 │   │   │   ├── chat.py                # Chat tư vấn bệnh cây (non-stream + SSE stream)
 │   │   │   ├── diseases.py            # Tìm kiếm + chi tiết bệnh
 │   │   │   ├── care_tips.py           # Mẹo chăm sóc hàng ngày
-│   │   │   └── home.py                # Dashboard trang chủ
+│   │   │   ├── home.py                # Dashboard trang chủ
+│   │   │   ├── partners.py            # Đối tác, cửa hàng, sản phẩm, marketplace inquiry
+│   │   │   ├── notifications.py       # In-app notification + push token
+│   │   │   ├── subscriptions.py       # Gói người dùng
+│   │   │   ├── vnpay.py               # Return/IPN thanh toán VNPAY
+│   │   │   └── admin.py               # Dashboard quản trị + CRUD nội dung
 │   │   ├── schemas/                   # Pydantic request/response schemas
 │   │   ├── services/
 │   │   │   ├── model_service.py       # ONNX inference + TTA flip + center-crop
@@ -85,7 +90,10 @@ DO_AN_VMB/
 │   │   │   ├── account.ts             # Change/forgot/reset password + delete account
 │   │   │   ├── google-auth.ts         # Google OAuth hook + link/unlink
 │   │   │   ├── chat.ts                # Chat non-stream
-│   │   │   ├── diagnosis.ts           # POST /diagnose + parse lỗi
+│   │   │   ├── diagnosis.ts           # POST /diagnose + feedback kết quả AI
+│   │   │   ├── marketplace.ts         # Marketplace, inquiry, kênh đại lý
+│   │   │   ├── notifications.ts       # Danh sách/read/read-all thông báo
+│   │   │   ├── care.ts                # Lịch chăm sóc và nhật ký
 │   │   │   ├── plants.ts / users.ts / history.ts / diseases.ts / home.ts / mappers.ts
 │   │   ├── components/
 │   │   │   ├── profile/               # SettingsSection, AccountSecurity, AppInfo, DeleteAccountModal
@@ -158,7 +166,12 @@ DO_AN_VMB/
   - **Auto-save ảnh vào gallery** nếu `autoSaveScanImages` bật
   - Plant scope selector (từ garden + full PlantVillage list)
 - **ResultScreen**: stage, forecast, treatment plan, chat button
+- **AI feedback**: người dùng đánh dấu kết quả quét `Đúng`, `Sai`, `Không chắc`
 - **ChatScreen**: tin nhắn + citations
+- **CareCenter**: lịch chăm sóc và nhật ký chăm sóc, tạo/sửa/xóa, gắn với cây
+- **NotificationsScreen**: danh sách thông báo thật từ backend, đọc từng cái, đọc tất cả
+- **Marketplace inquiry**: gửi yêu cầu tư vấn từ sản phẩm/cửa hàng
+- **Kênh đại lý**: quản lý hồ sơ, cửa hàng, sản phẩm, upload ảnh/file và xem yêu cầu tư vấn
 - **ProfileScreen**:
   - Stats grid (ngày hoạt động, tỷ lệ cây khỏe, bệnh thường gặp...)
   - Achievement card (cấp độ theo số scan)
@@ -175,35 +188,47 @@ DO_AN_VMB/
 - **SearchScreen**: debounce + API thật
 - **EditProfileScreen**: update name/phone/avatar
 - Xóa cache thật (xóa `FileSystem.cacheDirectory`)
+- Cache read-only mức demo bằng AsyncStorage cho Home, vườn cây, lịch sử quét, lịch chăm sóc và nhật ký. Khi API lỗi có thể hiển thị nhãn "Dữ liệu đã lưu".
 
 ### 3.5 DevOps / Hardening
 - Root `.gitignore` tập trung, ignore `.env`, SQLite, uploads, dist, models, checkpoints
 - Secret scanner (`scripts/scan_secrets.sh`): AIza, Postgres URL với password thật
+- GitHub Actions MVP CI chạy backend pytest/secret scan, admin-web lint/build và mobile type-check
 - History rewrite doc (`docs/history-rewrite.md`): quy trình thủ công chạy `git filter-repo`
 - Uploads cleanup CLI (`scripts/cleanup_uploads.py`): dry-run, age threshold, DB reference, freshness window
 - Update disease images script (`scripts/update_disease_images.py`): lấy URL ảnh từ PlantVillage GitHub
 - Auto-migrate column mới khi backend khởi động (không cần Alembic thủ công)
 - Seed `diseases` + `care_tips` từ JSON/SQL khi init DB
+- Dockerfile backend + `backend/render.yaml` cho Render deployment
+- Backend pytest suite cho auth, home dashboard, marketplace/subscription, secret scanner, cleanup CLI
+
+### 3.6 Admin Web
+- **Web admin riêng** tại `admin-web/` dùng Vite React + TypeScript
+- Đăng nhập bằng tài khoản admin qua JWT backend
+- Dashboard tổng quan users, quét AI, doanh thu, đối tác, sản phẩm, gói người dùng và nội dung
+- Duyệt/từ chối hồ sơ đại lý qua `/api/v1/admin/partners`
+- Duyệt/từ chối sản phẩm marketplace qua `/api/v1/admin/products`
+- Quản lý CRUD mẹo chăm sóc qua `/api/v1/admin/care-tips`
+- Quản lý người dùng, tạm khóa/kích hoạt tài khoản
+- Xem thanh toán người dùng/đối tác và lịch sử quét
+- Quản lý CRUD bệnh cây qua `/api/v1/admin/diseases`
+- Xem/lọc yêu cầu tư vấn qua `/api/v1/admin/inquiries`
+- Xem thông báo, unread count, đọc từng thông báo hoặc đọc tất cả
+- Lưu session admin bằng localStorage và tự logout khi API trả lỗi auth
 
 ## 4. Tính năng đang dang dở / còn placeholder ⚠️
 
 | Việc | Trạng thái | File |
 |---|---|---|
-| Push notifications | Chưa có | Cần Expo Notifications + server scheduler |
-| Dark mode | Toggle lưu local, theme không reactive | `stores/settingsStore.ts`, `theme/theme.ts` |
-| i18n (vi/en) | Toggle local, text hardcode tiếng Việt | Cần `react-i18next` |
-| Chat streaming UI | Backend có SSE, mobile dùng non-stream | `screens/ChatScreen.tsx` |
-| Deploy backend | Chỉ chạy localhost | Cần Render/Railway/Fly.io |
+| i18n (vi/en) | Có setup + locale, vẫn còn một số text hardcode tiếng Việt | `leafscan-ai/src/i18n`, các screens/components |
+| Apple login/register | Nút có nhưng báo chưa hỗ trợ | `LoginScreen.tsx`, `RegisterScreen.tsx` |
 
 ## 5. Còn thiếu / chưa có ❌
 
-- **Tests tự động** — chưa có `backend/tests/`, chỉ có evaluation scripts manual
-- **CI/CD** — không có `.github/workflows/`
-- **Docker** — chưa có Dockerfile
 - **Refresh token** — JWT 24h cố định, không renew
-- **Admin dashboard** — không có trang quản trị xem thống kê
-- **Offline mode** — mobile phụ thuộc API hoàn toàn (ngoài AsyncStorage auth/settings)
+- **Offline write queue** — đã có cache đọc mức demo, chưa có tạo/sửa/xóa offline và đồng bộ lại
 - **Finetune model ngoài PlantVillage** — accuracy trên ảnh thực địa chưa tối ưu
+- **Apple login production** — giữ trạng thái chưa hỗ trợ trong phạm vi đồ án
 
 ## 6. Cấu hình & biến môi trường
 
@@ -271,11 +296,16 @@ EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=      # khi build IPA
 
 ### 6.3 Schema CSDL chính
 
-- **users**: id, email, name, password_hash, phone, avatar, **google_id**, created_at
+- **users**: id, email, name, password_hash, phone, avatar, role, status, **google_id**, created_at
 - **plants**: id, user_id, name, latin_name, category, image_url, thumbnail_url, location, notes, health_score, created_at
 - **diseases**: id, disease_key, model_class_name, name, severity, description, symptoms[], treatment[], prevention[], affected_area_typical, image_url
 - **scan_history**: id, user_id, plant_id, disease_key, image_url, confidence, predicted_stage, forecast_stage_7d, affected_area_snapshot, scan_date
 - **care_tips**: id, slug, title, summary, content, category, suitable_plants[], priority, is_active, source_name/url/note, start_date/end_date
+- **care_tasks**, **care_logs**: lịch chăm sóc và nhật ký của từng user
+- **partners**, **partner_stores**, **partner_products**, **marketplace_inquiries**: đối tác, cửa hàng, sản phẩm và yêu cầu tư vấn
+- **notifications**, **push_tokens**: thông báo in-app/push token
+- **user_payment_transactions**, **payment_transactions**: thanh toán gói người dùng và gói đại lý
+- **scan_feedback**: phản hồi đúng/sai/không chắc cho kết quả AI
 - **password_reset_otps**: id, email, otp_hash, expires_at, used, created_at
 
 ## 7. Cách chạy dự án
@@ -306,6 +336,22 @@ npx expo start --host lan  # LAN mode, quét QR bằng Expo Go
 # hoặc --tunnel nếu wifi có vấn đề
 ```
 
+### Admin web
+```bash
+cd admin-web
+npm install
+cp .env.example .env
+# Sửa VITE_API_BASE_URL=http://localhost:8000/api/v1 nếu cần
+npm run dev
+```
+
+### Kiểm tra demo
+```bash
+cd backend && .venv/bin/python -m pytest -q
+cd admin-web && npm run lint && npm run build
+cd leafscan-ai && npm run lint
+```
+
 ### Secret scanner
 ```bash
 bash scripts/scan_secrets.sh  # exit 0 = sạch, exit 1 = có leak
@@ -327,11 +373,11 @@ python -m scripts.update_disease_images
 
 ## 8. Điểm cần cải thiện
 
-1. **Tests tự động** — viết `backend/tests/` với pytest (auth, diagnosis, RAG)
-2. **Finetune model** trên PlantDoc để tăng accuracy ngoài lab
-3. **Calibration** (temperature scaling) để confidence % có ý nghĩa
-4. **Deploy backend** lên cloud với Docker
-5. **Push notifications** nhắc tưới cây / cảnh báo bệnh
+1. **Refresh token + session management** cho bảo mật cao hơn
+2. **Offline write queue** để tạo/sửa/xóa khi mất mạng rồi đồng bộ lại
+3. **Finetune model** trên dữ liệu thực địa ngoài PlantVillage
+4. **Calibration** (temperature scaling) để confidence % có ý nghĩa
+5. **Apple login production** cho iOS
 6. **Chat streaming UI** để typing animation mượt hơn
-7. **Dark mode + i18n** cho app production-ready
-8. **Refresh token + session management** cho bảo mật cao hơn
+7. **Dark mode + i18n** toàn bộ màn hình
+8. **Deploy backend/admin + EAS/native build** cho môi trường production

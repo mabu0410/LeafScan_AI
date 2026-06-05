@@ -186,10 +186,63 @@ class AdminStatusUpdateDTO(BaseModel):
 
 
 # ──────────────────────────────────────────────
+# Partner Stores
+# ──────────────────────────────────────────────
+
+class PartnerStoreCreateDTO(BaseModel):
+    name: str
+    description: str | None = None
+    address: str | None = None
+    contact_email: EmailStr | None = None
+    phone: str | None = None
+    is_active: bool = True
+
+
+class PartnerStoreUpdateDTO(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    address: str | None = None
+    contact_email: EmailStr | None = None
+    phone: str | None = None
+    is_active: bool | None = None
+
+
+class PartnerStoreResponse(BaseModel):
+    id: int
+    partner_id: int
+    name: str
+    description: str | None = None
+    address: str | None = None
+    contact_email: str | None = None
+    phone: str | None = None
+    logo_url: str | None = None
+    cover_url: str | None = None
+    is_active: bool
+    is_primary: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PartnerStoreEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: PartnerStoreResponse | None = None
+
+
+class PartnerStoreListEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: list[PartnerStoreResponse]
+
+
+# ──────────────────────────────────────────────
 # Partner Product
 # ──────────────────────────────────────────────
 
 class ProductCreateDTO(BaseModel):
+    store_id: int | None = None
     name: str
     description: str | None = None
     image_url: str | None = None
@@ -200,6 +253,7 @@ class ProductCreateDTO(BaseModel):
 
 
 class ProductUpdateDTO(BaseModel):
+    store_id: int | None = None
     name: str | None = None
     description: str | None = None
     image_url: str | None = None
@@ -217,8 +271,10 @@ class ProductToggleDTO(BaseModel):
 class PartnerProductResponse(BaseModel):
     id: int
     partner_id: int
+    store_id: int | None = None
     partner_name: str | None = None
     partner_status: str | None = None
+    store_name: str | None = None
     name: str
     description: str | None
     image_url: str | None
@@ -303,6 +359,57 @@ class PaymentStatusEnvelope(BaseModel):
     success: bool
     message: str
     data: PaymentTransactionDTO
+
+
+# ──────────────────────────────────────────────
+# Marketplace inquiries
+# ──────────────────────────────────────────────
+
+class MarketplaceInquiryCreateDTO(BaseModel):
+    partner_id: int | None = None
+    product_id: int | None = None
+    store_id: int | None = None
+    name: str
+    phone: str | None = None
+    email: EmailStr | None = None
+    message: str
+
+
+class MarketplaceInquiryStatusDTO(BaseModel):
+    status: Literal["new", "contacted", "closed"]
+
+
+class MarketplaceInquiryResponse(BaseModel):
+    id: int
+    user_id: int
+    partner_id: int
+    product_id: int | None = None
+    store_id: int | None = None
+    partner_name: str | None = None
+    product_name: str | None = None
+    store_name: str | None = None
+    name: str
+    phone: str | None = None
+    email: str | None = None
+    message: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MarketplaceInquiryEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: MarketplaceInquiryResponse | None = None
+
+
+class MarketplaceInquiryListEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: list[MarketplaceInquiryResponse]
 
 
 # ──────────────────────────────────────────────

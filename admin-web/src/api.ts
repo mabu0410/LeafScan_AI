@@ -1,10 +1,33 @@
-import { AdminDashboardData, AuthSession, CareTip, CareTipPayload, PartnerProduct, PartnerStore } from './types';
+import {
+  AdminDashboardData,
+  AdminDiseaseItem,
+  AdminDiseasePayload,
+  AdminPaymentItem,
+  AdminRevenueReportData,
+  AdminScanItem,
+  AdminUserItem,
+  AuthSession,
+  CareTip,
+  CareTipPayload,
+  MarketplaceInquiry,
+  NotificationItem,
+  NotificationListData,
+  PaginatedData,
+  PartnerProduct,
+  PartnerStore,
+} from './types';
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8000/api/v1';
 
-export const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
-  DEFAULT_API_BASE_URL;
+function normalizeApiBaseUrl(value: string) {
+  const clean = value.trim().replace(/\/+$/, '');
+  return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`;
+}
+
+const configuredApiDomain = import.meta.env.VITE_API_DOMAIN as string | undefined;
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+export const API_BASE_URL = normalizeApiBaseUrl(configuredApiDomain || configuredApiBaseUrl || DEFAULT_API_BASE_URL);
 
 const PUBLIC_BASE_URL = API_BASE_URL.replace(/\/api\/v1$/, '');
 
@@ -22,15 +45,24 @@ async function requestJson<T>(
     body?: unknown;
   } = {}
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method || 'GET',
-    headers: {
-      Accept: 'application/json',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method || 'GET',
+      headers: {
+        Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === 'Failed to fetch' || message.toLowerCase().includes('fetch')) {
+      throw new Error('Không kết nối được backend. Vui lòng kiểm tra API server.');
+    }
+    throw error;
+  }
 
   const rawText = await response.text();
   const payload = rawText ? JSON.parse(rawText) : {};
@@ -60,7 +92,7 @@ export async function loginAdmin(email: string, password: string): Promise<AuthS
   });
   const data = response.data;
   if (!response.success || !data?.access_token || !data?.user) {
-    throw new Error(response.message || 'Dang nhap that bai.');
+    throw new Error(response.message || 'Đăng nhập thất bại.');
   }
 
   return {
@@ -81,7 +113,210 @@ export async function listPendingPartners(token: string): Promise<PartnerStore[]
 
 export async function getAdminDashboard(token: string): Promise<AdminDashboardData> {
   const response = await requestJson<ApiEnvelope<AdminDashboardData>>('/admin/dashboard', { token });
-  if (!response.data) throw new Error(response.message || 'Khong tai duoc thong ke admin.');
+  if (!response.data) throw new Error(response.message || 'Không tải được thống kê admin.');
+  return response.data;
+}
+
+function queryString(params: Record<string, string | number | undefined>) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && String(value).trim() !== '') {
+      query.set(key, String(value));
+    }
+  });
+  const value = query.toString();
+  return value ? `?${value}` : '';
+}
+
+export async function listAdminUsers(
+  token: string,
+  params: { q?: string; role?: string; status?: string; page?: number; pageSize?: number } = {}
+): Promise<PaginatedData<AdminUserItem>> {
+  const response = await requestJson<ApiEnvelope<PaginatedData<AdminUserItem>>>(
+    `/admin/users${queryString({
+      q: params.q,
+      role: params.role === 'all' ? undefined : params.role,
+      status: params.status === 'all' ? undefined : params.status,
+      page: params.page,
+      page_size: params.pageSize,
+    })}`,
+    { token }
+  );
+  if (!response.data) throw new Error(response.message || 'Không tải được người dùng.');
+  return response.data;
+}
+
+export async function updateAdminUserStatus(token: string, userId: number, status: 'active' | 'suspended'): Promise<AdminUserItem> {
+  const response = await requestJson<ApiEnvelope<AdminUserItem>>(`/admin/users/${userId}/status`, {
+    method: 'PATCH',
+    token,
+    body: { status },
+  });
+  if (!response.data) throw new Error(response.message || 'Không cập nhật được người dùng.');
+  return response.data;
+}
+
+export async function listAdminPayments(
+  token: string,
+  params: { q?: string; kind?: string; status?: string; startDate?: string; endDate?: string; page?: number; pageSize?: number } = {}
+): Promise<PaginatedData<AdminPaymentItem>> {
+  const response = await requestJson<ApiEnvelope<PaginatedData<AdminPaymentItem>>>(
+    `/admin/payments${queryString({
+      q: params.q,
+      kind: params.kind === 'all' ? undefined : params.kind,
+      status: params.status === 'all' ? undefined : params.status,
+      start_date: params.startDate,
+      end_date: params.endDate,
+      page: params.page,
+      page_size: params.pageSize,
+    })}`,
+    { token }
+  );
+  if (!response.data) throw new Error(response.message || 'Không tải được thanh toán.');
+  return response.data;
+}
+
+export async function getAdminRevenueReport(
+  token: string,
+  params: { startDate?: string; endDate?: string; period?: string; kind?: string; partnerId?: number | null } = {}
+): Promise<AdminRevenueReportData> {
+  const response = await requestJson<ApiEnvelope<AdminRevenueReportData>>(
+    `/admin/revenue-report${queryString({
+      start_date: params.startDate,
+      end_date: params.endDate,
+      period: params.period,
+      kind: params.kind === 'all' ? undefined : params.kind,
+      partner_id: params.partnerId || undefined,
+    })}`,
+    { token }
+  );
+  if (!response.data) throw new Error(response.message || 'Không tải được báo cáo doanh thu.');
+  return response.data;
+}
+
+export async function exportAdminRevenueReport(
+  token: string,
+  params: { format: 'excel' | 'pdf'; startDate?: string; endDate?: string; period?: string; kind?: string; partnerId?: number | null }
+): Promise<void> {
+  const query = queryString({
+    format: params.format,
+    start_date: params.startDate,
+    end_date: params.endDate,
+    period: params.period,
+    kind: params.kind === 'all' ? undefined : params.kind,
+    partner_id: params.partnerId || undefined,
+  });
+  const response = await fetch(`${API_BASE_URL}/admin/revenue-report/export${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.detail || payload?.message || 'Không xuất được báo cáo doanh thu.');
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="([^"]+)"/);
+  const filename = match?.[1] || `leafscan-revenue.${params.format === 'pdf' ? 'pdf' : 'csv'}`;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function refundAdminPayment(token: string, payment: Pick<AdminPaymentItem, 'id' | 'kind'>, reason?: string): Promise<AdminPaymentItem> {
+  const response = await requestJson<ApiEnvelope<AdminPaymentItem>>(`/admin/payments/${payment.kind}/${payment.id}/refund`, {
+    method: 'POST',
+    token,
+    body: { reason },
+  });
+  if (!response.data) throw new Error(response.message || 'Không hoàn tiền được giao dịch.');
+  return response.data;
+}
+
+export async function listAdminScans(
+  token: string,
+  params: { q?: string; severity?: string; page?: number; pageSize?: number } = {}
+): Promise<PaginatedData<AdminScanItem>> {
+  const response = await requestJson<ApiEnvelope<PaginatedData<AdminScanItem>>>(
+    `/admin/scans${queryString({
+      q: params.q,
+      severity: params.severity === 'all' ? undefined : params.severity,
+      page: params.page,
+      page_size: params.pageSize,
+    })}`,
+    { token }
+  );
+  if (!response.data) throw new Error(response.message || 'Không tải được lịch sử quét.');
+  return response.data;
+}
+
+export async function listAdminDiseases(token: string, params: { q?: string } = {}): Promise<AdminDiseaseItem[]> {
+  const response = await requestJson<ApiEnvelope<AdminDiseaseItem[]>>(
+    `/admin/diseases${queryString({ q: params.q })}`,
+    { token }
+  );
+  return response.data || [];
+}
+
+export async function createAdminDisease(token: string, payload: AdminDiseasePayload): Promise<AdminDiseaseItem> {
+  const response = await requestJson<ApiEnvelope<AdminDiseaseItem>>('/admin/diseases', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+  if (!response.data) throw new Error(response.message || 'Không tạo được bệnh cây.');
+  return response.data;
+}
+
+export async function updateAdminDisease(token: string, id: number, payload: AdminDiseasePayload): Promise<AdminDiseaseItem> {
+  const response = await requestJson<ApiEnvelope<AdminDiseaseItem>>(`/admin/diseases/${id}`, {
+    method: 'PUT',
+    token,
+    body: payload,
+  });
+  if (!response.data) throw new Error(response.message || 'Không cập nhật được bệnh cây.');
+  return response.data;
+}
+
+export async function deleteAdminDisease(token: string, id: number): Promise<void> {
+  await requestJson<{ success: boolean; message?: string }>(`/admin/diseases/${id}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function listAdminInquiries(token: string, status?: string): Promise<MarketplaceInquiry[]> {
+  const response = await requestJson<ApiEnvelope<MarketplaceInquiry[]>>(
+    `/admin/inquiries${queryString({ status: status === 'all' ? undefined : status })}`,
+    { token }
+  );
+  return response.data || [];
+}
+
+export async function listNotifications(token: string): Promise<NotificationListData> {
+  const response = await requestJson<ApiEnvelope<NotificationListData>>('/notifications', { token });
+  if (!response.data) throw new Error(response.message || 'Không tải được thông báo.');
+  return response.data;
+}
+
+export async function markNotificationRead(token: string, id: number): Promise<NotificationItem | null> {
+  const response = await requestJson<ApiEnvelope<NotificationItem | null>>(`/notifications/${id}/read`, {
+    method: 'PATCH',
+    token,
+  });
+  return response.data || null;
+}
+
+export async function markAllNotificationsRead(token: string): Promise<NotificationListData> {
+  const response = await requestJson<ApiEnvelope<NotificationListData>>('/notifications/read-all', {
+    method: 'PATCH',
+    token,
+  });
+  if (!response.data) throw new Error(response.message || 'Không cập nhật được thông báo.');
   return response.data;
 }
 
@@ -98,7 +333,7 @@ export async function updatePartnerStatus(
       rejection_reason: status === 'rejected' ? 'Hồ sơ chưa đạt yêu cầu.' : undefined,
     },
   });
-  if (!response.data) throw new Error(response.message || 'Khong cap nhat duoc dai ly.');
+  if (!response.data) throw new Error(response.message || 'Không cập nhật được đại lý.');
   return response.data;
 }
 
@@ -120,7 +355,7 @@ export async function updateProductStatus(
       rejection_reason: status === 'rejected' ? 'Sản phẩm chưa đạt yêu cầu hiển thị.' : undefined,
     },
   });
-  if (!response.data) throw new Error(response.message || 'Khong cap nhat duoc san pham.');
+  if (!response.data) throw new Error(response.message || 'Không cập nhật được sản phẩm.');
   return response.data;
 }
 
@@ -135,7 +370,7 @@ export async function createCareTip(token: string, payload: CareTipPayload): Pro
     token,
     body: payload,
   });
-  if (!response.data) throw new Error(response.message || 'Khong tao duoc meo cham soc.');
+  if (!response.data) throw new Error(response.message || 'Không tạo được mẹo chăm sóc.');
   return response.data;
 }
 
@@ -145,7 +380,7 @@ export async function updateCareTip(token: string, id: number, payload: CareTipP
     token,
     body: payload,
   });
-  if (!response.data) throw new Error(response.message || 'Khong cap nhat duoc meo cham soc.');
+  if (!response.data) throw new Error(response.message || 'Không cập nhật được mẹo chăm sóc.');
   return response.data;
 }
 

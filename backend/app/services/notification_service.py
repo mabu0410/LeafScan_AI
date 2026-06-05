@@ -10,6 +10,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import (
+    ADMIN_EMAILS,
     EXPO_PUSH_URL,
     NOTIFICATION_SCHEDULER_ENABLED,
     NOTIFICATION_SCHEDULER_INITIAL_DELAY_SECONDS,
@@ -18,7 +19,7 @@ from app.config import (
     NOTIFICATION_TASK_PAST_DUE_GRACE_MINUTES,
 )
 from app.database import SessionLocal
-from app.models.domain import CareTask, NotificationDelivery, PushToken
+from app.models.domain import CareTask, Notification, NotificationDelivery, PushToken, User
 
 logger = logging.getLogger("leafscan.notifications")
 
@@ -87,6 +88,62 @@ def notification_status(db: Session, *, user_id: int) -> dict[str, Any]:
         "active_token_count": len(rows),
         "latest_registered_at": latest,
     }
+
+
+def create_notification(
+    db: Session,
+    *,
+    user_id: int,
+    notification_type: str,
+    title: str,
+    body: str,
+    data: dict[str, Any] | None = None,
+    event_key: str | None = None,
+) -> Notification | None:
+    if event_key:
+        existing = db.query(Notification).filter(Notification.event_key == event_key).first()
+        if existing:
+            return existing
+    row = Notification(
+        user_id=user_id,
+        notification_type=notification_type,
+        title=title,
+        body=body,
+        data=data or {},
+        event_key=event_key,
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
+def notify_admins(
+    db: Session,
+    *,
+    notification_type: str,
+    title: str,
+    body: str,
+    data: dict[str, Any] | None = None,
+    event_key_prefix: str | None = None,
+) -> int:
+    admin_emails = [email.strip().lower() for email in ADMIN_EMAILS if email.strip()]
+    if not admin_emails:
+        return 0
+    admins = db.query(User).filter(User.email.in_(admin_emails)).all()
+    created = 0
+    for admin in admins:
+        event_key = f"{event_key_prefix}:admin:{admin.id}" if event_key_prefix else None
+        if create_notification(
+            db,
+            user_id=admin.id,
+            notification_type=notification_type,
+            title=title,
+            body=body,
+            data=data,
+            event_key=event_key,
+        ):
+            created += 1
+    return created
 
 
 def _active_tokens(db: Session, user_id: int) -> list[PushToken]:
@@ -211,6 +268,20 @@ def run_scheduled_notifications(db: Session | None = None, *, now: datetime | No
 
         for task in tasks:
             event_key = f"care_task_due:{task.id}"
+            create_notification(
+                session,
+                user_id=task.user_id,
+                notification_type="care_task",
+                title="Nhắc việc chăm sóc cây",
+                body=_task_reminder_body(task),
+                data={
+                    "type": "care_task",
+                    "taskId": task.id,
+                    "plantId": task.plant_id,
+                    "dueAt": task.due_at.isoformat() if task.due_at else None,
+                },
+                event_key=f"in_app:{event_key}",
+            )
             result = send_push_to_user(
                 session,
                 user_id=task.user_id,

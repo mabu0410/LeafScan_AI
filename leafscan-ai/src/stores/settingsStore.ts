@@ -17,7 +17,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      notifications: true,
+      notifications: false,
       darkMode: false,
       language: 'vi',
       autoSaveScanImages: true,

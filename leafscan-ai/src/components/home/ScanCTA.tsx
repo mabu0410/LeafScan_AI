@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface ScanCTAProps {
@@ -10,6 +11,7 @@ interface ScanCTAProps {
 }
 
 export function ScanCTA({ onPress }: ScanCTAProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -36,8 +38,8 @@ export function ScanCTA({ onPress }: ScanCTAProps) {
             <Ionicons name="camera" size={30} color={theme.colors.white} />
           </View>
           <View style={styles.textWrap}>
-            <Text style={styles.title}>Quét lá ngay</Text>
-            <Text style={styles.subtitle}>Chụp lá để AI phân tích ngay</Text>
+            <Text style={styles.title}>{t('home.scanCta.title')}</Text>
+            <Text style={styles.subtitle}>{t('home.scanCta.subtitle')}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.white} />
         </LinearGradient>

@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { theme } from '../theme/theme';
@@ -22,6 +23,7 @@ type Props = {
 
 export default function OnboardingScreen({ navigation }: Props) {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
     const completeOnboarding = useAuthStore(state => state.completeOnboarding);
 
     const goToRegister = () => {
@@ -56,26 +58,23 @@ export default function OnboardingScreen({ navigation }: Props) {
             <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}>
                 <View style={styles.dragHandle} />
 
-                <Text style={styles.title}>
-                    Chào mừng bạn đến với{'\n'}
-                    Leaf AI
-                </Text>
+                <Text style={styles.title}>{t('onboarding.title')}</Text>
 
-                <Text style={styles.subtitle}>Giải pháp AI bảo vệ mùa màng của bạn</Text>
+                <Text style={styles.subtitle}>{t('onboarding.subtitle')}</Text>
 
                 <TouchableOpacity
                     activeOpacity={0.88}
                     onPress={goToRegister}
                     style={styles.primaryButton}
                 >
-                    <Text style={styles.primaryButtonText}>Bắt đầu ngay</Text>
+                    <Text style={styles.primaryButtonText}>{t('onboarding.start')}</Text>
                     <Ionicons name="arrow-forward" size={30} color={theme.colors.white} />
                 </TouchableOpacity>
 
                 <View style={styles.loginRow}>
-                    <Text style={styles.loginText}>Đã có tài khoản?</Text>
+                    <Text style={styles.loginText}>{t('onboarding.hasAccount')}</Text>
                     <TouchableOpacity activeOpacity={0.72} onPress={goToLogin} hitSlop={8}>
-                        <Text style={styles.loginLink}>Đăng nhập</Text>
+                        <Text style={styles.loginLink}>{t('auth.login')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

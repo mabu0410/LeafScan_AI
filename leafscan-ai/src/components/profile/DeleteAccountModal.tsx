@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface DeleteAccountModalProps {
@@ -24,6 +25,7 @@ export function DeleteAccountModal({
   onConfirm,
   onCancel,
 }: DeleteAccountModalProps) {
+  const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -54,17 +56,14 @@ export function DeleteAccountModal({
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Xóa tài khoản</Text>
-          <Text style={styles.subtitle}>
-            Thao tác này sẽ xóa toàn bộ dữ liệu của bạn và không thể hoàn tác.
-            Nhập mật khẩu để xác nhận.
-          </Text>
+          <Text style={styles.title}>{t('profile.deleteModal.title')}</Text>
+          <Text style={styles.subtitle}>{t('profile.deleteModal.description')}</Text>
 
           {/* Password input */}
           <View style={styles.inputWrap}>
             <TextInput
               style={styles.input}
-              placeholder="Nhập mật khẩu xác nhận"
+              placeholder={t('profile.deleteModal.placeholder')}
               placeholderTextColor={theme.colors.textMuted}
               secureTextEntry={!showPassword}
               value={password}
@@ -91,7 +90,7 @@ export function DeleteAccountModal({
               style={[styles.button, styles.cancelButton]}
               disabled={loading}
             >
-              <Text style={styles.cancelText}>Hủy</Text>
+              <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </Pressable>
 
             <Pressable
@@ -106,7 +105,7 @@ export function DeleteAccountModal({
               {loading ? (
                 <ActivityIndicator color="#FFF" size="small" />
               ) : (
-                <Text style={styles.deleteText}>Xóa vĩnh viễn</Text>
+                <Text style={styles.deleteText}>{t('profile.deleteModal.deleteForever')}</Text>
               )}
             </Pressable>
           </View>

@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 interface ScanControlsProps {
   isScanning: boolean;
@@ -61,6 +62,7 @@ export function ScanControls({
   onPickFromGallery,
   onFlipCamera,
 }: ScanControlsProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const isCaptureBlocked = isScanning || captureDisabled;
 
@@ -73,7 +75,7 @@ export function ScanControls({
     <View style={[styles.container, { bottom: bottomInset + 18 }]}>
       <SecondaryButton
         icon="images-outline"
-        label="Thư viện"
+        label={t('scan.library')}
         onPress={onPickFromGallery}
         disabled={isScanning}
       />
@@ -111,13 +113,13 @@ export function ScanControls({
           </LinearGradient>
         </Pressable>
         <Text style={[styles.captureLabel, captureDisabled && !isScanning && styles.captureLabelMuted]}>
-          {isScanning ? 'Đang quét...' : captureDisabled ? 'Chọn cây trước' : 'Quét ngay'}
+          {isScanning ? t('scan.scanning') : captureDisabled ? t('scan.choosePlantFirst') : t('scan.scanNow')}
         </Text>
       </Animated.View>
 
       <SecondaryButton
         icon="camera-reverse-outline"
-        label="Đổi camera"
+        label={t('scan.flipCamera')}
         onPress={onFlipCamera}
         disabled={isScanning}
       />

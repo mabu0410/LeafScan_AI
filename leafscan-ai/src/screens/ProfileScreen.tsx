@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { useHistoryStore } from '../stores/historyStore';
@@ -12,6 +13,7 @@ import { usePlantsStore } from '../stores/plantsStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { deleteAccountApi } from '../api/account';
 import { googleLinkApi, googleUnlinkApi, useGoogleAuth } from '../api/google-auth';
+import { registerForPushNotificationsAsync, unregisterPushNotificationsAsync } from '../services/notifications';
 import { theme } from '../theme/theme';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { AchievementCard } from '../components/profile/AchievementCard';
@@ -22,12 +24,10 @@ import { SettingsSection } from '../components/profile/SettingsSection';
 import { AccountSecuritySection } from '../components/profile/AccountSecuritySection';
 import { AppInfoSection } from '../components/profile/AppInfoSection';
 import { DeleteAccountModal } from '../components/profile/DeleteAccountModal';
+import { isAdminAccount } from '../utils/admin';
 
 const APP_VERSION = '1.0.0';
-const ADMIN_EMAILS = (process.env.EXPO_PUBLIC_ADMIN_EMAILS || '')
-    .split(',')
-    .map((item: string) => item.trim().toLowerCase())
-    .filter(Boolean);
+type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 function parseDateMillis(raw?: string): number {
     if (!raw) return 0;
@@ -36,12 +36,12 @@ function parseDateMillis(raw?: string): number {
     return dt.getTime();
 }
 
-function buildLevel(totalScans: number) {
+function buildLevel(totalScans: number, t: Translate) {
     const tiers = [
-        { title: 'Người mới', target: 20, nextTitle: 'Thợ quét cấp 1' },
-        { title: 'Thợ quét cấp 1', target: 50, nextTitle: 'Thợ quét cấp 2' },
-        { title: 'Thợ quét cấp 2', target: 100, nextTitle: 'Bác sĩ cây' },
-        { title: 'Bác sĩ cây', target: 200, nextTitle: 'Chuyên gia nông nghiệp AI' },
+        { title: t('profile.levels.newbie'), target: 20, nextTitle: t('profile.levels.scanner1') },
+        { title: t('profile.levels.scanner1'), target: 50, nextTitle: t('profile.levels.scanner2') },
+        { title: t('profile.levels.scanner2'), target: 100, nextTitle: t('profile.levels.doctor') },
+        { title: t('profile.levels.doctor'), target: 200, nextTitle: t('profile.levels.expert') },
     ];
 
     const tier = tiers.find((item) => totalScans < item.target) || tiers[tiers.length - 1];
@@ -56,6 +56,7 @@ function buildLevel(totalScans: number) {
 export default function ProfileScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
     const [cameraPermission, requestCameraPermission] = useCameraPermissions();
     const user = useAuthStore(state => state.user);
     const logout = useAuthStore(state => state.logout);
@@ -70,7 +71,6 @@ export default function ProfileScreen() {
         darkMode,
         language,
         scanQuality,
-        toggleNotifications,
         toggleAutoSaveScanImages,
         toggleDarkMode,
         updateSettings,
@@ -85,7 +85,7 @@ export default function ProfileScreen() {
         isConfigured: isGoogleAuthConfigured,
     } = useGoogleAuth();
     const logoutScale = useSharedValue(1);
-    const isAdmin = Boolean(user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase()));
+    const isAdmin = isAdminAccount(user);
 
     useEffect(() => {
         loadPlants().catch(() => undefined);
@@ -101,14 +101,14 @@ export default function ProfileScreen() {
                 googleLinkApi(accessToken, idToken)
                     .then(() => {
                         setIsGoogleLinked(true);
-                        Alert.alert('Thành công', 'Đã liên kết tài khoản Google.');
+                        Alert.alert(t('common.success'), t('profile.alerts.googleLinked'));
                     })
                     .catch((err: any) => {
-                        Alert.alert('Lỗi', err.message || 'Liên kết Google thất bại.');
+                        Alert.alert(t('common.error'), err.message || t('profile.alerts.googleLinkFailed'));
                     });
             }
         }
-    }, [googleResponse, accessToken]);
+    }, [googleResponse, accessToken, t]);
 
     const sortedScans = useMemo(
         () =>
@@ -119,17 +119,17 @@ export default function ProfileScreen() {
         [scans]
     );
 
-    const level = useMemo(() => buildLevel(sortedScans.length), [sortedScans.length]);
+    const level = useMemo(() => buildLevel(sortedScans.length, t), [sortedScans.length, t]);
 
     const badges = useMemo(
         () => [
-            { id: 'sprout', label: 'Mầm xanh', icon: 'leaf-outline' as const, earned: sortedScans.length >= 1 },
-            { id: 'observer', label: 'Quan sát viên', icon: 'eye-outline' as const, earned: sortedScans.length >= 10 },
-            { id: 'scanner', label: 'Thợ quét', icon: 'scan-outline' as const, earned: sortedScans.length >= 25 },
-            { id: 'doctor', label: 'Bác sĩ cây', icon: 'medkit-outline' as const, earned: sortedScans.length >= 50 },
-            { id: 'ai-farmer', label: 'Nông dân AI', icon: 'sparkles-outline' as const, earned: sortedScans.length >= 100 },
+            { id: 'sprout', label: t('profile.badges.sprout'), icon: 'leaf-outline' as const, earned: sortedScans.length >= 1 },
+            { id: 'observer', label: t('profile.badges.observer'), icon: 'eye-outline' as const, earned: sortedScans.length >= 10 },
+            { id: 'scanner', label: t('profile.badges.scanner'), icon: 'scan-outline' as const, earned: sortedScans.length >= 25 },
+            { id: 'doctor', label: t('profile.badges.doctor'), icon: 'medkit-outline' as const, earned: sortedScans.length >= 50 },
+            { id: 'ai-farmer', label: t('profile.badges.aiFarmer'), icon: 'sparkles-outline' as const, earned: sortedScans.length >= 100 },
         ],
-        [sortedScans.length]
+        [sortedScans.length, t]
     );
 
     const activeDays = useMemo(() => {
@@ -156,54 +156,54 @@ export default function ProfileScreen() {
     }, [plants]);
 
     const commonDisease = useMemo(() => {
-        if (sortedScans.length === 0) return 'Chưa có dữ liệu';
+        if (sortedScans.length === 0) return t('common.noData');
         const bucket: Record<string, number> = {};
         sortedScans.forEach((scan) => {
             if (!scan.result) return;
             bucket[scan.result] = (bucket[scan.result] || 0) + 1;
         });
         const top = Object.entries(bucket).sort((a, b) => b[1] - a[1])[0];
-        return top?.[0] || 'Chưa có dữ liệu';
-    }, [sortedScans]);
+        return top?.[0] || t('common.noData');
+    }, [sortedScans, t]);
 
     const stats = useMemo(
         () => [
-            { id: 'days', label: 'Ngày hoạt động', value: String(activeDays), icon: 'calendar-outline' as const },
-            { id: 'scans', label: 'Cây đã quét', value: String(sortedScans.length), icon: 'scan-outline' as const },
+            { id: 'days', label: t('profile.stats.active_days'), value: String(activeDays), icon: 'calendar-outline' as const },
+            { id: 'scans', label: t('profile.stats.scanned_plants'), value: String(sortedScans.length), icon: 'scan-outline' as const },
             {
                 id: 'diseases',
-                label: 'Bệnh phát hiện',
+                label: t('profile.stats.diseases_detected'),
                 value: String(diseaseDetectedCount),
                 icon: 'bug-outline' as const,
                 tint: '#F9E9DE',
             },
             {
                 id: 'healthy-rate',
-                label: 'Tỷ lệ cây khỏe',
+                label: t('profile.stats.healthy_rate'),
                 value: `${healthyPlantRate}%`,
                 icon: 'heart-outline' as const,
             },
             {
                 id: 'common-disease',
-                label: 'Bệnh thường gặp nhất',
+                label: t('profile.stats.common_disease'),
                 value: commonDisease,
                 icon: 'stats-chart-outline' as const,
                 tint: '#EFEAF9',
             },
         ],
-        [activeDays, commonDisease, diseaseDetectedCount, healthyPlantRate, sortedScans.length]
+        [activeDays, commonDisease, diseaseDetectedCount, healthyPlantRate, sortedScans.length, t]
     );
 
     const cameraPermissionLabel = !cameraPermission
-        ? 'Đang kiểm tra'
+        ? t('profile.settings.checking')
         : cameraPermission.granted
-            ? 'Đã cấp'
-            : 'Chưa cấp';
+            ? t('profile.settings.granted')
+            : t('profile.settings.not_granted');
 
     const handleLogout = () => {
-        Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
-            { text: 'Hủy', style: 'cancel' },
-            { text: 'Đăng xuất', style: 'destructive', onPress: logout },
+        Alert.alert(t('profile.alerts.logoutTitle'), t('profile.alerts.logoutConfirm'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('auth.logout'), style: 'destructive', onPress: logout },
         ]);
     };
 
@@ -220,6 +220,31 @@ export default function ProfileScreen() {
         updateSettings('scanQuality', next);
     };
 
+    const handleToggleNotifications = async () => {
+        if (!accessToken) {
+            updateSettings('notifications', !notifications);
+            return;
+        }
+
+        if (notifications) {
+            updateSettings('notifications', false);
+            await unregisterPushNotificationsAsync(accessToken).catch(() => undefined);
+            return;
+        }
+
+        try {
+            await registerForPushNotificationsAsync(accessToken);
+            updateSettings('notifications', true);
+            Alert.alert(t('profile.alerts.notificationsEnabledTitle'), t('profile.alerts.notificationsEnabledBody'));
+        } catch (error: any) {
+            updateSettings('notifications', false);
+            Alert.alert(
+                t('profile.alerts.notificationFailedTitle'),
+                error?.message || t('profile.alerts.notificationFailedBody')
+            );
+        }
+    };
+
     const handleCameraPermission = async () => {
         try {
             if (cameraPermission?.granted) {
@@ -228,7 +253,7 @@ export default function ProfileScreen() {
             }
             await requestCameraPermission();
         } catch {
-            Alert.alert('Không thể mở cài đặt', 'Vui lòng cấp quyền camera trong cài đặt thiết bị.');
+            Alert.alert(t('profile.alerts.openSettingsFailedTitle'), t('profile.alerts.openSettingsFailedBody'));
         }
     };
 
@@ -249,11 +274,11 @@ export default function ProfileScreen() {
 
         // Reload data mới từ server
         await Promise.all([loadPlants(), loadHistory()]).catch(() => undefined);
-        Alert.alert('Đã dọn cache', 'Bộ nhớ tạm và dữ liệu đã được làm mới.');
+        Alert.alert(t('profile.alerts.cacheClearedTitle'), t('profile.alerts.cacheClearedBody'));
     };
 
     const openPlaceholder = (featureName: string) => {
-        Alert.alert('Đang cập nhật', `${featureName} sẽ sớm có trong phiên bản tới.`);
+        Alert.alert(t('profile.alerts.comingSoonTitle'), t('profile.alerts.comingSoonBody', { featureName }));
     };
 
     const handleDeleteAccountConfirm = async (password: string) => {
@@ -262,10 +287,10 @@ export default function ProfileScreen() {
         try {
             await deleteAccountApi(accessToken, password);
             setDeleteModalVisible(false);
-            Alert.alert('Đã xóa', 'Tài khoản đã được xóa vĩnh viễn.');
+            Alert.alert(t('profile.deleteModal.title'), t('profile.alerts.accountDeleted'));
             logout();
         } catch (error: any) {
-            Alert.alert('Lỗi', error.message || 'Xóa tài khoản thất bại.');
+            Alert.alert(t('common.error'), error.message || t('profile.alerts.deleteFailed'));
         } finally {
             setDeleteLoading(false);
         }
@@ -274,7 +299,7 @@ export default function ProfileScreen() {
     const openExternal = async (url: string) => {
         const supported = await Linking.canOpenURL(url);
         if (!supported) {
-            Alert.alert('Không thể mở liên kết', 'Thiết bị chưa hỗ trợ mở liên kết này.');
+            Alert.alert(t('profile.alerts.openLinkFailedTitle'), t('profile.alerts.openLinkFailedBody'));
             return;
         }
         await Linking.openURL(url);
@@ -288,7 +313,7 @@ export default function ProfileScreen() {
         >
             <Animated.View entering={FadeInDown.duration(420)}>
                 <ProfileHeader
-                    name={user?.name || 'Nông dân LeafScan'}
+                    name={user?.name || t('profile.defaultName')}
                     email={user?.email || 'email@example.com'}
                     onEditPress={() => navigation.navigate('EditProfile')}
                 />
@@ -326,7 +351,8 @@ export default function ProfileScreen() {
                     language={language}
                     scanQuality={scanQuality}
                     cameraPermissionLabel={cameraPermissionLabel}
-                    onToggleNotifications={toggleNotifications}
+                    onToggleNotifications={handleToggleNotifications}
+                    onOpenNotifications={() => navigation.navigate('Notifications')}
                     onToggleAutoSave={toggleAutoSaveScanImages}
                     onToggleDarkMode={toggleDarkMode}
                     onLanguagePress={toggleLanguage}
@@ -348,20 +374,20 @@ export default function ProfileScreen() {
                             try {
                                 await googleUnlinkApi(accessToken || '');
                                 setIsGoogleLinked(false);
-                                Alert.alert('Thành công', 'Đã hủy liên kết Google.');
+                                Alert.alert(t('common.success'), t('profile.alerts.googleUnlinked'));
                             } catch (err: any) {
-                                Alert.alert('Lỗi', err.message || 'Hủy liên kết thất bại.');
+                                Alert.alert(t('common.error'), err.message || t('profile.alerts.googleUnlinkFailed'));
                             }
                         } else {
                             if (!isGoogleAuthConfigured) {
                                 Alert.alert(
-                                    'Chưa cấu hình Google OAuth',
-                                    'Thiếu Google client ID. Vui lòng cấu hình ít nhất EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID trong leafscan-ai/.env.'
+                                    t('auth.googleNotConfigured'),
+                                    t('profile.alerts.googleMissingClient')
                                 );
                                 return;
                             }
                             if (!googleRequest) {
-                                Alert.alert('Vui lòng thử lại', 'Google OAuth chưa sẵn sàng.');
+                                Alert.alert(t('common.retry'), t('auth.googleNotReady'));
                                 return;
                             }
                             // Link — trigger Google sign-in
@@ -374,13 +400,13 @@ export default function ProfileScreen() {
 
             <Animated.View entering={FadeInDown.delay(310).duration(420)}>
                 <Pressable style={styles.partnerButton} onPress={() => navigation.navigate('PartnerChannel')}>
-                    <Text style={styles.partnerButtonTitle}>Kênh đại lý</Text>
-                    <Text style={styles.partnerButtonText}>Đăng ký cửa hàng, thanh toán gói và quản lý sản phẩm.</Text>
+                    <Text style={styles.partnerButtonTitle}>{t('profile.partner.title')}</Text>
+                    <Text style={styles.partnerButtonText}>{t('profile.partner.description')}</Text>
                 </Pressable>
                 {isAdmin && (
                     <Pressable style={styles.adminButton} onPress={() => navigation.navigate('AdminModeration')}>
-                        <Text style={styles.adminButtonTitle}>Duyệt đại lý & sản phẩm</Text>
-                        <Text style={styles.adminButtonText}>Quản lý nội dung đang chờ kiểm duyệt.</Text>
+                        <Text style={styles.adminButtonTitle}>{t('profile.admin.title')}</Text>
+                        <Text style={styles.adminButtonText}>{t('profile.admin.description')}</Text>
                     </Pressable>
                 )}
             </Animated.View>
@@ -406,7 +432,7 @@ export default function ProfileScreen() {
                         }}
                         style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
                     >
-                        <Text style={styles.logoutText}>Đăng xuất</Text>
+                        <Text style={styles.logoutText}>{t('auth.logout')}</Text>
                     </Pressable>
                 </Animated.View>
             </Animated.View>

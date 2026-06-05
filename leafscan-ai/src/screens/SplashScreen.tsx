@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { theme } from '../theme/theme';
 
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export default function SplashScreen({ navigation }: Props) {
+    const { t } = useTranslation();
     const scale = useSharedValue(0.8);
     const opacity = useSharedValue(0);
     const iconY = useSharedValue(0);
@@ -66,7 +68,7 @@ export default function SplashScreen({ navigation }: Props) {
                 </Animated.View>
 
                 <Animated.View style={titleStyle}>
-                    <Text style={styles.subtitle}>Làm vườn thông minh hơn</Text>
+                    <Text style={styles.subtitle}>{t('splash.subtitle')}</Text>
                 </Animated.View>
             </Animated.View>
         </View>

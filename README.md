@@ -77,8 +77,17 @@ Các mục tiêu chính:
 ### Marketplace và subscription
 
 - Có module đối tác, cửa hàng, sản phẩm và marketplace.
+- Marketplace giai đoạn đồ án dùng dạng yêu cầu tư vấn: user gửi thông tin liên hệ từ sản phẩm/cửa hàng, đại lý xem và đổi trạng thái `new/contacted/closed`.
 - Có module subscription/user subscription để mở rộng theo gói dịch vụ.
+- Hỗ trợ thanh toán VNPAY cho gói người dùng và gói đại lý.
 - Các phần này tạo nền tảng cho mô hình sản phẩm có kênh đối tác hoặc gói nâng cấp.
+
+### Quản trị, thông báo và cache demo
+
+- Admin web có dashboard, duyệt đại lý, duyệt sản phẩm, CRUD mẹo chăm sóc, CRUD bệnh cây, quản lý người dùng, thanh toán, lịch sử quét, yêu cầu tư vấn và thông báo.
+- Mobile có màn thông báo thật từ backend, đọc từng thông báo và đọc tất cả.
+- Kết quả quét AI có feedback `Đúng`, `Sai`, `Không chắc` để chứng minh hướng cải thiện mô hình.
+- Mobile có cache read-only mức demo cho Home, vườn cây, lịch sử quét, lịch chăm sóc và nhật ký. Khi API lỗi, app dùng dữ liệu lưu gần nhất.
 
 ## Luồng hoạt động tổng quát
 
@@ -112,6 +121,7 @@ Dự án gồm hai ứng dụng chính:
 
 - `leafscan-ai/`: ứng dụng mobile viết bằng React Native, Expo và TypeScript.
 - `backend/`: REST API viết bằng Python, FastAPI, SQLAlchemy và ONNX Runtime.
+- `admin-web/`: web dashboard nội bộ viết bằng Vite React để duyệt marketplace.
 
 Backend đóng vai trò trung tâm xử lý nghiệp vụ. Mobile app không chạy mô hình trực tiếp mà gửi ảnh tới backend. Cách này giúp kiểm soát model, threshold, logging, dữ liệu lịch sử và các dịch vụ phụ trợ như chatbot, email, Google OAuth và subscription ở một nơi duy nhất.
 
@@ -133,6 +143,10 @@ backend/
   app/data/          Knowledge base bệnh cây
   migrations/        SQL migration thủ công
   tests/             Pytest suite
+
+admin-web/
+  src/           Web admin React: login, dashboard, duyệt đại lý, sản phẩm và care tips
+  .env.example   Template URL backend cho dashboard
 ```
 
 ## Công nghệ sử dụng
@@ -221,6 +235,8 @@ DO_AN_VMB/
 | `POST` | `/api/v1/auth/register` | Đăng ký tài khoản |
 | `POST` | `/api/v1/auth/login` | Đăng nhập và nhận JWT |
 | `GET` | `/api/v1/auth/me` | Lấy thông tin người dùng hiện tại |
+| `GET` | `/api/v1/users/me` | Lấy hồ sơ người dùng cho mobile profile |
+| `PUT` | `/api/v1/users/me` | Cập nhật hồ sơ người dùng |
 | `POST` | `/api/v1/auth/forgot-password` | Gửi OTP quên mật khẩu |
 | `POST` | `/api/v1/auth/reset-password` | Đặt lại mật khẩu bằng OTP |
 | `GET` | `/api/v1/plants` | Lấy danh sách cây của người dùng |
@@ -229,8 +245,26 @@ DO_AN_VMB/
 | `GET` | `/api/v1/diseases` | Tra cứu danh sách bệnh |
 | `GET` | `/api/v1/home` | Dữ liệu dashboard trang chủ |
 | `POST` | `/api/v1/diagnose` | Chẩn đoán bệnh từ ảnh lá |
+| `POST` | `/api/v1/diagnose/{scan_id}/feedback` | Gửi phản hồi đúng/sai/không chắc cho kết quả AI |
 | `POST` | `/api/v1/chat` | Chat tư vấn bệnh cây |
 | `POST` | `/api/v1/chat/stream` | Chat tư vấn dạng SSE stream |
+| `GET/POST` | `/api/v1/home/tasks` | Lịch chăm sóc của người dùng |
+| `GET/POST` | `/api/v1/home/care-logs` | Nhật ký chăm sóc của người dùng |
+| `GET` | `/api/v1/notifications` | Danh sách thông báo |
+| `PATCH` | `/api/v1/notifications/{id}/read` | Đánh dấu một thông báo đã đọc |
+| `PATCH` | `/api/v1/notifications/read-all` | Đánh dấu tất cả thông báo đã đọc |
+| `POST` | `/api/v1/marketplace/inquiries` | User gửi yêu cầu tư vấn |
+| `GET/PATCH` | `/api/v1/partners/me/inquiries` | Đại lý xem/cập nhật yêu cầu tư vấn |
+| `GET` | `/api/v1/admin/partners` | Admin xem danh sách đại lý chờ duyệt |
+| `PATCH` | `/api/v1/admin/partners/{id}/status` | Admin duyệt hoặc từ chối đại lý |
+| `GET` | `/api/v1/admin/products` | Admin xem danh sách sản phẩm chờ duyệt |
+| `PATCH` | `/api/v1/admin/products/{id}/status` | Admin duyệt hoặc từ chối sản phẩm |
+| `GET/POST/PUT/DELETE` | `/api/v1/admin/care-tips` | Admin quản lý mẹo chăm sóc |
+| `GET/PATCH` | `/api/v1/admin/users` | Admin xem và tạm khóa/kích hoạt người dùng |
+| `GET` | `/api/v1/admin/payments` | Admin xem thanh toán user/đại lý |
+| `GET` | `/api/v1/admin/scans` | Admin xem lịch sử quét |
+| `GET/POST/PUT/DELETE` | `/api/v1/admin/diseases` | Admin quản lý bệnh cây |
+| `GET` | `/api/v1/admin/inquiries` | Admin xem yêu cầu tư vấn |
 
 ## Cơ sở dữ liệu chính
 
@@ -241,9 +275,13 @@ Các bảng quan trọng:
 - `diseases`: thông tin bệnh cây, triệu chứng, điều trị, phòng ngừa và mapping với model class.
 - `scan_history`: lịch sử quét, ảnh, confidence, stage, forecast và bệnh liên quan.
 - `care_tips`: mẹo chăm sóc cây hiển thị ở dashboard.
+- `care_tasks`, `care_logs`: lịch chăm sóc và nhật ký chăm sóc.
 - `password_reset_otps`: OTP đặt lại mật khẩu.
-- `partners`, `partner_products`: dữ liệu marketplace/đối tác.
+- `partners`, `partner_stores`, `partner_products`, `marketplace_inquiries`: dữ liệu marketplace/đối tác và yêu cầu tư vấn.
 - `subscription_plans`, `user_subscriptions`: gói dịch vụ và trạng thái đăng ký.
+- `user_payment_transactions`, `payment_transactions`: giao dịch VNPAY của user và đại lý.
+- `notifications`, `push_tokens`: thông báo in-app và token push.
+- `scan_feedback`: phản hồi của user cho kết quả AI.
 
 ## Cài đặt backend
 
@@ -273,9 +311,16 @@ Cập nhật các biến quan trọng trong `backend/.env`:
 ```bash
 SECRET_KEY=<random-long-secret>
 DATABASE_URL=postgresql://user:password@localhost:5432/leafscan
+ADMIN_EMAILS=admin@example.com
 GEMINI_API_KEY=<your-gemini-api-key>
 GEMINI_MODEL=gemini-2.5-flash
 MODEL_PATH=/path/to/efficientnetv2s_plantvillage.onnx
+```
+
+Nạp dữ liệu seed local/dev:
+
+```bash
+python database/run_seeds.py
 ```
 
 Khởi chạy:
@@ -332,13 +377,50 @@ Hoặc:
 npx expo start --host lan --clear
 ```
 
+## Cài đặt admin web
+
+Yêu cầu:
+
+- Node.js
+- Backend đang chạy và `ADMIN_EMAILS` trong `backend/.env` có email admin, ví dụ `admin@example.com`.
+
+Chạy dashboard:
+
+```bash
+cd admin-web
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Mặc định dashboard gọi backend qua:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+Mở dashboard ở:
+
+```text
+http://localhost:5173
+```
+
+Tài khoản demo sau khi chạy seed:
+
+```text
+Admin: admin / admin123
+Đối tác: doitac / doitac123
+```
+
+Seed lưu alias `admin` và `doitac` trong trường phone để dùng được với luồng đăng nhập hiện tại. Admin vẫn cần email `admin@example.com` nằm trong `ADMIN_EMAILS` để gọi API quản trị.
+
 ## Kiểm thử và kiểm tra chất lượng
 
 Chạy test backend:
 
 ```bash
 cd backend
-pytest tests/
+.venv/bin/python -m pytest -q
 ```
 
 Kiểm tra TypeScript mobile:
@@ -346,6 +428,14 @@ Kiểm tra TypeScript mobile:
 ```bash
 cd leafscan-ai
 npm run lint
+```
+
+Kiểm tra TypeScript admin web:
+
+```bash
+cd admin-web
+npm run lint
+npm run build
 ```
 
 Quét secret trước khi commit hoặc push:
@@ -372,6 +462,8 @@ Backend:
 - `GEMINI_MODEL`: tên model Gemini.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`: cấu hình gửi OTP email.
 - `GOOGLE_CLIENT_ID`: client ID để xác thực Google OAuth.
+- `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`: cấu hình thanh toán VNPAY.
+- `VNPAY_FEE_PERCENT`, `VNPAY_FEE_FIXED_VND`: phí VNPAY ước tính dùng cho báo cáo doanh thu ròng trong admin.
 - `CORS_ORIGINS`: danh sách origin được phép gọi API.
 
 Mobile:
@@ -380,6 +472,17 @@ Mobile:
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`: Google OAuth web client ID.
 - `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`: Google OAuth Android client ID khi build Android.
 - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`: Google OAuth iOS client ID khi build iOS.
+
+Admin web:
+
+- `VITE_API_BASE_URL`: URL API backend, mặc định `http://localhost:8000/api/v1`.
+
+Checklist env demo:
+
+- `ADMIN_EMAILS` phải chứa email tài khoản admin.
+- Google login cần `GOOGLE_CLIENT_ID` ở backend và `EXPO_PUBLIC_GOOGLE_*_CLIENT_ID` ở mobile.
+- VNPAY cần đúng return/IPN URL trỏ về backend đang chạy.
+- Quên mật khẩu cần SMTP app password hợp lệ.
 
 ## Ghi chú về model AI
 
@@ -399,17 +502,18 @@ Giới hạn hiện tại:
 - Thư mục `.kiro/` là dữ liệu local của công cụ phát triển và đã được ignore khỏi Git.
 - Các file model nặng như `.onnx`, `.pth` nên lưu ngoài Git hoặc dùng cơ chế artifact/storage phù hợp.
 - Chạy `bash scripts/scan_secrets.sh` trước khi push để giảm rủi ro lộ secret.
+- GitHub Actions MVP CI chạy backend tests, secret scan, admin-web lint/build và mobile type-check.
 
 ## Hướng phát triển tiếp theo
 
 - Hoàn thiện chat streaming UI trên mobile.
-- Bổ sung push notification nhắc chăm sóc cây.
+- Bổ sung offline write queue cho tạo/sửa/xóa khi mất mạng.
 - Mở rộng dark mode và i18n toàn bộ màn hình.
 - Cải thiện model bằng dữ liệu ảnh thực địa ngoài PlantVillage.
 - Thêm calibration để confidence của model phản ánh xác suất thực tế tốt hơn.
-- Xây dựng CI/CD cho test, build và deploy.
-- Hoàn thiện Docker/deploy backend lên cloud.
-- Phát triển admin dashboard để theo dõi người dùng, lượt quét, bệnh phổ biến và marketplace.
+- Hoàn thiện Apple login production.
+- Thêm refresh token và quản lý session nâng cao.
+- Mở rộng CI/CD sang deploy tự động và EAS/native build.
 
 ## Tài liệu liên quan
 

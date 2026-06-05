@@ -3,8 +3,11 @@ import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleS
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { PartnerProduct, PartnerStore, RootStackParamList } from '../types';
-import { getMarketplacePartnerApi, listMarketplaceProductsApi } from '../api/marketplace';
+import { createMarketplaceInquiryApi, getMarketplacePartnerApi, listMarketplaceProductsApi } from '../api/marketplace';
+import { MarketplaceInquiryModal } from '../components/MarketplaceInquiryModal';
+import { useAuthStore } from '../stores/authStore';
 import { theme } from '../theme/theme';
 
 type Route = RouteProp<RootStackParamList, 'PartnerStore'>;
@@ -14,10 +17,15 @@ const PRODUCT_PLACEHOLDER = 'https://images.unsplash.com/photo-1464226184884-fa2
 export default function PartnerStoreScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
+  const { t } = useTranslation();
+  const token = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const [partner, setPartner] = useState<PartnerStore | null>(null);
   const [products, setProducts] = useState<PartnerProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [sendingInquiry, setSendingInquiry] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -30,11 +38,11 @@ export default function PartnerStoreScreen() {
       setPartner(nextPartner);
       setProducts(nextProducts);
     } catch (err: any) {
-      setError(err?.message || 'Không tải được cửa hàng.');
+      setError(err?.message || t('marketplace.storeLoadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [route.params.partnerId]);
+  }, [route.params.partnerId, t]);
 
   useEffect(() => {
     loadData().catch(() => undefined);
@@ -45,10 +53,24 @@ export default function PartnerStoreScreen() {
     const url = `tel:${partner.phone}`;
     const supported = await Linking.canOpenURL(url);
     if (!supported) {
-      Alert.alert('Không thể gọi', 'Thiết bị không hỗ trợ cuộc gọi.');
+      Alert.alert(t('marketplace.callFailedTitle'), t('marketplace.callFailedBody'));
       return;
     }
     await Linking.openURL(url);
+  };
+
+  const submitInquiry = async (input: { name: string; phone?: string; email?: string; message: string }) => {
+    if (!token || !partner) return;
+    setSendingInquiry(true);
+    try {
+      await createMarketplaceInquiryApi(token, { partnerId: partner.id, ...input });
+      setInquiryOpen(false);
+      Alert.alert('Đã gửi yêu cầu', 'Đại lý sẽ liên hệ lại theo thông tin bạn cung cấp.');
+    } catch (err: any) {
+      Alert.alert('Không gửi được yêu cầu', err?.message || 'Vui lòng thử lại.');
+    } finally {
+      setSendingInquiry(false);
+    }
   };
 
   return (
@@ -57,20 +79,20 @@ export default function PartnerStoreScreen() {
         <Pressable onPress={() => navigation.goBack()} style={styles.iconButton}>
           <Ionicons name="chevron-back" size={22} color={theme.colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Cửa hàng</Text>
+        <Text style={styles.headerTitle}>{t('marketplace.storeTitle')}</Text>
         <View style={styles.iconButton} />
       </View>
 
       {loading ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.stateText}>Đang tải cửa hàng...</Text>
+          <Text style={styles.stateText}>{t('marketplace.storeLoading')}</Text>
         </View>
       ) : error || !partner ? (
         <View style={styles.centerState}>
-          <Text style={styles.errorText}>{error || 'Không tìm thấy cửa hàng.'}</Text>
+          <Text style={styles.errorText}>{error || t('marketplace.storeNotFound')}</Text>
           <Pressable onPress={() => loadData().catch(() => undefined)} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Thử lại</Text>
+            <Text style={styles.primaryButtonText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -95,17 +117,21 @@ export default function PartnerStoreScreen() {
           <View style={styles.actionRow}>
             <Pressable onPress={openPhone} style={styles.actionButton}>
               <Ionicons name="call-outline" size={18} color={theme.colors.white} />
-              <Text style={styles.actionText}>Gọi đại lý</Text>
+              <Text style={styles.actionText}>{t('marketplace.callDealer')}</Text>
+            </Pressable>
+            <Pressable onPress={() => setInquiryOpen(true)} style={[styles.actionButton, styles.inquiryButton]}>
+              <Ionicons name="chatbubbles-outline" size={18} color={theme.colors.white} />
+              <Text style={styles.actionText}>Yêu cầu tư vấn</Text>
             </Pressable>
             {!!partner.contactUrl && (
               <Pressable onPress={() => Linking.openURL(partner.contactUrl as string)} style={[styles.actionButton, styles.secondaryAction]}>
                 <Ionicons name="open-outline" size={18} color={theme.colors.primary} />
-                <Text style={styles.secondaryActionText}>Liên hệ</Text>
+                <Text style={styles.secondaryActionText}>{t('marketplace.contact')}</Text>
               </Pressable>
             )}
           </View>
 
-          <Text style={styles.sectionTitle}>Sản phẩm đang hiển thị</Text>
+          <Text style={styles.sectionTitle}>{t('marketplace.displayedProducts')}</Text>
           {products.map((product) => (
             <Pressable key={product.id} style={styles.productCard} onPress={() => navigation.navigate('PartnerProductDetail', { product })}>
               <Image source={{ uri: product.imageUrl || PRODUCT_PLACEHOLDER }} style={styles.productImage} />
@@ -116,8 +142,20 @@ export default function PartnerStoreScreen() {
               <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
             </Pressable>
           ))}
-          {products.length === 0 && <Text style={styles.stateText}>Cửa hàng chưa có sản phẩm được duyệt.</Text>}
+          {products.length === 0 && <Text style={styles.stateText}>{t('marketplace.noApprovedProducts')}</Text>}
         </ScrollView>
+      )}
+      {partner && (
+        <MarketplaceInquiryModal
+          visible={inquiryOpen}
+          title={partner.storeName || partner.companyName}
+          defaultName={user?.name}
+          defaultPhone={user?.phone}
+          defaultEmail={user?.email}
+          loading={sendingInquiry}
+          onClose={() => setInquiryOpen(false)}
+          onSubmit={submitInquiry}
+        />
       )}
     </View>
   );
@@ -148,6 +186,7 @@ const styles = StyleSheet.create({
   description: { fontSize: 14, lineHeight: 21, color: theme.colors.textSecondary, marginBottom: 18 },
   actionRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   actionButton: { height: 46, paddingHorizontal: 16, borderRadius: 10, backgroundColor: theme.colors.primary, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  inquiryButton: { backgroundColor: '#0F8F58' },
   actionText: { color: theme.colors.white, fontWeight: '800' },
   secondaryAction: { backgroundColor: theme.colors.primaryPale, borderWidth: 1, borderColor: theme.colors.primary },
   secondaryActionText: { color: theme.colors.primary, fontWeight: '800' },

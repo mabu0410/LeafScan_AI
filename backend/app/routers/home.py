@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import desc
@@ -134,7 +134,7 @@ def _care_log_to_home(care_log: CareLog) -> HomeCareLog:
 
 
 def _today_tasks(db: Session, user_id: int) -> list[CareTask]:
-    start_at = datetime.combine(date.today(), time.min)
+    start_at = datetime.combine(_utcnow().date(), time.min)
     end_at = start_at + timedelta(days=1)
     return (
         db.query(CareTask)

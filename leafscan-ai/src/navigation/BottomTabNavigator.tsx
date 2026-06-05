@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { BottomTabParamList } from '../types';
 import { theme } from '../theme/theme';
 import { BottomNavigation, BottomTabIcon } from '../components/home/BottomNavigation';
@@ -15,6 +16,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export default function BottomTabNavigator() {
+    const { t } = useTranslation();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -51,8 +54,8 @@ export default function BottomTabNavigator() {
                 },
             })}
         >
-            <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Trang chủ' }} />
-            <Tab.Screen name="Garden" component={MyGardenScreen} options={{ tabBarLabel: 'Vườn' }} />
+            <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: t('tabs.home') }} />
+            <Tab.Screen name="Garden" component={MyGardenScreen} options={{ tabBarLabel: t('tabs.garden') }} />
             <Tab.Screen
                 name="ScanTab"
                 component={ScanScreen}
@@ -63,8 +66,8 @@ export default function BottomTabNavigator() {
                     ),
                 }}
             />
-            <Tab.Screen name="MarketplaceTab" component={MarketplaceScreen} options={{ tabBarLabel: 'Vật tư' }} />
-            <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Hồ sơ' }} />
+            <Tab.Screen name="MarketplaceTab" component={MarketplaceScreen} options={{ tabBarLabel: t('tabs.marketplace') }} />
+            <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: t('tabs.profile') }} />
         </Tab.Navigator>
     );
 }

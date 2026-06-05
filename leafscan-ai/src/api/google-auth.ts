@@ -10,6 +10,7 @@ WebBrowser.maybeCompleteAuthSession();
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+const MISSING_GOOGLE_CLIENT_ID = 'missing-google-client-id';
 
 function getPlatformGoogleClientId() {
   if (Platform.OS === 'ios') return GOOGLE_IOS_CLIENT_ID;
@@ -17,16 +18,27 @@ function getPlatformGoogleClientId() {
   return GOOGLE_WEB_CLIENT_ID;
 }
 
+function isNativeClientConfigured(platformClientId: string) {
+  if (!platformClientId) return false;
+  if (GOOGLE_WEB_CLIENT_ID && platformClientId === GOOGLE_WEB_CLIENT_ID) return false;
+  return platformClientId.endsWith('.apps.googleusercontent.com');
+}
+
 export function useGoogleAuth() {
   const platformClientId = getPlatformGoogleClientId();
-  const fallbackClientId = platformClientId || GOOGLE_WEB_CLIENT_ID || 'missing-google-client-id';
-  const isConfigured = fallbackClientId !== 'missing-google-client-id';
+  const nativePlatform = Platform.OS === 'ios' || Platform.OS === 'android';
+  const isConfigured = nativePlatform
+    ? isNativeClientConfigured(platformClientId)
+    : Boolean(GOOGLE_WEB_CLIENT_ID);
+  const requestClientId = isConfigured
+    ? platformClientId
+    : GOOGLE_WEB_CLIENT_ID || platformClientId || MISSING_GOOGLE_CLIENT_ID;
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: fallbackClientId,
-    webClientId: GOOGLE_WEB_CLIENT_ID || fallbackClientId,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || fallbackClientId,
-    iosClientId: GOOGLE_IOS_CLIENT_ID || fallbackClientId,
+    clientId: requestClientId,
+    webClientId: GOOGLE_WEB_CLIENT_ID || requestClientId,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID || requestClientId,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || requestClientId,
   });
 
   return { request, response, promptAsync, isConfigured };

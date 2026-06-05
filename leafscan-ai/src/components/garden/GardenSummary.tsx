@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface GardenSummaryProps {
@@ -14,6 +15,8 @@ export function GardenSummary({
   healthyPlants,
   attentionPlants,
 }: GardenSummaryProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.item}>
@@ -21,7 +24,7 @@ export function GardenSummary({
           <Ionicons name="leaf-outline" size={15} color={theme.colors.primary} />
         </View>
         <Text style={styles.value}>{totalPlants}</Text>
-        <Text style={styles.label}>Tổng cây</Text>
+        <Text style={styles.label}>{t('garden.summary.totalPlants')}</Text>
       </View>
 
       <View style={styles.item}>
@@ -29,7 +32,7 @@ export function GardenSummary({
           <Ionicons name="checkmark-circle-outline" size={15} color={theme.colors.healthy} />
         </View>
         <Text style={styles.value}>{healthyPlants}</Text>
-        <Text style={styles.label}>Khỏe mạnh</Text>
+        <Text style={styles.label}>{t('garden.summary.healthy')}</Text>
       </View>
 
       <View style={styles.item}>
@@ -37,7 +40,7 @@ export function GardenSummary({
           <Ionicons name="warning-outline" size={15} color={theme.colors.severe} />
         </View>
         <Text style={[styles.value, { color: theme.colors.severe }]}>{attentionPlants}</Text>
-        <Text style={styles.label}>Cần chú ý</Text>
+        <Text style={styles.label}>{t('garden.summary.attention')}</Text>
       </View>
     </View>
   );

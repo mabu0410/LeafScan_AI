@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/authStore';
@@ -19,7 +19,10 @@ import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import SearchScreen from '../screens/SearchScreen';
 import ChatScreen from '../screens/ChatScreen';
 import HistoryScreen from '../screens/HistoryScreen';
+import CareCenterScreen from '../screens/CareCenterScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import UpgradePlanScreen from '../screens/UpgradePlanScreen';
+import PaymentResultScreen from '../screens/PaymentResultScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsOfUseScreen from '../screens/TermsOfUseScreen';
 import MarketplaceScreen from '../screens/MarketplaceScreen';
@@ -28,13 +31,25 @@ import PartnerProductDetailScreen from '../screens/PartnerProductDetailScreen';
 import PartnerChannelScreen from '../screens/PartnerChannelScreen';
 import AdminModerationScreen from '../screens/AdminModerationScreen';
 import BottomTabNavigator from './BottomTabNavigator';
+import { isAdminAccount } from '../utils/admin';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+const linking: LinkingOptions<RootStackParamList> = {
+    prefixes: ['leafscan://'],
+    config: {
+        screens: {
+            PaymentResult: 'payment-result',
+        },
+    },
+};
+
 export default function AppNavigator() {
     const isLoggedIn = useAuthStore(state => state.isLoggedIn);
-    const userRole = useAuthStore(state => state.user?.role);
+    const user = useAuthStore(state => state.user);
+    const userRole = user?.role;
     const refreshProfile = useAuthStore(state => state.refreshProfile);
+    const isAdmin = isAdminAccount(user);
     const isPartner = userRole === 'partner' || userRole === 'dealer';
 
     React.useEffect(() => {
@@ -44,10 +59,10 @@ export default function AppNavigator() {
     }, [isLoggedIn, refreshProfile]);
 
     return (
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
             <Stack.Navigator
-                key={isLoggedIn ? `app-${isPartner ? 'partner' : 'farmer'}` : 'auth'}
-                initialRouteName={!isLoggedIn ? 'Onboarding' : isPartner ? 'PartnerChannel' : 'MainTabs'}
+                key={isLoggedIn ? `app-${isAdmin ? 'admin' : isPartner ? 'partner' : 'farmer'}` : 'auth'}
+                initialRouteName={!isLoggedIn ? 'Onboarding' : isAdmin ? 'AdminModeration' : 'MainTabs'}
                 screenOptions={{ headerShown: false }}
             >
                 {!isLoggedIn ? (
@@ -71,7 +86,10 @@ export default function AppNavigator() {
                         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
                         <Stack.Screen name="Search" component={SearchScreen} />
                         <Stack.Screen name="History" component={HistoryScreen} />
+                        <Stack.Screen name="CareCenter" component={CareCenterScreen} />
+                        <Stack.Screen name="Notifications" component={NotificationsScreen} />
                         <Stack.Screen name="UpgradePlan" component={UpgradePlanScreen} />
+                        <Stack.Screen name="PaymentResult" component={PaymentResultScreen} />
                         <Stack.Screen name="Marketplace" component={MarketplaceScreen} />
                         <Stack.Screen name="PartnerStore" component={PartnerStoreScreen} />
                         <Stack.Screen name="PartnerProductDetail" component={PartnerProductDetailScreen} />

@@ -15,6 +15,7 @@ load_dotenv(BACKEND_DIR / ".env")
 # Set DATABASE_URL sang SQLite in-memory nếu chưa có (tránh phụ thuộc Postgres local)
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-only")
+os.environ.setdefault("NOTIFICATION_SCHEDULER_ENABLED", "false")
 
 from fastapi.testclient import TestClient  # noqa: E402
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { ScanState } from './types';
 
 interface ScanStatusProps {
@@ -9,36 +10,37 @@ interface ScanStatusProps {
   bottomInset: number;
 }
 
-function getStatusConfig(state: ScanState) {
+function getStatusConfig(state: ScanState, t: (key: string) => string) {
   if (state === 'processing') {
     return {
-      label: 'Đang phân tích ảnh',
+      label: t('scan.status.processing'),
       icon: 'hourglass-outline' as const,
       color: '#C4FFD9',
     };
   }
   if (state === 'optimal') {
     return {
-      label: 'Đã căn chỉnh tốt',
+      label: t('scan.status.optimal'),
       icon: 'checkmark-circle-outline' as const,
       color: '#B8FFCE',
     };
   }
   if (state === 'aligning') {
     return {
-      label: 'Đang căn chỉnh lá cây',
+      label: t('scan.status.aligning'),
       icon: 'scan-outline' as const,
       color: '#D9FDE6',
     };
   }
   return {
-    label: 'Sẵn sàng quét',
+    label: t('scan.status.ready'),
     icon: 'sparkles-outline' as const,
     color: '#E7FFF0',
   };
 }
 
 export function ScanStatus({ state, bottomInset }: ScanStatusProps) {
+  const { t } = useTranslation();
   const opacity = useSharedValue(1);
   const translateY = useSharedValue(0);
 
@@ -60,7 +62,7 @@ export function ScanStatus({ state, bottomInset }: ScanStatusProps) {
     transform: [{ translateY: translateY.value }],
   }));
 
-  const { label, icon, color } = getStatusConfig(state);
+  const { label, icon, color } = getStatusConfig(state, t);
 
   return (
     <Animated.View style={[styles.container, { bottom: bottomInset + 132 }, animatedStyle]} pointerEvents="none">

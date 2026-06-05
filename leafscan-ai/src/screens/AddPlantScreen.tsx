@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Animated, { FadeInDown, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { usePlantsStore } from '../stores/plantsStore';
 import { PLANT_CATEGORIES } from '../constants/plants';
@@ -32,8 +33,19 @@ interface AddPlantErrors {
   category?: string;
 }
 
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  veggie: 'garden.filters.vegetables',
+  fruit: 'garden.filters.fruitTrees',
+  cereal: 'garden.filters.grains',
+  herb: 'garden.filters.herbs',
+  flower: 'garden.filters.ornamentals',
+  leaf: 'garden.filters.leafy',
+  other: 'garden.filters.other',
+};
+
 export default function AddPlantScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const [plantName, setPlantName] = useState('');
   const [scientificName, setScientificName] = useState('');
@@ -47,6 +59,14 @@ export default function AddPlantScreen({ navigation }: Props) {
 
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addPlant = usePlantsStore((state) => state.addPlant);
+  const categories = useMemo(
+    () =>
+      PLANT_CATEGORIES.map((category) => ({
+        ...category,
+        displayLabel: CATEGORY_LABEL_KEYS[category.id] ? t(CATEGORY_LABEL_KEYS[category.id]) : category.label,
+      })),
+    [t]
+  );
 
   useEffect(() => {
     return () => {
@@ -70,10 +90,10 @@ export default function AddPlantScreen({ navigation }: Props) {
   const validateForm = () => {
     const nextErrors: AddPlantErrors = {};
     if (!plantName.trim()) {
-      nextErrors.plantName = 'Vui lòng nhập tên cây';
+      nextErrors.plantName = t('plant.nameRequired');
     }
     if (!category.trim()) {
-      nextErrors.category = 'Vui lòng chọn danh mục';
+      nextErrors.category = t('plant.categoryRequired');
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -82,7 +102,7 @@ export default function AddPlantScreen({ navigation }: Props) {
   const handleTakePhoto = async () => {
     const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
     if (!cameraPermission.granted) {
-      Alert.alert('Chưa có quyền camera', 'Vui lòng cho phép ứng dụng truy cập camera để chụp ảnh cây.');
+      Alert.alert(t('plant.cameraPermissionTitle'), t('plant.cameraPermissionBody'));
       return;
     }
 
@@ -100,7 +120,7 @@ export default function AddPlantScreen({ navigation }: Props) {
   const handlePickLibrary = async () => {
     const mediaPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!mediaPermission.granted) {
-      Alert.alert('Chưa có quyền thư viện', 'Vui lòng cho phép ứng dụng truy cập thư viện ảnh.');
+      Alert.alert(t('plant.libraryPermissionTitle'), t('plant.libraryPermissionBody'));
       return;
     }
 
@@ -135,7 +155,7 @@ export default function AddPlantScreen({ navigation }: Props) {
         navigation.goBack();
       }, 900);
     } catch (error: any) {
-      Alert.alert('Không thể thêm cây', error?.message || 'Vui lòng thử lại.');
+      Alert.alert(t('plant.addFailedTitle'), error?.message || t('common.tryAgain'));
     } finally {
       setLoading(false);
     }
@@ -152,8 +172,8 @@ export default function AddPlantScreen({ navigation }: Props) {
             <Ionicons name="chevron-back" size={21} color={theme.colors.textPrimary} />
           </Pressable>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Thêm cây mới</Text>
-            <Text style={styles.headerSubtitle}>Thiết lập thông tin để bắt đầu theo dõi cây của bạn</Text>
+            <Text style={styles.headerTitle}>{t('plant.addTitle')}</Text>
+            <Text style={styles.headerSubtitle}>{t('plant.addSubtitle')}</Text>
           </View>
           <View style={styles.headerSpacer} />
         </Animated.View>
@@ -174,8 +194,8 @@ export default function AddPlantScreen({ navigation }: Props) {
 
           <Animated.View entering={FadeInDown.delay(100).duration(420)} style={styles.formCard}>
             <FormInput
-              label="Tên cây *"
-              placeholder="VD: Cà chua bi"
+              label={t('plant.name')}
+              placeholder={t('plant.namePlaceholder')}
               value={plantName}
               onChangeText={(value) => {
                 setPlantName(value);
@@ -186,16 +206,16 @@ export default function AddPlantScreen({ navigation }: Props) {
             />
 
             <FormInput
-              label="Tên khoa học"
-              optionalLabel="(không bắt buộc)"
-              placeholder="VD: Solanum lycopersicum"
+              label={t('plant.latinName')}
+              optionalLabel={t('plant.optional')}
+              placeholder={t('plant.latinPlaceholder')}
               value={scientificName}
               onChangeText={setScientificName}
               maxLength={120}
             />
 
             <CategoryChips
-              categories={PLANT_CATEGORIES}
+              categories={categories}
               selectedCategory={category}
               onSelectCategory={(selected) => {
                 setCategory(selected);
@@ -205,18 +225,18 @@ export default function AddPlantScreen({ navigation }: Props) {
             />
 
             <FormInput
-              label="Vị trí"
-              optionalLabel="(không bắt buộc)"
-              placeholder="VD: Luống A · Góc vườn phía Đông"
+              label={t('plant.location')}
+              optionalLabel={t('plant.optional')}
+              placeholder={t('plant.locationPlaceholder')}
               value={location}
               onChangeText={setLocation}
               maxLength={100}
             />
 
             <FormInput
-              label="Ghi chú"
-              optionalLabel="(không bắt buộc)"
-              placeholder="Thêm ghi chú về cách chăm sóc hoặc tình trạng hiện tại"
+              label={t('plant.notes')}
+              optionalLabel={t('plant.optional')}
+              placeholder={t('plant.notesPlaceholder')}
               value={note}
               onChangeText={setNote}
               multiline
@@ -225,8 +245,8 @@ export default function AddPlantScreen({ navigation }: Props) {
             />
 
             <SubmitButton
-              title="Thêm cây"
-              loadingTitle="Đang thêm..."
+              title={t('plant.addButton')}
+              loadingTitle={t('plant.adding')}
               loading={loading}
               disabled={!isFormValid}
               onPress={handleSubmit}
@@ -242,7 +262,7 @@ export default function AddPlantScreen({ navigation }: Props) {
           style={[styles.toast, { bottom: insets.bottom + 14 }]}
         >
           <Ionicons name="checkmark-circle" size={18} color="#2D7D46" />
-          <Text style={styles.toastText}>Đã thêm cây vào vườn của bạn</Text>
+          <Text style={styles.toastText}>{t('plant.addedToast')}</Text>
         </Animated.View>
       ) : null}
     </View>

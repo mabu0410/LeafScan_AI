@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface ImageUploadBoxProps {
@@ -50,14 +51,16 @@ export function ImageUploadBox({
   onPickLibrary,
   onRemoveImage,
 }: ImageUploadBoxProps) {
+  const { t } = useTranslation();
+
   if (imageUri) {
     return (
       <View style={styles.previewCard}>
         <Image source={{ uri: imageUri }} style={styles.previewImage} />
         <View style={styles.previewActions}>
-          <SmallAction icon="camera-outline" label="Đổi ảnh" onPress={onTakePhoto} />
-          <SmallAction icon="images-outline" label="Thư viện" onPress={onPickLibrary} />
-          <SmallAction icon="trash-outline" label="Xóa" onPress={onRemoveImage} />
+          <SmallAction icon="camera-outline" label={t('plant.changePhoto')} onPress={onTakePhoto} />
+          <SmallAction icon="images-outline" label={t('plant.library')} onPress={onPickLibrary} />
+          <SmallAction icon="trash-outline" label={t('plant.removeImage')} onPress={onRemoveImage} />
         </View>
       </View>
     );
@@ -68,12 +71,12 @@ export function ImageUploadBox({
       <View style={styles.iconWrap}>
         <Ionicons name="image-outline" size={28} color={theme.colors.primary} />
       </View>
-      <Text style={styles.title}>Thêm ảnh cây</Text>
-      <Text style={styles.subtitle}>Chụp ảnh hoặc chọn từ thư viện</Text>
+      <Text style={styles.title}>{t('plant.imageTitle')}</Text>
+      <Text style={styles.subtitle}>{t('plant.imageSubtitle')}</Text>
 
       <View style={styles.actionsRow}>
-        <SmallAction icon="camera-outline" label="Chụp ảnh" onPress={onTakePhoto} />
-        <SmallAction icon="images-outline" label="Thư viện" onPress={onPickLibrary} />
+        <SmallAction icon="camera-outline" label={t('plant.takePhoto')} onPress={onTakePhoto} />
+        <SmallAction icon="images-outline" label={t('plant.library')} onPress={onPickLibrary} />
       </View>
     </View>
   );

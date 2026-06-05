@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { ScanHistory } from '../types';
 import { fetchHistoryApi } from '../api/history';
 import { useAuthStore } from './authStore';
+import { fetchWithCache } from '../utils/offlineCache';
 
 interface HistoryFilter {
   severity: 'all' | 'healthy' | 'moderate' | 'severe';
@@ -24,11 +25,12 @@ export const useHistoryStore = create<HistoryState>()((set, get) => ({
   loading: false,
   loadHistory: async () => {
     const token = useAuthStore.getState().accessToken;
+    const userId = useAuthStore.getState().user?.id || 'me';
     if (!token) return;
     set({ loading: true });
     try {
-      const scans = await fetchHistoryApi(token);
-      set({ scans });
+      const result = await fetchWithCache(`scan-history:${userId}`, () => fetchHistoryApi(token));
+      set({ scans: result.data });
     } finally {
       set({ loading: false });
     }

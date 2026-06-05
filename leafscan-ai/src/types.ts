@@ -38,6 +38,7 @@ export interface Disease {
   imageUri?: string;
   uploadedImageUrl?: string;
   referenceImage?: string;
+  scanId?: string;
   predictedStage?: DiseaseStage;
   forecastStage7d?: DiseaseStage;
   forecastConfidence?: number;
@@ -106,11 +107,28 @@ export interface PartnerStore {
   createdAt: string;
 }
 
+export interface PartnerOutlet {
+  id: string;
+  partnerId: string;
+  name: string;
+  description?: string;
+  address?: string;
+  contactEmail?: string;
+  phone?: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  isActive: boolean;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
 export interface PartnerProduct {
   id: string;
   partnerId: string;
+  storeId?: string;
   partnerName?: string;
   partnerStatus?: string;
+  storeName?: string;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -138,6 +156,34 @@ export interface PaymentTransaction {
   createdAt: string;
   updatedAt: string;
   paidAt?: string;
+}
+
+export interface MarketplaceInquiry {
+  id: string;
+  userId: string;
+  partnerId: string;
+  productId?: string;
+  storeId?: string;
+  partnerName?: string;
+  productName?: string;
+  storeName?: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  message: string;
+  status: 'new' | 'contacted' | 'closed' | string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  notificationType: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  readAt?: string;
+  createdAt: string;
 }
 
 export type UserSubscriptionTier = 'free' | 'personal' | 'pro' | string;
@@ -190,7 +236,19 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   Search: undefined;
   History: undefined;
+  CareCenter: { initialTab?: 'tasks' | 'logs' } | undefined;
+  Notifications: undefined;
   UpgradePlan: undefined;
+  PaymentResult:
+    | {
+        paymentType?: 'user' | 'partner' | string;
+        txnRef?: string;
+        responseCode?: string;
+        transactionStatus?: string;
+        transactionNo?: string;
+        status?: string;
+      }
+    | undefined;
   Marketplace: { diseaseKey?: string; category?: string } | undefined;
   PartnerStore: { partnerId: string };
   PartnerProductDetail: { product: PartnerProduct };

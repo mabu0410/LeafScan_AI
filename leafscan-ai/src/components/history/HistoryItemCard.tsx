@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { ScanHistory } from '../../types';
 import { theme } from '../../theme/theme';
 
@@ -12,7 +13,7 @@ interface HistoryItemCardProps {
 }
 
 interface BadgeConfig {
-  label: string;
+  labelKey: string;
   bg: string;
   text: string;
   border: string;
@@ -20,26 +21,26 @@ interface BadgeConfig {
 
 const BADGE_CONFIG: Record<ScanHistory['severity'], BadgeConfig> = {
   healthy: {
-    label: 'Khỏe mạnh',
+    labelKey: 'history.severity.healthyTitle',
     bg: '#EAF6EE',
     text: '#2E7D4A',
     border: '#D3E9D9',
   },
   moderate: {
-    label: 'Cảnh báo',
+    labelKey: 'history.severity.moderateTitle',
     bg: '#FAF0E6',
     text: '#B86A2A',
     border: '#F0DDC8',
   },
   severe: {
-    label: 'Nguy hiểm',
+    labelKey: 'history.severity.severeTitle',
     bg: '#FBEAEA',
     text: '#B85C5C',
     border: '#F1D2D6',
   },
 };
 
-function getTimeLabel(scan: ScanHistory) {
+function getTimeLabel(scan: ScanHistory, fallback: string) {
   if (scan.scanDateISO) {
     const date = new Date(scan.scanDateISO);
     if (!Number.isNaN(date.getTime())) {
@@ -51,10 +52,11 @@ function getTimeLabel(scan: ScanHistory) {
   }
 
   const match = scan.date.match(/\b(\d{2}:\d{2})\b/);
-  return match?.[1] || 'Không rõ giờ';
+  return match?.[1] || fallback;
 }
 
 export function HistoryItemCard({ item, index, onPress }: HistoryItemCardProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -100,14 +102,14 @@ export function HistoryItemCard({ item, index, onPress }: HistoryItemCardProps) 
 
             <View style={styles.bottomRow}>
               <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-                <Text style={[styles.badgeText, { color: badge.text }]}>{badge.label}</Text>
+                <Text style={[styles.badgeText, { color: badge.text }]}>{t(badge.labelKey)}</Text>
               </View>
               <View style={styles.metaRight}>
                 <View style={styles.timeRow}>
                   <Ionicons name="time-outline" size={12} color={theme.colors.textMuted} />
-                  <Text style={styles.timeText}>{getTimeLabel(item)}</Text>
+                  <Text style={styles.timeText}>{getTimeLabel(item, t('history.unknownTime'))}</Text>
                 </View>
-                <Text style={styles.confidenceText}>Độ tin cậy {confidenceText}</Text>
+                <Text style={styles.confidenceText}>{t('history.confidence', { value: confidenceText })}</Text>
               </View>
             </View>
           </View>

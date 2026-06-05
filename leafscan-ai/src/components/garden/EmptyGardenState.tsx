@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface EmptyGardenStateProps {
@@ -9,6 +10,7 @@ interface EmptyGardenStateProps {
 }
 
 export function EmptyGardenState({ onAddFirstPlant }: EmptyGardenStateProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -22,10 +24,8 @@ export function EmptyGardenState({ onAddFirstPlant }: EmptyGardenStateProps) {
         </View>
       </View>
 
-      <Text style={styles.title}>Bạn chưa có cây nào</Text>
-      <Text style={styles.description}>
-        Thêm cây đầu tiên để theo dõi sức khỏe, lịch sử quét và cảnh báo bệnh.
-      </Text>
+      <Text style={styles.title}>{t('garden.empty.title')}</Text>
+      <Text style={styles.description}>{t('garden.empty.description')}</Text>
 
       <Animated.View style={animatedStyle}>
         <Pressable
@@ -39,7 +39,7 @@ export function EmptyGardenState({ onAddFirstPlant }: EmptyGardenStateProps) {
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         >
           <Ionicons name="add" size={18} color={theme.colors.white} />
-          <Text style={styles.buttonText}>Thêm cây đầu tiên</Text>
+          <Text style={styles.buttonText}>{t('garden.empty.button')}</Text>
         </Pressable>
       </Animated.View>
     </Animated.View>

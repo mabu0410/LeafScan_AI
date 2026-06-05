@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.pool import StaticPool
 from dotenv import load_dotenv
 
 ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
@@ -22,6 +23,8 @@ if not SQLALCHEMY_DATABASE_URL:
 engine_kwargs = {"pool_pre_ping": True}
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+    if SQLALCHEMY_DATABASE_URL in {"sqlite:///:memory:", "sqlite://"}:
+        engine_kwargs["poolclass"] = StaticPool
 else:
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
@@ -53,6 +56,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_user_google_id_column()
     _ensure_user_role_column()
+    _ensure_user_status_column()
     _ensure_care_tips_columns()
     _ensure_scan_history_columns()
     _ensure_diseases_columns()
@@ -228,9 +232,65 @@ def _ensure_partner_marketplace_columns() -> None:
                     )
                 )
 
+        if inspector.has_table("partners") and not inspector.has_table("partner_stores"):
+            if dialect == "postgresql":
+                conn.execute(
+                    text(
+                        "CREATE TABLE IF NOT EXISTS partner_stores ("
+                        "id SERIAL PRIMARY KEY, "
+                        "partner_id INTEGER NOT NULL REFERENCES partners(id) ON DELETE CASCADE, "
+                        "name VARCHAR(255) NOT NULL, "
+                        "description TEXT, "
+                        "address VARCHAR(500), "
+                        "contact_email VARCHAR(255), "
+                        "phone VARCHAR(20), "
+                        "logo_url VARCHAR(500), "
+                        "cover_url VARCHAR(500), "
+                        "is_active BOOLEAN NOT NULL DEFAULT TRUE, "
+                        "is_primary BOOLEAN NOT NULL DEFAULT FALSE, "
+                        "created_at TIMESTAMPTZ NOT NULL DEFAULT now(), "
+                        "updated_at TIMESTAMPTZ NOT NULL DEFAULT now()"
+                        ")"
+                    )
+                )
+            elif dialect == "sqlite":
+                conn.execute(
+                    text(
+                        "CREATE TABLE IF NOT EXISTS partner_stores ("
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        "partner_id INTEGER NOT NULL, "
+                        "name TEXT NOT NULL, "
+                        "description TEXT, "
+                        "address TEXT, "
+                        "contact_email TEXT, "
+                        "phone TEXT, "
+                        "logo_url TEXT, "
+                        "cover_url TEXT, "
+                        "is_active INTEGER NOT NULL DEFAULT 1, "
+                        "is_primary INTEGER NOT NULL DEFAULT 0, "
+                        "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                        "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                        ")"
+                    )
+                )
+        if inspector.has_table("partner_stores"):
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_partner_stores_partner_active "
+                    "ON partner_stores(partner_id, is_active)"
+                )
+            )
+
         if inspector.has_table("partner_products"):
             columns = _table_columns(conn, "partner_products")
             if dialect == "postgresql":
+                if "store_id" not in columns:
+                    conn.execute(
+                        text(
+                            "ALTER TABLE partner_products "
+                            "ADD COLUMN store_id INTEGER REFERENCES partner_stores(id) ON DELETE SET NULL"
+                        )
+                    )
                 if "moderation_status" not in columns:
                     conn.execute(
                         text(
@@ -241,6 +301,8 @@ def _ensure_partner_marketplace_columns() -> None:
                 if "rejection_reason" not in columns:
                     conn.execute(text("ALTER TABLE partner_products ADD COLUMN rejection_reason TEXT"))
             elif dialect == "sqlite":
+                if "store_id" not in columns:
+                    conn.execute(text("ALTER TABLE partner_products ADD COLUMN store_id INTEGER"))
                 if "moderation_status" not in columns:
                     conn.execute(
                         text(
@@ -250,6 +312,46 @@ def _ensure_partner_marketplace_columns() -> None:
                     )
                 if "rejection_reason" not in columns:
                     conn.execute(text("ALTER TABLE partner_products ADD COLUMN rejection_reason TEXT"))
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_partner_products_store_id "
+                    "ON partner_products(store_id)"
+                )
+            )
+
+        if inspector.has_table("partners") and inspector.has_table("partner_stores"):
+            if dialect == "postgresql":
+                conn.execute(
+                    text(
+                        "INSERT INTO partner_stores ("
+                        "partner_id, name, description, address, contact_email, phone, "
+                        "logo_url, cover_url, is_active, is_primary, created_at, updated_at"
+                        ") "
+                        "SELECT p.id, COALESCE(NULLIF(p.store_name, ''), p.company_name), "
+                        "p.description, p.address, p.contact_email, p.phone, p.logo_url, p.cover_url, "
+                        "TRUE, TRUE, now(), now() "
+                        "FROM partners p "
+                        "WHERE NOT EXISTS ("
+                        "SELECT 1 FROM partner_stores ps WHERE ps.partner_id = p.id"
+                        ")"
+                    )
+                )
+            elif dialect == "sqlite":
+                conn.execute(
+                    text(
+                        "INSERT INTO partner_stores ("
+                        "partner_id, name, description, address, contact_email, phone, "
+                        "logo_url, cover_url, is_active, is_primary, created_at, updated_at"
+                        ") "
+                        "SELECT p.id, COALESCE(NULLIF(p.store_name, ''), p.company_name), "
+                        "p.description, p.address, p.contact_email, p.phone, p.logo_url, p.cover_url, "
+                        "1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP "
+                        "FROM partners p "
+                        "WHERE NOT EXISTS ("
+                        "SELECT 1 FROM partner_stores ps WHERE ps.partner_id = p.id"
+                        ")"
+                    )
+                )
 
         if inspector.has_table("product_impressions"):
             if dialect == "postgresql":
@@ -287,6 +389,21 @@ def _ensure_user_role_column() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'farmer'"))
         elif dialect == "sqlite":
             conn.execute(text("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'farmer'"))
+
+
+def _ensure_user_status_column() -> None:
+    """Bảo đảm bảng users có cột status để admin khóa/mở tài khoản."""
+    dialect = engine.dialect.name
+    with engine.begin() as conn:
+        if not inspect(conn).has_table("users"):
+            return
+        columns = _table_columns(conn, "users")
+        if "status" in columns:
+            return
+        if dialect == "postgresql":
+            conn.execute(text("ALTER TABLE users ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active'"))
+        elif dialect == "sqlite":
+            conn.execute(text("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'"))
 
 
 def _ensure_care_tips_columns() -> None:

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../theme/theme';
 
 interface DailyTipCardProps {
@@ -9,6 +10,7 @@ interface DailyTipCardProps {
 }
 
 export function DailyTipCard({ onPress }: DailyTipCardProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -32,14 +34,14 @@ export function DailyTipCard({ onPress }: DailyTipCardProps) {
 
         <View style={styles.content}>
           <View style={styles.tag}>
-            <Text style={styles.tagText}>Mẹo chăm sóc</Text>
+            <Text style={styles.tagText}>{t('home.tip.careTag')}</Text>
           </View>
-          <Text style={styles.title}>Mẹo hôm nay</Text>
+          <Text style={styles.title}>{t('home.tip.todayTitle')}</Text>
           <Text style={styles.description} numberOfLines={2}>
-            Tưới nước vào buổi sáng sớm giúp lá khô nhanh, ngăn ngừa nấm bệnh phát triển.
+            {t('home.tip.defaultDescription')}
           </Text>
           <View style={styles.readMoreRow}>
-            <Text style={styles.readMore}>Xem thêm</Text>
+            <Text style={styles.readMore}>{t('home.tip.readMore')}</Text>
             <Ionicons name="arrow-forward" size={14} color={theme.colors.accent} />
           </View>
         </View>

@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { updateCurrentUserApi, UpdateUserProfilePayload } from '../api/users';
@@ -42,11 +43,11 @@ const MOCK_USER_DATA = {
   created_at: '2026-05-04T12:19:42.813+07:00',
 };
 
-function formatJoinedDate(raw?: string) {
-  if (!raw) return 'Chưa có dữ liệu';
+function formatJoinedDate(raw: string | undefined, locale: string, fallback: string) {
+  if (!raw) return fallback;
   const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return 'Chưa có dữ liệu';
-  return date.toLocaleDateString('vi-VN', {
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -63,12 +64,9 @@ function validatePhone(phone: string) {
   return /^\+?[0-9]{8,15}$/.test(normalized);
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export default function EditProfileScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const setUserProfile = useAuthStore((state) => state.setUserProfile);
@@ -131,15 +129,15 @@ export default function EditProfileScreen({ navigation }: Props) {
     const nextErrors: EditProfileErrors = {};
 
     if (!name.trim()) {
-      nextErrors.name = 'Họ tên không được bỏ trống';
+      nextErrors.name = t('profile.edit.nameRequired');
     }
 
     if (!validateEmail(email.trim())) {
-      nextErrors.email = 'Email không đúng định dạng';
+      nextErrors.email = t('profile.edit.invalidEmail');
     }
 
     if (!validatePhone(phone)) {
-      nextErrors.phone = 'Số điện thoại không hợp lệ';
+      nextErrors.phone = t('profile.edit.invalidPhone');
     }
 
     setErrors(nextErrors);
@@ -149,7 +147,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   const handleChangeAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Chưa có quyền thư viện', 'Vui lòng cấp quyền truy cập ảnh để đổi avatar.');
+      Alert.alert(t('profile.edit.libraryPermissionTitle'), t('profile.edit.libraryPermissionBody'));
       return;
     }
 
@@ -165,21 +163,13 @@ export default function EditProfileScreen({ navigation }: Props) {
     }
   };
 
-  const mockUpdateProfile = async (payload: UpdateUserProfilePayload) => {
-    await sleep(800);
-    return {
-      id: safeUser.id,
-      name: payload.name,
-      email: payload.email,
-      phone: payload.phone || undefined,
-      avatar: payload.avatar || undefined,
-      createdAt: safeUser.createdAt,
-    };
-  };
-
   const handleSave = async () => {
     if (loading) return;
     if (!runValidation()) return;
+    if (!accessToken) {
+      Alert.alert(t('profile.edit.loginRequiredTitle'), t('profile.edit.loginRequiredBody'));
+      return;
+    }
 
     const payload: UpdateUserProfilePayload = {
       name: name.trim(),
@@ -191,16 +181,7 @@ export default function EditProfileScreen({ navigation }: Props) {
     setLoading(true);
 
     try {
-      let updatedUser;
-      if (accessToken) {
-        try {
-          updatedUser = await updateCurrentUserApi(accessToken, payload);
-        } catch {
-          updatedUser = await mockUpdateProfile(payload);
-        }
-      } else {
-        updatedUser = await mockUpdateProfile(payload);
-      }
+      const updatedUser = await updateCurrentUserApi(accessToken, payload);
 
       setUserProfile({
         id: String(updatedUser.id || safeUser.id),
@@ -216,7 +197,7 @@ export default function EditProfileScreen({ navigation }: Props) {
         setShowToast(false);
       }, 1800);
     } catch (error: any) {
-      Alert.alert('Không thể cập nhật hồ sơ', error?.message || 'Vui lòng thử lại.');
+      Alert.alert(t('profile.edit.updateFailedTitle'), error?.message || t('common.tryAgain'));
     } finally {
       setLoading(false);
     }
@@ -232,7 +213,7 @@ export default function EditProfileScreen({ navigation }: Props) {
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={22} color={theme.colors.textPrimary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
+          <Text style={styles.headerTitle}>{t('profile.edit.headerTitle')}</Text>
           <View style={styles.headerRightSpace} />
         </Animated.View>
 
@@ -250,13 +231,13 @@ export default function EditProfileScreen({ navigation }: Props) {
 
           <Animated.View entering={FadeInDown.delay(80).duration(380)} style={styles.formCard}>
             <ProfileInput
-              label="Họ và tên"
+              label={t('profile.edit.fullName')}
               value={name}
               onChangeText={(value) => {
                 setName(value);
                 clearError('name');
               }}
-              placeholder="Nhập họ tên"
+              placeholder={t('profile.edit.fullNamePlaceholder')}
               maxLength={80}
               error={errors.name}
             />
@@ -268,7 +249,7 @@ export default function EditProfileScreen({ navigation }: Props) {
                 setEmail(value);
                 clearError('email');
               }}
-              placeholder="Nhập email"
+              placeholder={t('profile.edit.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -277,14 +258,14 @@ export default function EditProfileScreen({ navigation }: Props) {
             />
 
             <ProfileInput
-              label="Số điện thoại"
+              label={t('profile.edit.phone')}
               optional
               value={phone}
               onChangeText={(value) => {
                 setPhone(value);
                 clearError('phone');
               }}
-              placeholder="Nhập số điện thoại"
+              placeholder={t('profile.edit.phonePlaceholder')}
               keyboardType="phone-pad"
               maxLength={20}
               error={errors.phone}
@@ -294,7 +275,11 @@ export default function EditProfileScreen({ navigation }: Props) {
           <Animated.View entering={FadeInDown.delay(120).duration(380)}>
             <ReadOnlyInfoCard
               accountId={safeUser.id}
-              joinedAt={formatJoinedDate(safeUser.createdAt)}
+              joinedAt={formatJoinedDate(
+                safeUser.createdAt,
+                (i18n.resolvedLanguage || i18n.language).startsWith('en') ? 'en-US' : 'vi-VN',
+                t('profile.edit.noData')
+              )}
             />
           </Animated.View>
 
@@ -304,7 +289,7 @@ export default function EditProfileScreen({ navigation }: Props) {
               style={({ pressed }) => [styles.changePasswordButton, pressed && styles.changePasswordPressed]}
             >
               <Ionicons name="lock-closed-outline" size={16} color={theme.colors.textPrimary} />
-              <Text style={styles.changePasswordText}>Đổi mật khẩu</Text>
+              <Text style={styles.changePasswordText}>{t('profile.edit.changePassword')}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
             </Pressable>
           </Animated.View>
@@ -322,7 +307,7 @@ export default function EditProfileScreen({ navigation }: Props) {
           style={[styles.toast, { bottom: insets.bottom + 12 }]}
         >
           <Ionicons name="checkmark-circle" size={18} color="#2D7D46" />
-          <Text style={styles.toastText}>Đã cập nhật hồ sơ</Text>
+          <Text style={styles.toastText}>{t('profile.edit.updatedToast')}</Text>
         </Animated.View>
       ) : null}
     </SafeAreaView>

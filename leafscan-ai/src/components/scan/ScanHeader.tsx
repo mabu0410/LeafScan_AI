@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { CompactPlantSelector } from './CompactPlantSelector';
 
 interface ScanHeaderProps {
@@ -61,11 +62,13 @@ export function ScanHeader({
   onPressPlantSelector,
   disabled = false,
 }: ScanHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={[styles.container, { top: topInset + 8 }]}>
       <HeaderIconButton iconName="close" onPress={onClose} disabled={false} />
       <View style={styles.titleCard}>
-        <Text style={styles.title}>Quét bệnh lá cây</Text>
+        <Text style={styles.title}>{t('scan.title')}</Text>
         <CompactPlantSelector
           selectedLabel={selectedPlantLabel}
           hasSelection={hasSelection}

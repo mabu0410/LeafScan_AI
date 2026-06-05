@@ -17,20 +17,28 @@ import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { PartnerProduct, PartnerStore, RootStackParamList } from '../types';
+import { MarketplaceInquiry, PartnerOutlet, PartnerProduct, PartnerStore, RootStackParamList } from '../types';
 import {
+  createStoreApi,
   createProductApi,
   createVnpayPartnerPaymentApi,
+  deleteStoreApi,
   deleteProductApi,
   getMyPartnerApi,
   getPaymentStatusApi,
+  listMyStoresApi,
   listMyProductsApi,
+  listMyPartnerInquiriesApi,
   registerPartnerApi,
+  updateMyPartnerInquiryStatusApi,
+  updateStoreApi,
   updateMyPartnerApi,
   updateProductApi,
   uploadPartnerBusinessLicenseApi,
   uploadPartnerCoverApi,
   uploadPartnerLogoApi,
+  uploadStoreCoverApi,
+  uploadStoreLogoApi,
   uploadProductImageApi,
   PartnerPlanType,
 } from '../api/marketplace';
@@ -38,7 +46,7 @@ import { useAuthStore } from '../stores/authStore';
 import { theme } from '../theme/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-type PartnerTab = 'profile' | 'products';
+type PartnerSection = 'dashboard' | 'stores' | 'products' | 'profile' | 'inquiries';
 
 interface PartnerFormState {
   companyName: string;
@@ -65,12 +73,21 @@ interface PartnerFileSelection {
 }
 
 interface ProductFormState {
+  storeId: string;
   name: string;
   description: string;
   priceRange: string;
   productUrl: string;
   targetDiseases: string;
   targetCategories: string;
+}
+
+interface StoreFormState {
+  name: string;
+  description: string;
+  address: string;
+  contactEmail: string;
+  phone: string;
 }
 
 const EMPTY_PARTNER_FORM: PartnerFormState = {
@@ -92,12 +109,21 @@ const EMPTY_PARTNER_FORM: PartnerFormState = {
 };
 
 const EMPTY_PRODUCT_FORM: ProductFormState = {
+  storeId: '',
   name: '',
   description: '',
   priceRange: '',
   productUrl: '',
   targetDiseases: '',
   targetCategories: '',
+};
+
+const EMPTY_STORE_FORM: StoreFormState = {
+  name: '',
+  description: '',
+  address: '',
+  contactEmail: '',
+  phone: '',
 };
 
 const GREEN = '#007C39';
@@ -167,9 +193,23 @@ function partnerStatusLabel(status?: string): string {
 
 function productStatusLabel(status?: string): string {
   if (status === 'approved') return 'Đã duyệt';
-  if (status === 'pending_review') return 'Chờ duyệt';
+  if (status === 'pending_review') return 'Đang hiển thị - chờ kiểm';
   if (status === 'rejected') return 'Bị từ chối';
   return status || 'Chưa rõ';
+}
+
+function inquiryStatusLabel(status?: string): string {
+  if (status === 'new') return 'Mới';
+  if (status === 'contacted') return 'Đã liên hệ';
+  if (status === 'closed') return 'Đã đóng';
+  return status || 'Chưa rõ';
+}
+
+function inquiryStatusTone(status?: string): 'success' | 'warning' | 'danger' | 'info' | 'muted' {
+  if (status === 'new') return 'warning';
+  if (status === 'contacted') return 'info';
+  if (status === 'closed') return 'muted';
+  return 'muted';
 }
 
 function isValidEmail(value: string): boolean {
@@ -194,14 +234,18 @@ export default function PartnerChannelScreen() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
-  const [activeTab, setActiveTab] = useState<PartnerTab>('profile');
+  const [activeSection, setActiveSection] = useState<PartnerSection>('dashboard');
   const [partner, setPartner] = useState<PartnerStore | null>(null);
+  const [stores, setStores] = useState<PartnerOutlet[]>([]);
   const [products, setProducts] = useState<PartnerProduct[]>([]);
+  const [inquiries, setInquiries] = useState<MarketplaceInquiry[]>([]);
   const [partnerForm, setPartnerForm] = useState<PartnerFormState>({
     ...EMPTY_PARTNER_FORM,
     contactEmail: user?.email || '',
     phone: user?.phone || '',
   });
+  const [storeForm, setStoreForm] = useState<StoreFormState>(EMPTY_STORE_FORM);
+  const [editingStore, setEditingStore] = useState<PartnerOutlet | null>(null);
   const [productForm, setProductForm] = useState<ProductFormState>(EMPTY_PRODUCT_FORM);
   const [editingProduct, setEditingProduct] = useState<PartnerProduct | null>(null);
   const [loading, setLoading] = useState(true);
@@ -269,9 +313,22 @@ export default function PartnerChannelScreen() {
       setPartner(nextPartner);
       syncPartnerForm(nextPartner);
       if (nextPartner) {
-        setProducts(await listMyProductsApi(token));
+        const [nextStores, nextProducts, nextInquiries] = await Promise.all([
+          listMyStoresApi(token),
+          listMyProductsApi(token),
+          listMyPartnerInquiriesApi(token),
+        ]);
+        setStores(nextStores);
+        setProducts(nextProducts);
+        setInquiries(nextInquiries);
+        setProductForm((current) => ({
+          ...current,
+          storeId: current.storeId || nextStores[0]?.id || '',
+        }));
       } else {
+        setStores([]);
         setProducts([]);
+        setInquiries([]);
       }
     } catch (err: any) {
       setError(err?.message || 'Không tải được kênh đối tác.');
@@ -286,6 +343,10 @@ export default function PartnerChannelScreen() {
 
   const updatePartnerField = (field: keyof PartnerFormState, value: string | boolean) => {
     setPartnerForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateStoreField = (field: keyof StoreFormState, value: string) => {
+    setStoreForm((current) => ({ ...current, [field]: value }));
   };
 
   const updateProductField = (field: keyof ProductFormState, value: string) => {
@@ -516,13 +577,14 @@ export default function PartnerChannelScreen() {
       await WebBrowser.openBrowserAsync(payment.paymentUrl);
       const status = await getPaymentStatusApi(token, payment.txnRef);
       await loadData();
-      const planLabel = PARTNER_PLANS.find((item) => item.type === payment.planType)?.title || 'gói đối tác';
-      Alert.alert(
-        'Trạng thái thanh toán',
-        status.status === 'success'
-          ? `Thanh toán thành công, ${planLabel.toLowerCase()} đã được kích hoạt.`
-          : 'Giao dịch chưa hoàn tất. Vui lòng kiểm tra lại sau khi VNPAY gửi IPN.'
-      );
+      navigation.navigate('PaymentResult', {
+        paymentType: 'partner',
+        txnRef: payment.txnRef,
+        responseCode: status.providerResponseCode,
+        transactionStatus: status.providerTransactionStatus,
+        transactionNo: status.vnpTransactionNo,
+        status: status.status,
+      });
     } catch (err: any) {
       Alert.alert('Lỗi thanh toán', err?.message || 'Không tạo được thanh toán VNPAY.');
     } finally {
@@ -531,14 +593,144 @@ export default function PartnerChannelScreen() {
     }
   };
 
+  const resetStoreForm = () => {
+    setEditingStore(null);
+    setStoreForm(EMPTY_STORE_FORM);
+  };
+
+  const beginEditStore = (store: PartnerOutlet) => {
+    setEditingStore(store);
+    setStoreForm({
+      name: store.name || '',
+      description: store.description || '',
+      address: store.address || '',
+      contactEmail: store.contactEmail || '',
+      phone: store.phone || '',
+    });
+  };
+
+  const submitStore = async () => {
+    if (!token || !partner) return;
+    if (!storeForm.name.trim()) {
+      Alert.alert('Thiếu tên cửa hàng', 'Vui lòng nhập tên cửa hàng.');
+      return;
+    }
+    if (storeForm.contactEmail.trim() && !isValidEmail(storeForm.contactEmail)) {
+      Alert.alert('Email không hợp lệ', 'Vui lòng nhập email cửa hàng đúng định dạng.');
+      return;
+    }
+    if (storeForm.phone.trim() && !isValidPhone(storeForm.phone)) {
+      Alert.alert('Số điện thoại không hợp lệ', 'Số điện thoại cần bắt đầu bằng 0 và đủ 10 chữ số.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        name: storeForm.name.trim(),
+        description: storeForm.description.trim() || undefined,
+        address: storeForm.address.trim() || undefined,
+        contactEmail: storeForm.contactEmail.trim() || undefined,
+        phone: storeForm.phone.trim() || undefined,
+      };
+      if (editingStore) {
+        await updateStoreApi(token, editingStore.id, payload);
+      } else {
+        await createStoreApi(token, payload);
+      }
+      resetStoreForm();
+      await loadData();
+      Alert.alert('Đã lưu cửa hàng', editingStore ? 'Cửa hàng đã được cập nhật.' : 'Cửa hàng mới đã được tạo.');
+    } catch (err: any) {
+      Alert.alert('Lỗi', err?.message || 'Không lưu được cửa hàng.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStore = async (store: PartnerOutlet) => {
+    if (!token) return;
+    setSaving(true);
+    try {
+      await updateStoreApi(token, store.id, { isActive: !store.isActive });
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err?.message || 'Không cập nhật được trạng thái cửa hàng.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDeleteStore = (store: PartnerOutlet) => {
+    Alert.alert('Xóa cửa hàng', `Xóa "${store.name}" khỏi kênh đối tác? Sản phẩm cũ sẽ được bỏ gắn cửa hàng.`, [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Xóa',
+        style: 'destructive',
+        onPress: async () => {
+          if (!token) return;
+          setSaving(true);
+          try {
+            await deleteStoreApi(token, store.id);
+            if (editingStore?.id === store.id) resetStoreForm();
+            await loadData();
+          } catch (err: any) {
+            Alert.alert('Lỗi', err?.message || 'Không xóa được cửa hàng.');
+          } finally {
+            setSaving(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const pickAndUploadStoreLogo = async (store: PartnerOutlet) => {
+    if (!token) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]?.uri) return;
+    setSaving(true);
+    try {
+      await uploadStoreLogoApi(token, store.id, result.assets[0].uri);
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err?.message || 'Không upload được logo cửa hàng.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const pickAndUploadStoreCover = async (store: PartnerOutlet) => {
+    if (!token) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]?.uri) return;
+    setSaving(true);
+    try {
+      await uploadStoreCoverApi(token, store.id, result.assets[0].uri);
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err?.message || 'Không upload được ảnh cửa hàng.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const resetProductForm = () => {
     setEditingProduct(null);
-    setProductForm(EMPTY_PRODUCT_FORM);
+    setProductForm({ ...EMPTY_PRODUCT_FORM, storeId: stores[0]?.id || '' });
   };
 
   const beginEditProduct = (product: PartnerProduct) => {
     setEditingProduct(product);
     setProductForm({
+      storeId: product.storeId || stores[0]?.id || '',
       name: product.name || '',
       description: product.description || '',
       priceRange: product.priceRange || '',
@@ -554,9 +746,14 @@ export default function PartnerChannelScreen() {
       Alert.alert('Thiếu tên sản phẩm', 'Vui lòng nhập tên sản phẩm.');
       return;
     }
+    if (!productForm.storeId) {
+      Alert.alert('Chưa chọn cửa hàng', 'Vui lòng chọn cửa hàng sẽ đăng sản phẩm này.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
+        storeId: productForm.storeId,
         name: productForm.name.trim(),
         description: productForm.description.trim() || undefined,
         priceRange: productForm.priceRange.trim() || undefined,
@@ -571,7 +768,7 @@ export default function PartnerChannelScreen() {
       }
       resetProductForm();
       await loadData();
-      Alert.alert('Đã lưu sản phẩm', 'Sản phẩm sẽ hiển thị public sau khi admin duyệt.');
+      Alert.alert('Đã lưu sản phẩm', 'Sản phẩm đang hiển thị public. Admin có thể kiểm tra và từ chối sau nếu nội dung chưa phù hợp.');
     } catch (err: any) {
       Alert.alert('Lỗi', err?.message || 'Không lưu được sản phẩm.');
     } finally {
@@ -613,6 +810,19 @@ export default function PartnerChannelScreen() {
         },
       },
     ]);
+  };
+
+  const updateInquiryStatus = async (inquiry: MarketplaceInquiry, status: 'contacted' | 'closed') => {
+    if (!token) return;
+    setSaving(true);
+    try {
+      await updateMyPartnerInquiryStatusApi(token, inquiry.id, status);
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err?.message || 'Không cập nhật được yêu cầu tư vấn.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const pickAndUploadProductImage = async (product: PartnerProduct) => {
@@ -668,9 +878,18 @@ export default function PartnerChannelScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title={partner ? 'Nhà đối tác vật tư' : 'Đăng ký đối tác vật tư'} onBack={navigation.canGoBack() ? navigation.goBack : undefined} onLogout={confirmLogout} />
+      <Header title={partner ? 'Bảng điều khiển đại lý' : 'Đăng ký đối tác vật tư'} onBack={navigation.canGoBack() ? navigation.goBack : undefined} onLogout={confirmLogout} />
+      {partner && (
+        <PartnerWorkspaceNav
+          activeSection={activeSection}
+          onChange={setActiveSection}
+          storeCount={stores.length}
+          productCount={products.length}
+          inquiryCount={inquiries.length}
+        />
+      )}
 
-      <ScrollView contentContainerStyle={!partner ? styles.registrationContent : styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={!partner ? styles.registrationContent : styles.workspaceContent} showsVerticalScrollIndicator={false}>
         {!partner ? (
           <RegistrationForm
             form={partnerForm}
@@ -691,13 +910,28 @@ export default function PartnerChannelScreen() {
             <PartnerOverview
               partner={partner}
               initials={initials}
+              storeCount={stores.length}
               productCount={products.length}
               activeCount={partner.activeProductCount}
             />
 
-            <TabPills activeTab={activeTab} onChange={setActiveTab} />
-
-            {activeTab === 'profile' ? (
+            {activeSection === 'dashboard' ? (
+              <>
+                <StatusCard partner={partner} />
+                <WorkspaceActionGrid
+                  onOpenStores={() => setActiveSection('stores')}
+                  onOpenProducts={() => setActiveSection('products')}
+                  onOpenInquiries={() => setActiveSection('inquiries')}
+                  onOpenProfile={() => setActiveSection('profile')}
+                />
+                {needsPayment && (
+                  <PaymentCard saving={saving} payingPlan={payingPlan} onPay={startPayment} />
+                )}
+                {partner.activeMembership && (
+                  <MembershipCard partner={partner} />
+                )}
+              </>
+            ) : activeSection === 'profile' ? (
               <>
                 <StatusCard partner={partner} />
                 <PartnerForm
@@ -736,12 +970,39 @@ export default function PartnerChannelScreen() {
                   <MembershipCard partner={partner} />
                 )}
               </>
+            ) : activeSection === 'stores' ? (
+              <>
+                <StoreForm
+                  form={storeForm}
+                  editingStore={editingStore}
+                  saving={saving}
+                  onChange={updateStoreField}
+                  onSubmit={submitStore}
+                  onCancel={resetStoreForm}
+                />
+                <StoreList
+                  stores={stores}
+                  saving={saving}
+                  onEdit={beginEditStore}
+                  onToggle={toggleStore}
+                  onDelete={confirmDeleteStore}
+                  onUploadLogo={pickAndUploadStoreLogo}
+                  onUploadCover={pickAndUploadStoreCover}
+                />
+              </>
+            ) : activeSection === 'inquiries' ? (
+              <InquiryList
+                inquiries={inquiries}
+                saving={saving}
+                onUpdateStatus={updateInquiryStatus}
+              />
             ) : (
               <>
                 <ProductAccessCard partner={partner} canManageProducts={canManageProducts} onPay={startPayment} saving={saving} payingPlan={payingPlan} />
                 {canManageProducts && (
                   <ProductForm
                     form={productForm}
+                    stores={stores}
                     editingProduct={editingProduct}
                     saving={saving}
                     onChange={updateProductField}
@@ -1228,11 +1489,13 @@ function IntroCard({ icon, title, text }: { icon: IconName; title: string; text:
 function PartnerOverview({
   partner,
   initials,
+  storeCount,
   productCount,
   activeCount,
 }: {
   partner: PartnerStore;
   initials: string;
+  storeCount: number;
   productCount: number;
   activeCount: number;
 }) {
@@ -1250,6 +1513,7 @@ function PartnerOverview({
         </View>
       </View>
       <View style={styles.metricsRow}>
+        <Metric icon="storefront-outline" value={String(storeCount)} label="cửa hàng" />
         <Metric icon="cube-outline" value={String(productCount)} label="sản phẩm đã tạo" />
         <Metric icon="checkmark-circle-outline" value={String(activeCount)} label="đang active" />
       </View>
@@ -1257,23 +1521,92 @@ function PartnerOverview({
   );
 }
 
-function TabPills({ activeTab, onChange }: { activeTab: PartnerTab; onChange: (tab: PartnerTab) => void }) {
-  const tabs: Array<{ id: PartnerTab; label: string; icon: IconName }> = [
+function PartnerWorkspaceNav({
+  activeSection,
+  onChange,
+  storeCount,
+  productCount,
+  inquiryCount,
+}: {
+  activeSection: PartnerSection;
+  onChange: (section: PartnerSection) => void;
+  storeCount: number;
+  productCount: number;
+  inquiryCount: number;
+}) {
+  const tabs: Array<{ id: PartnerSection; label: string; icon: IconName; count?: number }> = [
+    { id: 'dashboard', label: 'Tổng quan', icon: 'speedometer-outline' },
+    { id: 'stores', label: 'Cửa hàng', icon: 'storefront-outline', count: storeCount },
+    { id: 'products', label: 'Sản phẩm', icon: 'cube-outline', count: productCount },
+    { id: 'inquiries', label: 'Tư vấn', icon: 'chatbubbles-outline', count: inquiryCount },
     { id: 'profile', label: 'Hồ sơ', icon: 'business-outline' },
-    { id: 'products', label: 'Sản phẩm', icon: 'cube-outline' },
   ];
   return (
-    <View style={styles.tabs}>
+    <View style={styles.workspaceNav}>
       {tabs.map((tab) => {
-        const active = activeTab === tab.id;
+        const active = activeSection === tab.id;
         return (
-          <Pressable key={tab.id} onPress={() => onChange(tab.id)} style={[styles.tabButton, active && styles.tabButtonActive]}>
+          <Pressable key={tab.id} onPress={() => onChange(tab.id)} style={[styles.workspaceNavButton, active && styles.workspaceNavButtonActive]}>
             <Ionicons name={tab.icon} size={16} color={active ? CARD : MUTED} />
-            <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+            <Text style={[styles.workspaceNavText, active && styles.workspaceNavTextActive]}>{tab.label}</Text>
+            {typeof tab.count === 'number' && (
+              <View style={[styles.navCount, active && styles.navCountActive]}>
+                <Text style={[styles.navCountText, active && styles.navCountTextActive]}>{tab.count}</Text>
+              </View>
+            )}
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+function WorkspaceActionGrid({
+  onOpenStores,
+  onOpenProducts,
+  onOpenInquiries,
+  onOpenProfile,
+}: {
+  onOpenStores: () => void;
+  onOpenProducts: () => void;
+  onOpenInquiries: () => void;
+  onOpenProfile: () => void;
+}) {
+  return (
+    <View style={styles.card}>
+      <SectionTitle title="Quản lý nhanh" subtitle="Đi thẳng tới khu vực cần thao tác trong workspace đại lý." />
+      <View style={styles.quickActionGrid}>
+        <QuickAction icon="storefront-outline" title="Cửa hàng" text="Thêm, sửa, xóa cửa hàng" onPress={onOpenStores} />
+        <QuickAction icon="cube-outline" title="Sản phẩm" text="Quản lý sản phẩm theo cửa hàng" onPress={onOpenProducts} />
+        <QuickAction icon="chatbubbles-outline" title="Yêu cầu tư vấn" text="Xem khách hàng đang cần liên hệ" onPress={onOpenInquiries} />
+        <QuickAction icon="document-text-outline" title="Hồ sơ" text="Thông tin duyệt và tài liệu" onPress={onOpenProfile} />
+      </View>
+    </View>
+  );
+}
+
+function QuickAction({
+  icon,
+  title,
+  text,
+  onPress,
+}: {
+  icon: IconName;
+  title: string;
+  text: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.quickAction}>
+      <View style={styles.quickActionIcon}>
+        <Ionicons name={icon} size={18} color={GREEN} />
+      </View>
+      <View style={styles.fill}>
+        <Text style={styles.quickActionTitle}>{title}</Text>
+        <Text style={styles.quickActionText}>{text}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={MUTED} />
+    </Pressable>
   );
 }
 
@@ -1436,7 +1769,7 @@ function PaymentCard({
 }) {
   return (
     <View style={styles.card}>
-      <SectionTitle title="Chọn gói quảng cáo" subtitle="Sau khi thanh toán, shop và tối đa 20 sản phẩm active có thể hiển thị public nếu đã được duyệt." />
+      <SectionTitle title="Chọn gói quảng cáo" subtitle="Sau khi thanh toán, shop và tối đa 20 sản phẩm active có thể hiển thị public. Admin sẽ hậu kiểm nội dung sản phẩm." />
       <PlanButtons saving={saving} payingPlan={payingPlan} onPay={onPay} />
     </View>
   );
@@ -1476,7 +1809,7 @@ function ProductAccessCard({
         <Ionicons name="checkmark-circle-outline" size={22} color={GREEN} />
         <View style={styles.fill}>
           <Text style={styles.statusTitle}>Có thể quản lý sản phẩm</Text>
-          <Text style={styles.statusText}>Sản phẩm mới hoặc nội dung sửa đổi sẽ cần admin duyệt trước khi public.</Text>
+          <Text style={styles.statusText}>Sản phẩm mới hoặc nội dung sửa đổi sẽ public ngay và nằm trong danh sách chờ admin kiểm tra.</Text>
         </View>
       </View>
     );
@@ -1544,8 +1877,136 @@ function PlanButtons({
   );
 }
 
+function StoreForm({
+  form,
+  editingStore,
+  saving,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  form: StoreFormState;
+  editingStore: PartnerOutlet | null;
+  saving: boolean;
+  onChange: (field: keyof StoreFormState, value: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <View style={styles.card}>
+      <SectionTitle
+        title={editingStore ? 'Sửa cửa hàng' : 'Thêm cửa hàng'}
+        subtitle="Quản lý từng cửa hàng/chi nhánh dưới tài khoản đối tác."
+      />
+      <Field label="Tên cửa hàng" value={form.name} onChangeText={(value) => onChange('name', value)} />
+      <Field label="Mô tả" value={form.description} onChangeText={(value) => onChange('description', value)} multiline />
+      <Field label="Địa chỉ" value={form.address} onChangeText={(value) => onChange('address', value)} />
+      <Field label="Email cửa hàng" value={form.contactEmail} onChangeText={(value) => onChange('contactEmail', value)} autoCapitalize="none" keyboardType="email-address" />
+      <Field label="Số điện thoại" value={form.phone} onChangeText={(value) => onChange('phone', value)} keyboardType="phone-pad" />
+      <View style={styles.buttonRow}>
+        <Pressable disabled={saving} onPress={onSubmit} style={[styles.primaryButton, saving && styles.disabled]}>
+          <Text style={styles.primaryButtonText}>{saving ? 'Đang lưu...' : editingStore ? 'Lưu cửa hàng' : 'Tạo cửa hàng'}</Text>
+        </Pressable>
+        {editingStore && (
+          <Pressable disabled={saving} onPress={onCancel} style={styles.secondaryButton}>
+            <Text style={styles.secondaryButtonText}>Hủy</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function StoreList({
+  stores,
+  saving,
+  onEdit,
+  onToggle,
+  onDelete,
+  onUploadLogo,
+  onUploadCover,
+}: {
+  stores: PartnerOutlet[];
+  saving: boolean;
+  onEdit: (store: PartnerOutlet) => void;
+  onToggle: (store: PartnerOutlet) => void;
+  onDelete: (store: PartnerOutlet) => void;
+  onUploadLogo: (store: PartnerOutlet) => void;
+  onUploadCover: (store: PartnerOutlet) => void;
+}) {
+  return (
+    <View style={styles.card}>
+      <SectionTitle title="Danh sách cửa hàng" subtitle={`${stores.length} cửa hàng`} />
+      {stores.length === 0 ? (
+        <Text style={styles.emptyText}>Chưa có cửa hàng.</Text>
+      ) : (
+        stores.map((store) => (
+          <View key={store.id} style={styles.storeRow}>
+            {store.coverUrl ? (
+              <Image source={{ uri: store.coverUrl }} style={styles.storeCover as any} />
+            ) : (
+              <View style={styles.storeCoverFallback}>
+                <Ionicons name="storefront-outline" size={22} color={MUTED} />
+              </View>
+            )}
+            <View style={styles.fill}>
+              <View style={styles.productTitleRow}>
+                <Text numberOfLines={1} style={styles.productName}>{store.name}</Text>
+                <Badge label={store.isActive ? 'Active' : 'Ẩn'} tone={store.isActive ? 'success' : 'muted'} />
+              </View>
+              {!!store.address && <Text style={styles.productMeta}>{store.address}</Text>}
+              {!!store.phone && <Text style={styles.productMeta}>{store.phone}</Text>}
+              <View style={styles.iconActionRow}>
+                <IconAction disabled={saving} icon="create-outline" label="Sửa" onPress={() => onEdit(store)} />
+                <IconAction disabled={saving} icon="image-outline" label="Bìa" onPress={() => onUploadCover(store)} />
+                <IconAction disabled={saving} icon="aperture-outline" label="Logo" onPress={() => onUploadLogo(store)} />
+                <IconAction disabled={saving} icon={store.isActive ? 'pause-circle-outline' : 'play-circle-outline'} label={store.isActive ? 'Ẩn' : 'Bật'} onPress={() => onToggle(store)} />
+                <IconAction disabled={saving || stores.length <= 1} icon="trash-outline" label="Xóa" danger onPress={() => onDelete(store)} />
+              </View>
+            </View>
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
+function StoreSelector({
+  stores,
+  selectedStoreId,
+  onSelect,
+}: {
+  stores: PartnerOutlet[];
+  selectedStoreId: string;
+  onSelect: (storeId: string) => void;
+}) {
+  return (
+    <View style={styles.selectorWrap}>
+      <Text style={styles.fieldLabel}>Cửa hàng đăng sản phẩm</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorList}>
+        {stores.map((store) => {
+          const active = selectedStoreId === store.id;
+          return (
+            <Pressable
+              key={store.id}
+              onPress={() => onSelect(store.id)}
+              style={[styles.selectorChip, active && styles.selectorChipActive]}
+            >
+              <Ionicons name="storefront-outline" size={14} color={active ? CARD : GREEN} />
+              <Text style={[styles.selectorChipText, active && styles.selectorChipTextActive]} numberOfLines={1}>
+                {store.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 function ProductForm({
   form,
+  stores,
   editingProduct,
   saving,
   onChange,
@@ -1553,6 +2014,7 @@ function ProductForm({
   onCancel,
 }: {
   form: ProductFormState;
+  stores: PartnerOutlet[];
   editingProduct: PartnerProduct | null;
   saving: boolean;
   onChange: (field: keyof ProductFormState, value: string) => void;
@@ -1565,6 +2027,7 @@ function ProductForm({
         title={editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}
         subtitle="Gắn disease key hoặc nhóm cây để sản phẩm được gợi ý đúng sau khi quét bệnh."
       />
+      <StoreSelector stores={stores} selectedStoreId={form.storeId} onSelect={(storeId) => onChange('storeId', storeId)} />
       <Field label="Tên sản phẩm" value={form.name} onChangeText={(value) => onChange('name', value)} />
       <Field label="Mô tả" value={form.description} onChangeText={(value) => onChange('description', value)} multiline />
       <Field label="Khoảng giá" value={form.priceRange} onChangeText={(value) => onChange('priceRange', value)} />
@@ -1602,7 +2065,7 @@ function ProductList({
 }) {
   return (
     <View style={styles.card}>
-      <SectionTitle title="Sản phẩm của cửa hàng" subtitle={`${products.length} sản phẩm`} />
+      <SectionTitle title="Sản phẩm theo cửa hàng" subtitle={`${products.length} sản phẩm`} />
       {products.length === 0 ? (
         <Text style={styles.emptyText}>Chưa có sản phẩm.</Text>
       ) : (
@@ -1621,6 +2084,7 @@ function ProductList({
                 <Badge label={product.isActive ? 'Active' : 'Ẩn'} tone={product.isActive ? 'success' : 'muted'} />
               </View>
               <Text style={styles.productMeta}>{productStatusLabel(product.moderationStatus)}</Text>
+              <Text style={styles.productMeta}>Cửa hàng: {product.storeName || 'Chưa gắn cửa hàng'}</Text>
               {!!product.rejectionReason && <Text style={styles.rejectReason}>{product.rejectionReason}</Text>}
               {!!product.priceRange && <Text style={styles.productMeta}>{product.priceRange}</Text>}
               <View style={styles.iconActionRow}>
@@ -1629,6 +2093,66 @@ function ProductList({
                 <IconAction disabled={saving} icon={product.isActive ? 'pause-circle-outline' : 'play-circle-outline'} label={product.isActive ? 'Ẩn' : 'Bật'} onPress={() => onToggle(product)} />
                 <IconAction disabled={saving} icon="trash-outline" label="Xóa" danger onPress={() => onDelete(product)} />
               </View>
+            </View>
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
+function InquiryList({
+  inquiries,
+  saving,
+  onUpdateStatus,
+}: {
+  inquiries: MarketplaceInquiry[];
+  saving: boolean;
+  onUpdateStatus: (inquiry: MarketplaceInquiry, status: 'contacted' | 'closed') => void;
+}) {
+  return (
+    <View style={styles.card}>
+      <SectionTitle title="Yêu cầu tư vấn" subtitle={`${inquiries.length} yêu cầu từ người dùng`} />
+      {inquiries.length === 0 ? (
+        <Text style={styles.emptyText}>Chưa có yêu cầu tư vấn nào.</Text>
+      ) : (
+        inquiries.map((inquiry) => (
+          <View key={inquiry.id} style={styles.inquiryCard}>
+            <View style={styles.inquiryHeader}>
+              <View style={styles.inquiryAvatar}>
+                <Ionicons name="person-outline" size={18} color={GREEN} />
+              </View>
+              <View style={styles.fill}>
+                <Text style={styles.productName}>{inquiry.name}</Text>
+                <Text style={styles.productMeta}>
+                  {[inquiry.phone, inquiry.email].filter(Boolean).join(' · ') || 'Chưa có thông tin liên hệ'}
+                </Text>
+              </View>
+              <Badge label={inquiryStatusLabel(inquiry.status)} tone={inquiryStatusTone(inquiry.status)} />
+            </View>
+            <Text style={styles.inquiryMessage}>{inquiry.message}</Text>
+            <View style={styles.inquiryMetaGrid}>
+              <InfoItem icon="cube-outline" label="Sản phẩm" value={inquiry.productName || 'Không gắn sản phẩm'} />
+              <InfoItem icon="storefront-outline" label="Cửa hàng" value={inquiry.storeName || 'Không gắn cửa hàng'} />
+              <InfoItem icon="calendar-outline" label="Ngày gửi" value={formatDate(inquiry.createdAt)} />
+            </View>
+            <View style={styles.iconActionRow}>
+              {inquiry.status === 'new' && (
+                <IconAction
+                  disabled={saving}
+                  icon="call-outline"
+                  label="Đã liên hệ"
+                  onPress={() => onUpdateStatus(inquiry, 'contacted')}
+                />
+              )}
+              {inquiry.status !== 'closed' && (
+                <IconAction
+                  disabled={saving}
+                  icon="checkmark-done-outline"
+                  label="Đóng"
+                  onPress={() => onUpdateStatus(inquiry, 'closed')}
+                />
+              )}
             </View>
           </View>
         ))
@@ -1750,8 +2274,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, lineHeight: 24, fontWeight: '900', color: TEXT },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, lineHeight: 24, fontWeight: '900', color: TEXT },
   content: { padding: 18, paddingBottom: 42 },
+  workspaceContent: { padding: 18, paddingBottom: 42 },
   registrationContent: { paddingHorizontal: 18, paddingTop: 0, paddingBottom: 128 },
   registrationIntro: { paddingTop: 14, paddingBottom: 10 },
   registrationSubtitle: { color: MUTED, fontSize: 13, lineHeight: 19, textAlign: 'center', fontWeight: '700' },
@@ -2030,26 +2555,45 @@ const styles = StyleSheet.create({
   },
   metricValue: { fontSize: 16, lineHeight: 20, fontWeight: '900', color: TEXT },
   metricLabel: { fontSize: 10, lineHeight: 14, color: MUTED, fontWeight: '700' },
-  tabs: {
+  workspaceNav: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: CARD,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
   },
-  tabButton: {
+  workspaceNavButton: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 44,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: CARD,
+    backgroundColor: '#F7FBF8',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 6,
+    gap: 2,
+    paddingHorizontal: 4,
   },
-  tabButtonActive: { backgroundColor: GREEN, borderColor: GREEN },
-  tabText: { fontSize: 12, fontWeight: '900', color: MUTED },
-  tabTextActive: { color: CARD },
+  workspaceNavButtonActive: { backgroundColor: GREEN, borderColor: GREEN },
+  workspaceNavText: { fontSize: 10, lineHeight: 13, fontWeight: '900', color: MUTED },
+  workspaceNavTextActive: { color: CARD },
+  navCount: {
+    position: 'absolute',
+    top: 4,
+    right: 5,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: '#EAF8EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  navCountActive: { backgroundColor: 'rgba(255,255,255,0.22)' },
+  navCountText: { color: GREEN, fontSize: 9, lineHeight: 11, fontWeight: '900' },
+  navCountTextActive: { color: CARD },
   card: {
     backgroundColor: CARD,
     borderRadius: 8,
@@ -2223,7 +2767,63 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   planPayText: { color: CARD, fontSize: 12, fontWeight: '900' },
+  quickActionGrid: { gap: 9 },
+  quickAction: {
+    minHeight: 58,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: '#F7FBF8',
+    paddingHorizontal: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  quickActionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#EAF8EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionTitle: { color: TEXT, fontSize: 13, lineHeight: 17, fontWeight: '900' },
+  quickActionText: { marginTop: 2, color: MUTED, fontSize: 11, lineHeight: 15, fontWeight: '700' },
   buttonRow: { flexDirection: 'row', gap: 9 },
+  storeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 11,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+  },
+  storeCover: { width: 70, height: 58, borderRadius: 8, backgroundColor: '#F1F3F1' },
+  storeCoverFallback: {
+    width: 70,
+    height: 58,
+    borderRadius: 8,
+    backgroundColor: '#F1F3F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectorWrap: { marginBottom: 10 },
+  selectorList: { gap: 8, paddingRight: 4 },
+  selectorChip: {
+    maxWidth: 220,
+    minHeight: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CDEBD4',
+    backgroundColor: '#F7FBF8',
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  selectorChipActive: { backgroundColor: GREEN, borderColor: GREEN },
+  selectorChipText: { color: GREEN, fontSize: 12, lineHeight: 16, fontWeight: '900', maxWidth: 170 },
+  selectorChipTextActive: { color: CARD },
   productRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -2245,6 +2845,35 @@ const styles = StyleSheet.create({
   productName: { flex: 1, fontSize: 14, lineHeight: 18, fontWeight: '900', color: TEXT },
   productMeta: { marginTop: 3, fontSize: 11, lineHeight: 15, color: MUTED, fontWeight: '700' },
   rejectReason: { marginTop: 3, fontSize: 11, lineHeight: 15, color: theme.colors.severe, fontWeight: '700' },
+  inquiryCard: {
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+  },
+  inquiryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  inquiryAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#EAF8EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inquiryMessage: {
+    marginTop: 10,
+    color: TEXT,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '700',
+  },
+  inquiryMetaGrid: {
+    gap: 8,
+    marginTop: 10,
+  },
   iconActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 8 },
   iconAction: {
     minHeight: 30,

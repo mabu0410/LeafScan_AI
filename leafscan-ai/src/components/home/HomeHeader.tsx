@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface HomeHeaderProps {
@@ -65,11 +66,13 @@ export function HomeHeader({
   onPressNotifications,
   onPressProfile,
 }: HomeHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.textWrap}>
-        <Text style={styles.greeting}>Xin chào, {userName} 👋</Text>
-        <Text style={styles.subtitle}>Hôm nay cây của bạn thế nào?</Text>
+        <Text style={styles.greeting}>{t('home.header.greeting', { name: userName })}</Text>
+        <Text style={styles.subtitle}>{t('home.header.subtitle')}</Text>
       </View>
       <View style={styles.actions}>
         <SoftIconButton icon="notifications-outline" onPress={onPressNotifications} />

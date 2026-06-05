@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface StatItem {
@@ -16,9 +17,11 @@ interface StatsGridProps {
 }
 
 export function StatsGrid({ stats }: StatsGridProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Thống kê chăm sóc</Text>
+      <Text style={styles.title}>{t('profile.careStats')}</Text>
       <View style={styles.grid}>
         {stats.map((stat, index) => {
           const isLastOdd = stats.length % 2 === 1 && index === stats.length - 1;

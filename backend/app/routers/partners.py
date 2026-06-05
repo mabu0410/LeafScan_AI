@@ -19,15 +19,16 @@ from app.config import (
     PARTNER_MONTHLY_PLAN_PRICE_VND,
     PARTNER_YEARLY_PLAN_DURATION_DAYS,
     PARTNER_YEARLY_PLAN_PRICE_VND,
-    PUBLIC_BASE_URL,
     UPLOAD_DIR,
 )
 from app.database import get_db
 from app.dependencies.admin import require_admin
 from app.dependencies.auth import get_current_user
 from app.models.domain import (
+    MarketplaceInquiry,
     Partner,
     PartnerMembership,
+    PartnerOutlet,
     PartnerProduct,
     PaymentTransaction,
     ProductImpression,
@@ -35,11 +36,21 @@ from app.models.domain import (
 )
 from app.schemas.subscription import (
     AdminStatusUpdateDTO,
+    MarketplaceInquiryCreateDTO,
+    MarketplaceInquiryEnvelope,
+    MarketplaceInquiryListEnvelope,
+    MarketplaceInquiryResponse,
+    MarketplaceInquiryStatusDTO,
     PartnerEnvelope,
     PartnerListEnvelope,
     PartnerProductResponse,
     PartnerRegistrationDTO,
     PartnerResponse,
+    PartnerStoreCreateDTO,
+    PartnerStoreEnvelope,
+    PartnerStoreListEnvelope,
+    PartnerStoreResponse,
+    PartnerStoreUpdateDTO,
     PartnerUpdateDTO,
     PaymentCreateEnvelope,
     PaymentCreateRequestDTO,
@@ -50,7 +61,9 @@ from app.schemas.subscription import (
     ProductListEnvelope,
     ProductUpdateDTO,
 )
-from app.services.vnpay_service import build_vnpay_payment_url, verify_vnpay_signature
+from app.services.notification_service import create_notification, notify_admins
+from app.services.vnpay_return_page import render_vnpay_return_page
+from app.services.vnpay_service import build_vnpay_payment_url, get_vnpay_return_url, verify_vnpay_signature
 
 
 router = APIRouter(prefix="/api/v1", tags=["Partners"])
@@ -101,17 +114,8 @@ def _active_product_count(db: Session, partner_id: int) -> int:
     )
 
 
-def _approved_active_product_count(db: Session, partner_id: int) -> int:
-    return (
-        db.query(func.count(PartnerProduct.id))
-        .filter(
-            PartnerProduct.partner_id == partner_id,
-            PartnerProduct.is_active == True,  # noqa: E712
-            PartnerProduct.moderation_status == "approved",
-        )
-        .scalar()
-        or 0
-    )
+def _is_public_product(product: PartnerProduct) -> bool:
+    return product.is_active and product.moderation_status != "rejected"
 
 
 def _partner_response(db: Session, partner: Partner) -> PartnerResponse:
@@ -121,11 +125,71 @@ def _partner_response(db: Session, partner: Partner) -> PartnerResponse:
     return data
 
 
+def _store_response(store: PartnerOutlet) -> PartnerStoreResponse:
+    return PartnerStoreResponse.model_validate(store)
+
+
+def _ensure_default_partner_store(db: Session, partner: Partner) -> PartnerOutlet:
+    store = (
+        db.query(PartnerOutlet)
+        .filter(PartnerOutlet.partner_id == partner.id)
+        .order_by(desc(PartnerOutlet.is_primary), PartnerOutlet.created_at.asc())
+        .first()
+    )
+    if store:
+        return store
+
+    store = PartnerOutlet(
+        partner_id=partner.id,
+        name=(partner.store_name or partner.company_name or "Cửa hàng chính").strip(),
+        description=partner.description,
+        address=partner.address,
+        contact_email=partner.contact_email,
+        phone=partner.phone,
+        logo_url=partner.logo_url,
+        cover_url=partner.cover_url,
+        is_active=True,
+        is_primary=True,
+    )
+    db.add(store)
+    db.flush()
+    return store
+
+
+def _get_partner_store(db: Session, partner_id: int, store_id: int | None) -> PartnerOutlet | None:
+    if store_id is None:
+        return None
+    store = (
+        db.query(PartnerOutlet)
+        .filter(PartnerOutlet.id == store_id, PartnerOutlet.partner_id == partner_id)
+        .first()
+    )
+    if not store:
+        raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
+    return store
+
+
 def _product_response(product: PartnerProduct) -> PartnerProductResponse:
     data = PartnerProductResponse.model_validate(product)
     if product.partner:
         data.partner_name = product.partner.store_name or product.partner.company_name
         data.partner_status = product.partner.status
+    if product.store:
+        data.store_name = product.store.name
+        data.partner_name = product.store.name
+    elif product.partner:
+        data.store_name = product.partner.store_name or product.partner.company_name
+    return data
+
+
+def _inquiry_response(inquiry: MarketplaceInquiry) -> MarketplaceInquiryResponse:
+    data = MarketplaceInquiryResponse.model_validate(inquiry)
+    if inquiry.partner:
+        data.partner_name = inquiry.partner.store_name or inquiry.partner.company_name
+    if inquiry.product:
+        data.product_name = inquiry.product.name
+    if inquiry.store:
+        data.store_name = inquiry.store.name
     return data
 
 
@@ -298,6 +362,27 @@ def register_partner(
         status="pending_review",
     )
     db.add(partner)
+    db.flush()
+    db.add(
+        PartnerOutlet(
+            partner_id=partner.id,
+            name=store_name,
+            description=payload.description,
+            address=address,
+            contact_email=str(payload.contact_email),
+            phone=phone,
+            is_active=True,
+            is_primary=True,
+        )
+    )
+    notify_admins(
+        db,
+        notification_type="partner_review",
+        title="Hồ sơ đại lý mới",
+        body=f"{store_name} vừa gửi hồ sơ cần duyệt.",
+        data={"partner_id": partner.id, "route": "partners"},
+        event_key_prefix=f"partner_review:{partner.id}",
+    )
     db.commit()
     db.refresh(partner)
     return PartnerEnvelope(success=True, message="Đã gửi hồ sơ đại lý để admin duyệt.", data=_partner_response(db, partner))
@@ -337,6 +422,9 @@ async def upload_partner_logo(
 ):
     partner = _get_my_partner(db, current_user.id)
     partner.logo_url = _save_upload_file(await file.read(), file.filename, f"partner_logo_{partner.id}")
+    primary_store = _ensure_default_partner_store(db, partner)
+    primary_store.logo_url = partner.logo_url
+    primary_store.updated_at = _now()
     _mark_partner_pending_if_rejected(partner)
     partner.updated_at = _now()
     db.commit()
@@ -352,6 +440,9 @@ async def upload_partner_cover(
 ):
     partner = _get_my_partner(db, current_user.id)
     partner.cover_url = _save_upload_file(await file.read(), file.filename, f"partner_cover_{partner.id}")
+    primary_store = _ensure_default_partner_store(db, partner)
+    primary_store.cover_url = partner.cover_url
+    primary_store.updated_at = _now()
     _mark_partner_pending_if_rejected(partner)
     partner.updated_at = _now()
     db.commit()
@@ -379,6 +470,128 @@ async def upload_partner_business_license(
     return PartnerEnvelope(success=True, message="Upload giấy phép kinh doanh thành công.", data=_partner_response(db, partner))
 
 
+@router.get("/partners/me/stores", response_model=PartnerStoreListEnvelope)
+def get_my_stores(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    partner = _get_my_partner(db, current_user.id)
+    _ensure_default_partner_store(db, partner)
+    stores = (
+        db.query(PartnerOutlet)
+        .filter(PartnerOutlet.partner_id == partner.id)
+        .order_by(desc(PartnerOutlet.is_primary), desc(PartnerOutlet.created_at))
+        .all()
+    )
+    db.commit()
+    return PartnerStoreListEnvelope(success=True, message="Thành công", data=[_store_response(item) for item in stores])
+
+
+@router.post("/partners/me/stores", response_model=PartnerStoreEnvelope)
+def create_my_store(
+    payload: PartnerStoreCreateDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    partner = _get_my_partner(db, current_user.id)
+    store = PartnerOutlet(
+        partner_id=partner.id,
+        name=_clean_required(payload.name, "tên cửa hàng"),
+        description=payload.description.strip() if payload.description else None,
+        address=payload.address.strip() if payload.address else None,
+        contact_email=str(payload.contact_email) if payload.contact_email else None,
+        phone=payload.phone.strip() if payload.phone else None,
+        is_active=payload.is_active,
+        is_primary=False,
+    )
+    db.add(store)
+    db.commit()
+    db.refresh(store)
+    return PartnerStoreEnvelope(success=True, message="Đã tạo cửa hàng.", data=_store_response(store))
+
+
+@router.put("/partners/me/stores/{store_id}", response_model=PartnerStoreEnvelope)
+def update_my_store(
+    store_id: int,
+    payload: PartnerStoreUpdateDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    partner = _get_my_partner(db, current_user.id)
+    store = _get_partner_store(db, partner.id, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
+
+    update_fields = payload.model_dump(exclude_unset=True)
+    if "name" in update_fields:
+        update_fields["name"] = _clean_required(update_fields["name"], "tên cửa hàng")
+    for field, value in update_fields.items():
+        if isinstance(value, str):
+            value = value.strip()
+        if field == "contact_email" and value is not None:
+            value = str(value)
+        setattr(store, field, value)
+    store.updated_at = _now()
+    db.commit()
+    db.refresh(store)
+    return PartnerStoreEnvelope(success=True, message="Đã cập nhật cửa hàng.", data=_store_response(store))
+
+
+@router.delete("/partners/me/stores/{store_id}")
+def delete_my_store(
+    store_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    partner = _get_my_partner(db, current_user.id)
+    store = _get_partner_store(db, partner.id, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
+    store_count = db.query(func.count(PartnerOutlet.id)).filter(PartnerOutlet.partner_id == partner.id).scalar() or 0
+    if store_count <= 1:
+        raise HTTPException(status_code=400, detail="Cần giữ ít nhất một cửa hàng.")
+    db.query(PartnerProduct).filter(
+        PartnerProduct.partner_id == partner.id,
+        PartnerProduct.store_id == store.id,
+    ).update({PartnerProduct.store_id: None}, synchronize_session=False)
+    db.delete(store)
+    db.commit()
+    return {"success": True, "message": "Đã xóa cửa hàng. Sản phẩm cũ đã được bỏ gắn cửa hàng."}
+
+
+@router.post("/partners/me/stores/{store_id}/logo", response_model=PartnerStoreEnvelope)
+async def upload_store_logo(
+    store_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    partner = _get_my_partner(db, current_user.id)
+    store = _get_partner_store(db, partner.id, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
+    store.logo_url = _save_upload_file(await file.read(), file.filename, f"partner_store_logo_{store.id}")
+    store.updated_at = _now()
+    db.commit()
+    db.refresh(store)
+    return PartnerStoreEnvelope(success=True, message="Upload logo cửa hàng thành công.", data=_store_response(store))
+
+
+@router.post("/partners/me/stores/{store_id}/cover", response_model=PartnerStoreEnvelope)
+async def upload_store_cover(
+    store_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    partner = _get_my_partner(db, current_user.id)
+    store = _get_partner_store(db, partner.id, store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
+    store.cover_url = _save_upload_file(await file.read(), file.filename, f"partner_store_cover_{store.id}")
+    store.updated_at = _now()
+    db.commit()
+    db.refresh(store)
+    return PartnerStoreEnvelope(success=True, message="Upload ảnh cửa hàng thành công.", data=_store_response(store))
+
+
 @router.get("/partners/me/products", response_model=ProductListEnvelope)
 def get_my_products(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     partner = _get_my_partner(db, current_user.id)
@@ -403,9 +616,11 @@ def create_my_product(
     if partner.status != "active":
         raise HTTPException(status_code=400, detail="Cửa hàng cần được admin duyệt trước khi đăng sản phẩm.")
     _ensure_can_activate_product(db, partner)
+    store = _get_partner_store(db, partner.id, payload.store_id) if payload.store_id else _ensure_default_partner_store(db, partner)
 
     product = PartnerProduct(
         partner_id=partner.id,
+        store_id=store.id if store else None,
         name=payload.name.strip(),
         description=payload.description,
         image_url=payload.image_url,
@@ -417,9 +632,18 @@ def create_my_product(
         moderation_status="pending_review",
     )
     db.add(product)
+    db.flush()
+    notify_admins(
+        db,
+        notification_type="product_review",
+        title="Sản phẩm mới cần hậu kiểm",
+        body=f"{product.name} từ {partner.store_name or partner.company_name} đang hiển thị và chờ admin kiểm tra.",
+        data={"product_id": product.id, "partner_id": partner.id, "route": "products"},
+        event_key_prefix=f"product_review:{product.id}",
+    )
     db.commit()
     db.refresh(product)
-    return ProductEnvelope(success=True, message="Đã tạo sản phẩm, chờ admin duyệt.", data=_product_response(product))
+    return ProductEnvelope(success=True, message="Đã tạo sản phẩm. Sản phẩm đang hiển thị và chờ admin kiểm tra.", data=_product_response(product))
 
 
 @router.put("/partners/me/products/{product_id}", response_model=ProductEnvelope)
@@ -442,12 +666,14 @@ def update_my_product(
     if update_fields.get("is_active") is True and not product.is_active:
         _ensure_can_activate_product(db, partner, product_id=product.id)
 
-    content_fields = {"name", "description", "image_url", "price_range", "target_diseases", "target_categories", "product_url"}
+    content_fields = {"store_id", "name", "description", "image_url", "price_range", "target_diseases", "target_categories", "product_url"}
     if content_fields.intersection(update_fields):
         product.moderation_status = "pending_review"
         product.rejection_reason = None
 
     for field, value in update_fields.items():
+        if field == "store_id" and value is not None:
+            _get_partner_store(db, partner.id, int(value))
         setattr(product, field, value)
     product.updated_at = _now()
     db.commit()
@@ -530,7 +756,7 @@ def list_public_products(
         .filter(
             Partner.status == "active",
             PartnerProduct.is_active == True,  # noqa: E712
-            PartnerProduct.moderation_status == "approved",
+            PartnerProduct.moderation_status != "rejected",
         )
         .order_by(desc(PartnerProduct.created_at))
     )
@@ -568,11 +794,122 @@ def track_product_click(
     product = db.query(PartnerProduct).filter(PartnerProduct.id == product_id).first()
     if not product or not product.partner or product.partner.status != "active":
         raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm.")
-    if not product.is_active or product.moderation_status != "approved" or _active_membership(db, product.partner_id) is None:
+    if not _is_public_product(product) or _active_membership(db, product.partner_id) is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm.")
     db.add(ProductImpression(partner_product_id=product.id, user_id=current_user.id, scan_id=None, clicked=True))
     db.commit()
     return {"success": True, "message": "Đã ghi nhận lượt bấm."}
+
+
+@router.post("/marketplace/inquiries", response_model=MarketplaceInquiryEnvelope)
+def create_marketplace_inquiry(
+    payload: MarketplaceInquiryCreateDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product: PartnerProduct | None = None
+    partner: Partner | None = None
+    store: PartnerOutlet | None = None
+
+    if payload.product_id is not None:
+        product = db.query(PartnerProduct).filter(PartnerProduct.id == payload.product_id).first()
+        if (
+            not product
+            or not product.partner
+            or product.partner.status != "active"
+            or not _is_public_product(product)
+            or _active_membership(db, product.partner_id) is None
+        ):
+            raise HTTPException(status_code=404, detail="Không tìm thấy sản phẩm.")
+        partner = product.partner
+        store = product.store
+    elif payload.partner_id is not None:
+        partner = db.query(Partner).filter(Partner.id == payload.partner_id, Partner.status == "active").first()
+        if not partner or _active_membership(db, partner.id) is None:
+            raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
+        store = _get_partner_store(db, partner.id, payload.store_id) if payload.store_id else None
+    else:
+        raise HTTPException(status_code=400, detail="Cần chọn sản phẩm hoặc cửa hàng để gửi yêu cầu.")
+
+    name = _clean_required(payload.name, "tên người liên hệ")
+    message = _clean_required(payload.message, "nội dung yêu cầu")
+    inquiry = MarketplaceInquiry(
+        user_id=current_user.id,
+        partner_id=partner.id,
+        product_id=product.id if product else None,
+        store_id=store.id if store else payload.store_id,
+        name=name,
+        phone=payload.phone.strip() if payload.phone else current_user.phone,
+        email=str(payload.email) if payload.email else current_user.email,
+        message=message,
+        status="new",
+    )
+    db.add(inquiry)
+    db.flush()
+    if partner.user_id:
+        create_notification(
+            db,
+            user_id=partner.user_id,
+            notification_type="system",
+            title="Yêu cầu tư vấn mới",
+            body=f"{name} vừa gửi yêu cầu tư vấn{f' cho {product.name}' if product else ''}.",
+            data={"inquiry_id": inquiry.id, "product_id": product.id if product else None, "partner_id": partner.id},
+            event_key=f"marketplace_inquiry:{inquiry.id}:partner:{partner.user_id}",
+        )
+    notify_admins(
+        db,
+        notification_type="system",
+        title="Yêu cầu tư vấn marketplace",
+        body=f"{name} vừa gửi yêu cầu tới {partner.store_name or partner.company_name}.",
+        data={"inquiry_id": inquiry.id, "partner_id": partner.id, "product_id": product.id if product else None},
+        event_key_prefix=f"marketplace_inquiry:{inquiry.id}",
+    )
+    db.commit()
+    db.refresh(inquiry)
+    return MarketplaceInquiryEnvelope(success=True, message="Đã gửi yêu cầu tư vấn.", data=_inquiry_response(inquiry))
+
+
+@router.get("/partners/me/inquiries", response_model=MarketplaceInquiryListEnvelope)
+def list_my_partner_inquiries(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    partner = _get_my_partner(db, current_user.id)
+    query = db.query(MarketplaceInquiry).filter(MarketplaceInquiry.partner_id == partner.id).order_by(desc(MarketplaceInquiry.created_at))
+    if status:
+        query = query.filter(MarketplaceInquiry.status == _validate_status(status, {"new", "contacted", "closed"}))
+    return MarketplaceInquiryListEnvelope(success=True, message="Thành công", data=[_inquiry_response(row) for row in query.all()])
+
+
+@router.patch("/partners/me/inquiries/{inquiry_id}/status", response_model=MarketplaceInquiryEnvelope)
+def update_my_partner_inquiry_status(
+    inquiry_id: int,
+    payload: MarketplaceInquiryStatusDTO,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    partner = _get_my_partner(db, current_user.id)
+    inquiry = db.query(MarketplaceInquiry).filter(MarketplaceInquiry.id == inquiry_id, MarketplaceInquiry.partner_id == partner.id).first()
+    if not inquiry:
+        raise HTTPException(status_code=404, detail="Không tìm thấy yêu cầu tư vấn.")
+    inquiry.status = _validate_status(payload.status, {"new", "contacted", "closed"})
+    inquiry.updated_at = _now()
+    db.commit()
+    db.refresh(inquiry)
+    return MarketplaceInquiryEnvelope(success=True, message="Đã cập nhật yêu cầu tư vấn.", data=_inquiry_response(inquiry))
+
+
+@router.get("/admin/inquiries", response_model=MarketplaceInquiryListEnvelope)
+def admin_list_marketplace_inquiries(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    query = db.query(MarketplaceInquiry).order_by(desc(MarketplaceInquiry.created_at))
+    if status:
+        query = query.filter(MarketplaceInquiry.status == _validate_status(status, {"new", "contacted", "closed"}))
+    return MarketplaceInquiryListEnvelope(success=True, message="Thành công", data=[_inquiry_response(row) for row in query.all()])
 
 
 # ──────────────────────────────────────────────
@@ -609,7 +946,7 @@ def create_vnpay_payment(
             amount_vnd=plan["price_vnd"],
             order_info=f"Thanh toan goi {plan_type} dai ly LeafScan {txn_ref}",
             client_ip=_client_ip(request),
-            return_url=f"{PUBLIC_BASE_URL}/api/v1/partner-payments/vnpay/return",
+            return_url=get_vnpay_return_url(),
         )
     except ValueError as exc:
         db.rollback()
@@ -632,9 +969,7 @@ def create_vnpay_payment(
     )
 
 
-@router.get("/partner-payments/vnpay/ipn")
-def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
-    params = dict(request.query_params)
+def confirm_partner_vnpay_payment(params: dict[str, object], db: Session) -> dict[str, str]:
     if not verify_vnpay_signature(params):
         return {"RspCode": "97", "Message": "Invalid signature"}
 
@@ -650,7 +985,7 @@ def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
     if amount_vnd != tx.amount_vnd:
         return {"RspCode": "04", "Message": "Invalid amount"}
 
-    if tx.status == "success":
+    if tx.status in {"success", "refunded"}:
         return {"RspCode": "02", "Message": "Order already confirmed"}
 
     response_code = params.get("vnp_ResponseCode")
@@ -681,22 +1016,35 @@ def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
                 source_transaction_id=tx.id,
             )
         )
+    if tx.partner and tx.partner.user_id:
+        create_notification(
+            db,
+            user_id=tx.partner.user_id,
+            notification_type="payment",
+            title="Thanh toán gói đại lý thành công" if success else "Thanh toán gói đại lý chưa thành công",
+            body=(
+                "Gói đại lý của bạn đã được kích hoạt."
+                if success
+                else "Giao dịch VNPAY chưa thành công. Bạn có thể thử thanh toán lại."
+            ),
+            data={"payment_type": "partner", "txn_ref": tx.txn_ref, "status": tx.status, "partner_id": tx.partner_id},
+            event_key=f"partner_payment:{tx.id}:{tx.status}",
+        )
 
     db.commit()
     return {"RspCode": "00", "Message": "Confirm Success"}
 
 
+@router.get("/partner-payments/vnpay/ipn")
+def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
+    return confirm_partner_vnpay_payment(dict(request.query_params), db)
+
+
 @router.get("/partner-payments/vnpay/return")
-def vnpay_return(request: Request):
+def vnpay_return(request: Request, db: Session = Depends(get_db)):
     params = dict(request.query_params)
-    txn_ref = params.get("vnp_TxnRef", "")
-    response_code = params.get("vnp_ResponseCode", "")
-    return {
-        "success": response_code == "00",
-        "message": "Đã nhận kết quả từ VNPAY. App sẽ kiểm tra trạng thái giao dịch từ server.",
-        "txn_ref": txn_ref,
-        "response_code": response_code,
-    }
+    confirm_partner_vnpay_payment(params, db)
+    return render_vnpay_return_page(params, payment_type="partner")
 
 
 @router.get("/partner-payments/status/{txn_ref}", response_model=PaymentStatusEnvelope)
@@ -748,6 +1096,22 @@ def admin_update_partner_status(
     partner.status = next_status
     partner.rejection_reason = payload.rejection_reason if partner.status == "rejected" else None
     partner.updated_at = _now()
+    if partner.user_id:
+        title = "Hồ sơ đại lý đã được duyệt" if next_status == "active" else "Hồ sơ đại lý đã bị từ chối"
+        body = (
+            f"{partner.store_name or partner.company_name} đã được hiển thị trên LeafScan."
+            if next_status == "active"
+            else (partner.rejection_reason or "Hồ sơ chưa đạt yêu cầu xét duyệt.")
+        )
+        create_notification(
+            db,
+            user_id=partner.user_id,
+            notification_type="partner_review",
+            title=title,
+            body=body,
+            data={"partner_id": partner.id, "status": next_status},
+            event_key=f"partner_status:{partner.id}:{next_status}:{int(_now().timestamp())}",
+        )
     db.commit()
     db.refresh(partner)
     return PartnerEnvelope(success=True, message="Đã cập nhật trạng thái đại lý.", data=_partner_response(db, partner))
@@ -778,6 +1142,22 @@ def admin_update_product_status(
     product.moderation_status = _validate_status(payload.status, PRODUCT_STATUSES)
     product.rejection_reason = payload.rejection_reason if product.moderation_status == "rejected" else None
     product.updated_at = _now()
+    if product.partner and product.partner.user_id:
+        title = "Sản phẩm đã được duyệt" if product.moderation_status == "approved" else "Sản phẩm đã bị từ chối"
+        body = (
+            f"{product.name} đã được hiển thị trên marketplace."
+            if product.moderation_status == "approved"
+            else (product.rejection_reason or "Sản phẩm chưa đạt yêu cầu hiển thị.")
+        )
+        create_notification(
+            db,
+            user_id=product.partner.user_id,
+            notification_type="product_review",
+            title=title,
+            body=body,
+            data={"product_id": product.id, "partner_id": product.partner_id, "status": product.moderation_status},
+            event_key=f"product_status:{product.id}:{product.moderation_status}:{int(_now().timestamp())}",
+        )
     db.commit()
     db.refresh(product)
     return ProductEnvelope(success=True, message="Đã cập nhật trạng thái sản phẩm.", data=_product_response(product))

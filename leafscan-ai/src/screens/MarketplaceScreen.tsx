@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { PartnerProduct, PartnerStore, RootStackParamList } from '../types';
 import { listMarketplacePartnersApi, listMarketplaceProductsApi, trackProductClickApi } from '../api/marketplace';
 import { useAuthStore } from '../stores/authStore';
@@ -13,6 +14,7 @@ type Route = RouteProp<RootStackParamList, 'Marketplace'> & { name?: string };
 export default function MarketplaceScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
+  const { t } = useTranslation();
   const isTabScreen = (route as unknown as { name?: string }).name === 'MarketplaceTab';
   const token = useAuthStore((state) => state.accessToken);
   const [products, setProducts] = useState<PartnerProduct[]>([]);
@@ -38,12 +40,12 @@ export default function MarketplaceScreen() {
       setProducts(nextProducts);
       setPartners(nextPartners);
     } catch (err: any) {
-      setError(err?.message || 'Không tải được marketplace.');
+      setError(err?.message || t('marketplace.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [route.params?.category, route.params?.diseaseKey]);
+  }, [route.params?.category, route.params?.diseaseKey, t]);
 
   useEffect(() => {
     loadData('').catch(() => undefined);
@@ -68,7 +70,7 @@ export default function MarketplaceScreen() {
             <Ionicons name="chevron-back" size={22} color={theme.colors.textPrimary} />
           </Pressable>
         )}
-        <Text style={styles.headerTitle}>Sản phẩm & cửa hàng</Text>
+        <Text style={styles.headerTitle}>{t('marketplace.title')}</Text>
         <View style={styles.iconButton} />
       </View>
 
@@ -78,7 +80,7 @@ export default function MarketplaceScreen() {
           value={query}
           onChangeText={setQuery}
           onSubmitEditing={() => loadData(query).catch(() => undefined)}
-          placeholder="Tìm phân bón, thuốc BVTV"
+          placeholder={t('marketplace.searchPlaceholder')}
           placeholderTextColor={theme.colors.textMuted}
           style={styles.searchInput}
           returnKeyType="search"
@@ -91,13 +93,13 @@ export default function MarketplaceScreen() {
       {loading ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.stateText}>Đang tải sản phẩm...</Text>
+          <Text style={styles.stateText}>{t('marketplace.loadingProducts')}</Text>
         </View>
       ) : error ? (
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={() => loadData(query).catch(() => undefined)} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Thử lại</Text>
+            <Text style={styles.primaryButtonText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -108,7 +110,7 @@ export default function MarketplaceScreen() {
         >
           {partners.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Đại lý đang hoạt động</Text>
+              <Text style={styles.sectionTitle}>{t('marketplace.activeDealers')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.partnerRow}>
                 {partners.map((partner) => (
                   <Pressable key={partner.id} style={styles.partnerChip} onPress={() => navigation.navigate('PartnerStore', { partnerId: partner.id })}>
@@ -127,11 +129,11 @@ export default function MarketplaceScreen() {
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sản phẩm phù hợp</Text>
+            <Text style={styles.sectionTitle}>{t('marketplace.matchingProducts')}</Text>
             {products.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Ionicons name="leaf-outline" size={30} color={theme.colors.textMuted} />
-                <Text style={styles.stateText}>Chưa có sản phẩm đang hiển thị.</Text>
+                <Text style={styles.stateText}>{t('marketplace.noProducts')}</Text>
               </View>
             ) : (
               products.map((product) => (
@@ -145,7 +147,7 @@ export default function MarketplaceScreen() {
                   )}
                   <View style={styles.productInfo}>
                     <Text numberOfLines={2} style={styles.productName}>{product.name}</Text>
-                    <Text numberOfLines={1} style={styles.partnerText}>{product.partnerName || 'Đại lý LeafScan'}</Text>
+                    <Text numberOfLines={1} style={styles.partnerText}>{product.partnerName || t('marketplace.defaultPartner')}</Text>
                     {!!product.priceRange && <Text style={styles.priceText}>{product.priceRange}</Text>}
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />

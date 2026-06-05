@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface StatsCardsProps {
@@ -66,6 +67,7 @@ export function StatsCards({
   scannedPlantsCount,
   warningCount,
 }: StatsCardsProps) {
+  const { t } = useTranslation();
   const hasAnyData = avgHealth !== null || scannedPlantsCount > 0;
   const hasHealth = avgHealth !== null;
 
@@ -77,7 +79,7 @@ export function StatsCards({
             <Ionicons name="pulse-outline" size={20} color={theme.colors.healthy} />
           </View>
           <StatValue value={avgHealth ?? 0} suffix="%" hasValue={hasHealth} />
-          <Text style={styles.statLabel}>Sức khỏe trung bình</Text>
+          <Text style={styles.statLabel}>{t('home.stats.averageHealth')}</Text>
         </View>
 
         <View style={styles.card}>
@@ -85,7 +87,7 @@ export function StatsCards({
             <Ionicons name="leaf-outline" size={20} color={theme.colors.primary} />
           </View>
           <StatValue value={scannedPlantsCount} />
-          <Text style={styles.statLabel}>Cây đã quét</Text>
+          <Text style={styles.statLabel}>{t('home.stats.scannedPlants')}</Text>
         </View>
 
         <View style={styles.card}>
@@ -95,14 +97,14 @@ export function StatsCards({
           <Text style={[styles.statValue, warningCount > 0 && styles.warningValue]}>
             {warningCount}
           </Text>
-          <Text style={styles.statLabel}>Cảnh báo</Text>
+          <Text style={styles.statLabel}>{t('history.severity.moderateTitle')}</Text>
         </View>
       </View>
 
       {!hasAnyData ? (
         <View style={styles.emptyNote}>
           <Ionicons name="information-circle-outline" size={14} color={theme.colors.textMuted} />
-          <Text style={styles.emptyText}>Chưa có dữ liệu, hãy quét lá để bắt đầu theo dõi.</Text>
+          <Text style={styles.emptyText}>{t('home.empty.noStats')}</Text>
         </View>
       ) : null}
     </View>

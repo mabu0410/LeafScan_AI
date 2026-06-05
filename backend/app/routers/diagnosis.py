@@ -20,7 +20,7 @@ from app.config import (
 )
 from app.database import get_db
 from app.dependencies.auth import get_current_user
-from app.models.domain import Disease, Plant, ScanHistory, User
+from app.models.domain import Disease, Plant, ScanFeedback, ScanHistory, User
 from app.schemas.disease import (
     DiagnosisDiseasePayload,
     DiagnosisErrorCode,
@@ -30,6 +30,7 @@ from app.schemas.disease import (
     PredictionItem,
     PredictionSummary,
 )
+from app.schemas.scan import ScanFeedbackEnvelope, ScanFeedbackRequest
 from app.services.image_validation import validate_leaf_image_dict as validate_leaf_image
 from app.services.model_service import ModelService, class_name_to_disease_key
 from app.services.plant_scope_validator import (
@@ -275,6 +276,7 @@ async def diagnose_disease(
             else "Phân tích hoàn tất, chưa có model_class_name tương ứng trong DB."
         ),
         debug=scope_debug,
+        scan_id=scan_record.id,
         scan_image_url=scan_image_url,
         uploaded_image_url=uploaded_image_url,
         prediction=prediction_payload,
@@ -287,6 +289,38 @@ async def diagnose_disease(
         top_prediction=top_disease,
         alternatives=alternatives,
     )
+
+
+@router.post("/diagnose/{scan_id}/feedback", response_model=ScanFeedbackEnvelope)
+def submit_scan_feedback(
+    scan_id: int,
+    payload: ScanFeedbackRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    allowed = {"correct", "incorrect", "unsure"}
+    feedback_value = payload.feedback.strip().lower()
+    if feedback_value not in allowed:
+        raise HTTPException(status_code=400, detail="Phản hồi phải là correct, incorrect hoặc unsure.")
+
+    scan = db.query(ScanHistory).filter(ScanHistory.id == scan_id, ScanHistory.user_id == current_user.id).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lượt quét.")
+
+    row = (
+        db.query(ScanFeedback)
+        .filter(ScanFeedback.scan_id == scan_id, ScanFeedback.user_id == current_user.id)
+        .first()
+    )
+    if row is None:
+        row = ScanFeedback(user_id=current_user.id, scan_id=scan_id, feedback=feedback_value, note=payload.note)
+        db.add(row)
+    else:
+        row.feedback = feedback_value
+        row.note = payload.note
+    db.commit()
+    db.refresh(row)
+    return ScanFeedbackEnvelope(success=True, message="Đã ghi nhận phản hồi AI.", data=row)
 
 
 def _log_validation_metrics(metrics: dict) -> None:

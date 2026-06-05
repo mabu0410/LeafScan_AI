@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface AppInfoSectionProps {
@@ -47,13 +48,15 @@ export function AppInfoSection({
   onPrivacyPolicy,
   onTermsOfUse,
 }: AppInfoSectionProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Thông tin ứng dụng</Text>
-      <Row icon="help-circle-outline" label="Trợ giúp & Phản hồi" onPress={onHelpFeedback} />
-      <Row icon="shield-checkmark-outline" label="Chính sách bảo mật" onPress={onPrivacyPolicy} />
-      <Row icon="document-text-outline" label="Điều khoản sử dụng" onPress={onTermsOfUse} />
-      <Row icon="information-circle-outline" label="Phiên bản app" value={appVersion} showChevron={false} />
+      <Text style={styles.title}>{t('profile.app_info.title')}</Text>
+      <Row icon="help-circle-outline" label={t('profile.app_info.help_feedback')} onPress={onHelpFeedback} />
+      <Row icon="shield-checkmark-outline" label={t('profile.app_info.privacy_policy')} onPress={onPrivacyPolicy} />
+      <Row icon="document-text-outline" label={t('profile.app_info.terms_of_use')} onPress={onTermsOfUse} />
+      <Row icon="information-circle-outline" label={t('profile.app_info.app_version')} value={appVersion} showChevron={false} />
     </View>
   );
 }

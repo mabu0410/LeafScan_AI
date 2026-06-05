@@ -43,6 +43,14 @@ def _normalize_user_role(raw_role: str | None) -> str:
     raise HTTPException(status_code=400, detail="Role tài khoản không hợp lệ.")
 
 
+def _ensure_user_can_login(user: User) -> None:
+    if getattr(user, "status", "active") == "suspended":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đã bị tạm khóa.",
+        )
+
+
 @router.post("/register", response_model=AuthResponse)
 def register(
     request: Request,
@@ -113,6 +121,7 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email hoặc mật khẩu không chính xác",
         )
+    _ensure_user_can_login(user)
         
     access_token = create_access_token(data={"sub": str(user.id)})
     
@@ -337,7 +346,14 @@ def delete_account(
 
 GOOGLE_CLIENT_IDS = [
     item.strip()
-    for item in os.getenv("GOOGLE_CLIENT_ID", "").split(",")
+    for item in ",".join(
+        [
+            os.getenv("GOOGLE_CLIENT_ID", ""),
+            os.getenv("EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID", ""),
+            os.getenv("EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID", ""),
+            os.getenv("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID", ""),
+        ]
+    ).split(",")
     if item.strip()
 ]
 
@@ -415,6 +431,7 @@ def google_login(
             db.commit()
             db.refresh(user)
 
+    _ensure_user_can_login(user)
     access_token = create_access_token(data={"sub": str(user.id)})
 
     return AuthResponse(

@@ -2,11 +2,13 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface CategoryItem {
   id: string;
   label: string;
+  displayLabel?: string;
 }
 
 interface CategoryChipsProps {
@@ -57,14 +59,16 @@ export function CategoryChips({
   onSelectCategory,
   error,
 }: CategoryChipsProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.group}>
-      <Text style={styles.label}>Danh mục</Text>
+      <Text style={styles.label}>{t('plant.category')}</Text>
       <View style={styles.chipsWrap}>
         {categories.map((category) => (
           <CategoryChip
             key={category.id}
-            label={category.label}
+            label={category.displayLabel || category.label}
             selected={selectedCategory === category.label}
             onPress={() => onSelectCategory(category.label)}
           />

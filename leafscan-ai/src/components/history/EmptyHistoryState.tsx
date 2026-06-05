@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface EmptyHistoryStateProps {
@@ -9,6 +10,7 @@ interface EmptyHistoryStateProps {
 }
 
 export function EmptyHistoryState({ onPressScan }: EmptyHistoryStateProps) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -21,10 +23,8 @@ export function EmptyHistoryState({ onPressScan }: EmptyHistoryStateProps) {
           <Ionicons name="leaf-outline" size={36} color={theme.colors.primary} />
         </View>
       </View>
-      <Text style={styles.title}>Bạn chưa có lần quét nào</Text>
-      <Text style={styles.description}>
-        Quét lá đầu tiên để xem kết quả chẩn đoán tại đây.
-      </Text>
+      <Text style={styles.title}>{t('history.empty.title')}</Text>
+      <Text style={styles.description}>{t('history.empty.description')}</Text>
 
       <Animated.View style={animatedStyle}>
         <Pressable
@@ -38,7 +38,7 @@ export function EmptyHistoryState({ onPressScan }: EmptyHistoryStateProps) {
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         >
           <Ionicons name="scan-outline" size={16} color={theme.colors.white} />
-          <Text style={styles.buttonText}>Quét ngay</Text>
+          <Text style={styles.buttonText}>{t('history.empty.button')}</Text>
         </Pressable>
       </Animated.View>
     </View>

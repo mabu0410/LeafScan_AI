@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface GardenHeaderProps {
@@ -51,6 +52,8 @@ export function GardenHeader({
   onPressFilter,
   onPressSort,
 }: GardenHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
@@ -70,7 +73,7 @@ export function GardenHeader({
           value={searchQuery}
           onChangeText={onChangeSearch}
           style={styles.searchInput}
-          placeholder="Tìm cây theo tên hoặc danh mục"
+          placeholder={t('garden.searchPlaceholder')}
           placeholderTextColor={theme.colors.textMuted}
         />
       </View>

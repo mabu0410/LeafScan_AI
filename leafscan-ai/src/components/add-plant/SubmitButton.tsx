@@ -13,7 +13,7 @@ interface SubmitButtonProps {
 
 export function SubmitButton({
   title,
-  loadingTitle = 'Đang thêm...',
+  loadingTitle,
   disabled = false,
   loading = false,
   onPress,
@@ -41,7 +41,7 @@ export function SubmitButton({
         style={[styles.button, isDisabled ? styles.buttonDisabled : styles.buttonEnabled]}
       >
         {loading ? <ActivityIndicator size="small" color={theme.colors.white} style={styles.loader} /> : null}
-        <Text style={styles.buttonText}>{loading ? loadingTitle : title}</Text>
+        <Text style={styles.buttonText}>{loading ? loadingTitle || title : title}</Text>
       </Pressable>
     </Animated.View>
   );

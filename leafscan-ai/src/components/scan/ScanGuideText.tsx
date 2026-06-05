@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 import { ScanState } from './types';
 
@@ -10,20 +11,21 @@ interface ScanGuideTextProps {
   bottomInset: number;
 }
 
-function buildGuideMessage(state: ScanState) {
+function buildGuideMessage(state: ScanState, t: (key: string) => string) {
   if (state === 'optimal') {
-    return 'Đã căn chỉnh tốt, chụp để phân tích';
+    return t('scan.guide.optimal');
   }
   if (state === 'processing') {
-    return 'AI đang phân tích ảnh lá cây';
+    return t('scan.guide.processing');
   }
   if (state === 'aligning') {
-    return 'Đưa lá cây vào trong khung để bắt đầu quét';
+    return t('scan.guide.aligning');
   }
-  return 'Giữ máy ổn định để kết quả chính xác hơn';
+  return t('scan.guide.default');
 }
 
 export function ScanGuideText({ state, bottomInset }: ScanGuideTextProps) {
+  const { t } = useTranslation();
   const opacity = useSharedValue(1);
 
   React.useEffect(() => {
@@ -46,7 +48,7 @@ export function ScanGuideText({ state, bottomInset }: ScanGuideTextProps) {
     <Animated.View style={[styles.wrapper, { bottom: bottomInset + 190 }, animatedStyle]} pointerEvents="none">
       <View style={styles.row}>
         <Ionicons name="leaf-outline" size={15} color="rgba(232, 255, 242, 0.92)" />
-        <Text style={styles.text}>{buildGuideMessage(state)}</Text>
+        <Text style={styles.text}>{buildGuideMessage(state, t)}</Text>
       </View>
     </Animated.View>
   );

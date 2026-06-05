@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
+import { createMarketplaceInquiryApi } from '../api/marketplace';
+import { MarketplaceInquiryModal } from '../components/MarketplaceInquiryModal';
+import { useAuthStore } from '../stores/authStore';
 import { theme } from '../theme/theme';
 
 type Route = RouteProp<RootStackParamList, 'PartnerProductDetail'>;
@@ -13,19 +17,38 @@ const PRODUCT_PLACEHOLDER = 'https://images.unsplash.com/photo-1464226184884-fa2
 export default function PartnerProductDetailScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<Route>();
+  const { t } = useTranslation();
   const { product } = route.params;
+  const token = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [sendingInquiry, setSendingInquiry] = useState(false);
 
   const openProduct = async () => {
     if (!product.productUrl) {
-      Alert.alert('Chưa có liên kết', 'Sản phẩm này chưa có link mua hoặc liên hệ.');
+      Alert.alert(t('marketplace.noProductLinkTitle'), t('marketplace.noProductLinkBody'));
       return;
     }
     const supported = await Linking.canOpenURL(product.productUrl);
     if (!supported) {
-      Alert.alert('Không thể mở liên kết', 'Thiết bị không hỗ trợ link này.');
+      Alert.alert(t('marketplace.openLinkFailedTitle'), t('marketplace.openLinkFailedBody'));
       return;
     }
     await Linking.openURL(product.productUrl);
+  };
+
+  const submitInquiry = async (input: { name: string; phone?: string; email?: string; message: string }) => {
+    if (!token) return;
+    setSendingInquiry(true);
+    try {
+      await createMarketplaceInquiryApi(token, { productId: product.id, ...input });
+      setInquiryOpen(false);
+      Alert.alert('Đã gửi yêu cầu', 'Đại lý sẽ liên hệ lại theo thông tin bạn cung cấp.');
+    } catch (error: any) {
+      Alert.alert('Không gửi được yêu cầu', error?.message || 'Vui lòng thử lại.');
+    } finally {
+      setSendingInquiry(false);
+    }
   };
 
   return (
@@ -34,26 +57,26 @@ export default function PartnerProductDetailScreen() {
         <Pressable onPress={() => navigation.goBack()} style={styles.iconButton}>
           <Ionicons name="chevron-back" size={22} color={theme.colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
+        <Text style={styles.headerTitle}>{t('marketplace.productDetail')}</Text>
         <View style={styles.iconButton} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Image source={{ uri: product.imageUrl || PRODUCT_PLACEHOLDER }} style={styles.image} />
         <Text style={styles.name}>{product.name}</Text>
-        <Text style={styles.partner}>{product.partnerName || 'Đại lý LeafScan'}</Text>
+        <Text style={styles.partner}>{product.partnerName || t('marketplace.defaultPartner')}</Text>
         {!!product.priceRange && <Text style={styles.price}>{product.priceRange}</Text>}
 
         {!!product.description && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Mô tả</Text>
+            <Text style={styles.sectionTitle}>{t('marketplace.description')}</Text>
             <Text style={styles.bodyText}>{product.description}</Text>
           </View>
         )}
 
         {(product.targetDiseases.length > 0 || product.targetCategories.length > 0) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Phù hợp</Text>
+            <Text style={styles.sectionTitle}>{t('marketplace.suitableFor')}</Text>
             <View style={styles.chipWrap}>
               {[...product.targetCategories, ...product.targetDiseases].map((item) => (
                 <View key={item} style={styles.chip}>
@@ -68,13 +91,29 @@ export default function PartnerProductDetailScreen() {
       <View style={styles.footer}>
         <Pressable onPress={() => navigation.navigate('PartnerStore', { partnerId: product.partnerId })} style={styles.storeButton}>
           <Ionicons name="storefront-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.storeButtonText}>Xem cửa hàng</Text>
+          <Text style={styles.storeButtonText}>{t('marketplace.viewStore')}</Text>
         </Pressable>
-        <Pressable onPress={openProduct} style={styles.primaryButton}>
-          <Ionicons name="open-outline" size={18} color={theme.colors.white} />
-          <Text style={styles.primaryButtonText}>Liên hệ mua</Text>
+        <Pressable onPress={() => setInquiryOpen(true)} style={styles.primaryButton}>
+          <Ionicons name="chatbubbles-outline" size={18} color={theme.colors.white} />
+          <Text style={styles.primaryButtonText}>Yêu cầu tư vấn</Text>
         </Pressable>
       </View>
+      {!!product.productUrl && (
+        <Pressable onPress={openProduct} style={styles.floatingLink}>
+          <Ionicons name="open-outline" size={17} color={theme.colors.primary} />
+          <Text style={styles.floatingLinkText}>{t('marketplace.buyContact')}</Text>
+        </Pressable>
+      )}
+      <MarketplaceInquiryModal
+        visible={inquiryOpen}
+        title={product.name}
+        defaultName={user?.name}
+        defaultPhone={user?.phone}
+        defaultEmail={user?.email}
+        loading={sendingInquiry}
+        onClose={() => setInquiryOpen(false)}
+        onSubmit={submitInquiry}
+      />
     </View>
   );
 }
@@ -121,4 +160,6 @@ const styles = StyleSheet.create({
   storeButtonText: { color: theme.colors.primary, fontWeight: '900' },
   primaryButton: { flex: 1, height: 48, borderRadius: 10, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   primaryButtonText: { color: theme.colors.white, fontWeight: '900' },
+  floatingLink: { position: 'absolute', right: 16, bottom: 92, minHeight: 40, borderRadius: 999, paddingHorizontal: 14, backgroundColor: theme.colors.bgCard, borderWidth: 1, borderColor: theme.colors.primary, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  floatingLinkText: { color: theme.colors.primary, fontSize: 13, fontWeight: '900' },
 });

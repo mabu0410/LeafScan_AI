@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { PartnerProduct, PartnerStore, RootStackParamList } from '../types';
 import {
   adminListPartnersApi,
@@ -15,7 +16,10 @@ import { theme } from '../theme/theme';
 
 export default function AdminModerationScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { t } = useTranslation();
   const token = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const [partners, setPartners] = useState<PartnerStore[]>([]);
   const [products, setProducts] = useState<PartnerProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,11 +38,11 @@ export default function AdminModerationScreen() {
       setPartners(nextPartners);
       setProducts(nextProducts);
     } catch (err: any) {
-      setError(err?.message || 'Không tải được dữ liệu duyệt.');
+      setError(err?.message || t('adminModeration.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     loadData().catch(() => undefined);
@@ -48,10 +52,10 @@ export default function AdminModerationScreen() {
     if (!token) return;
     setSaving(true);
     try {
-      await adminUpdatePartnerStatusApi(token, partner.id, status, status === 'rejected' ? 'Hồ sơ chưa đạt yêu cầu.' : undefined);
+      await adminUpdatePartnerStatusApi(token, partner.id, status, status === 'rejected' ? t('adminModeration.partnerRejectReason') : undefined);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Lỗi', err?.message || 'Không cập nhật được đại lý.');
+      Alert.alert(t('common.error'), err?.message || t('adminModeration.partnerUpdateFailed'));
     } finally {
       setSaving(false);
     }
@@ -61,10 +65,10 @@ export default function AdminModerationScreen() {
     if (!token) return;
     setSaving(true);
     try {
-      await adminUpdateProductStatusApi(token, product.id, status, status === 'rejected' ? 'Sản phẩm chưa đạt yêu cầu hiển thị.' : undefined);
+      await adminUpdateProductStatusApi(token, product.id, status, status === 'rejected' ? t('adminModeration.productRejectReason') : undefined);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Lỗi', err?.message || 'Không cập nhật được sản phẩm.');
+      Alert.alert(t('common.error'), err?.message || t('adminModeration.productUpdateFailed'));
     } finally {
       setSaving(false);
     }
@@ -73,10 +77,13 @@ export default function AdminModerationScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.iconButton}>
-          <Ionicons name="chevron-back" size={22} color={theme.colors.textPrimary} />
+        <Pressable onPress={() => (navigation.canGoBack() ? navigation.goBack() : logout())} style={styles.iconButton}>
+          <Ionicons name={navigation.canGoBack() ? 'chevron-back' : 'log-out-outline'} size={22} color={theme.colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Duyệt nội dung</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{t('adminModeration.title')}</Text>
+          <Text numberOfLines={1} style={styles.headerSubtitle}>{user?.email || 'Admin'}</Text>
+        </View>
         <Pressable onPress={() => loadData().catch(() => undefined)} style={styles.iconButton}>
           <Ionicons name="refresh-outline" size={20} color={theme.colors.textPrimary} />
         </Pressable>
@@ -85,7 +92,7 @@ export default function AdminModerationScreen() {
       {loading ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.stateText}>Đang tải danh sách chờ duyệt...</Text>
+          <Text style={styles.stateText}>{t('adminModeration.loading')}</Text>
         </View>
       ) : error ? (
         <View style={styles.centerState}>
@@ -93,55 +100,69 @@ export default function AdminModerationScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionTitle}>Đại lý chờ duyệt</Text>
+          <Text style={styles.sectionTitle}>{t('adminModeration.pendingPartners')}</Text>
+          <View style={styles.summaryRow}>
+            <SummaryPill icon="business-outline" label={t('adminModeration.partner')} value={partners.length} />
+            <SummaryPill icon="cube-outline" label={t('adminModeration.product')} value={products.length} />
+          </View>
           {partners.map((partner) => (
             <View key={partner.id} style={styles.card}>
               <Text style={styles.cardTitle}>{partner.storeName || partner.companyName}</Text>
               <Text style={styles.cardText}>{partner.contactEmail} · {partner.phone}</Text>
               {!!partner.address && <Text style={styles.cardText}>{partner.address}</Text>}
               <View style={styles.infoGrid}>
-                <InfoLine label="Người đại diện" value={partner.representativeName || 'Chưa nhập'} />
-                <InfoLine label="Vai trò" value={partner.representativeRole || 'Chưa nhập'} />
-                <InfoLine label="Khu vực phục vụ" value={partner.serviceArea || 'Chưa nhập'} />
-                <InfoLine label="Sản phẩm chính" value={partner.mainProducts || 'Chưa nhập'} />
-                <InfoLine label="Mã số thuế/GPKD" value={partner.businessLicense || 'Chưa nhập'} />
+                <InfoLine label={t('adminModeration.representative')} value={partner.representativeName || t('adminModeration.missingValue')} />
+                <InfoLine label={t('adminModeration.role')} value={partner.representativeRole || t('adminModeration.missingValue')} />
+                <InfoLine label={t('adminModeration.serviceArea')} value={partner.serviceArea || t('adminModeration.missingValue')} />
+                <InfoLine label={t('adminModeration.mainProducts')} value={partner.mainProducts || t('adminModeration.missingValue')} />
+                <InfoLine label={t('adminModeration.businessLicense')} value={partner.businessLicense || t('adminModeration.missingValue')} />
               </View>
               <View style={styles.documentBadges}>
-                <StatusBadge ok={Boolean(partner.businessLicenseFileUrl)} label={partner.businessLicenseFileUrl ? 'Có file giấy phép' : 'Thiếu file giấy phép'} />
-                <StatusBadge ok={Boolean(partner.coverUrl)} label={partner.coverUrl ? 'Có ảnh cửa hàng' : 'Thiếu ảnh cửa hàng'} />
-                <StatusBadge ok={Boolean(partner.advertisingCommitmentAccepted)} label={partner.advertisingCommitmentAccepted ? 'Đã cam kết' : 'Chưa cam kết'} />
+                <StatusBadge ok={Boolean(partner.businessLicenseFileUrl)} label={partner.businessLicenseFileUrl ? t('adminModeration.hasLicenseFile') : t('adminModeration.missingLicenseFile')} />
+                <StatusBadge ok={Boolean(partner.coverUrl)} label={partner.coverUrl ? t('adminModeration.hasStorePhoto') : t('adminModeration.missingStorePhoto')} />
+                <StatusBadge ok={Boolean(partner.advertisingCommitmentAccepted)} label={partner.advertisingCommitmentAccepted ? t('adminModeration.committed') : t('adminModeration.notCommitted')} />
               </View>
               <View style={styles.actionRow}>
                 <Pressable disabled={saving} onPress={() => approvePartner(partner, 'active')} style={styles.approveButton}>
-                  <Text style={styles.approveText}>Duyệt</Text>
+                  <Text style={styles.approveText}>{t('adminModeration.approve')}</Text>
                 </Pressable>
                 <Pressable disabled={saving} onPress={() => approvePartner(partner, 'rejected')} style={styles.rejectButton}>
-                  <Text style={styles.rejectText}>Từ chối</Text>
+                  <Text style={styles.rejectText}>{t('adminModeration.reject')}</Text>
                 </Pressable>
               </View>
             </View>
           ))}
-          {partners.length === 0 && <Text style={styles.stateText}>Không có đại lý chờ duyệt.</Text>}
+          {partners.length === 0 && <Text style={styles.stateText}>{t('adminModeration.noPendingPartners')}</Text>}
 
-          <Text style={[styles.sectionTitle, styles.secondSection]}>Sản phẩm chờ duyệt</Text>
+          <Text style={[styles.sectionTitle, styles.secondSection]}>{t('adminModeration.pendingProducts')}</Text>
           {products.map((product) => (
             <View key={product.id} style={styles.card}>
               <Text style={styles.cardTitle}>{product.name}</Text>
-              <Text style={styles.cardText}>{product.partnerName || 'Đại lý'} · {product.priceRange || 'Chưa nhập giá'}</Text>
+              <Text style={styles.cardText}>{product.partnerName || t('adminModeration.defaultPartner')} · {product.priceRange || t('adminModeration.missingPrice')}</Text>
               {!!product.description && <Text numberOfLines={2} style={styles.cardText}>{product.description}</Text>}
               <View style={styles.actionRow}>
                 <Pressable disabled={saving} onPress={() => approveProduct(product, 'approved')} style={styles.approveButton}>
-                  <Text style={styles.approveText}>Duyệt</Text>
+                  <Text style={styles.approveText}>{t('adminModeration.approve')}</Text>
                 </Pressable>
                 <Pressable disabled={saving} onPress={() => approveProduct(product, 'rejected')} style={styles.rejectButton}>
-                  <Text style={styles.rejectText}>Từ chối</Text>
+                  <Text style={styles.rejectText}>{t('adminModeration.reject')}</Text>
                 </Pressable>
               </View>
             </View>
           ))}
-          {products.length === 0 && <Text style={styles.stateText}>Không có sản phẩm chờ duyệt.</Text>}
+          {products.length === 0 && <Text style={styles.stateText}>{t('adminModeration.noPendingProducts')}</Text>}
         </ScrollView>
       )}
+    </View>
+  );
+}
+
+function SummaryPill({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: number }) {
+  return (
+    <View style={styles.summaryPill}>
+      <Ionicons name={icon} size={17} color={theme.colors.primary} />
+      <Text style={styles.summaryText}>{label}</Text>
+      <Text style={styles.summaryValue}>{value}</Text>
     </View>
   );
 }
@@ -177,9 +198,15 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   iconButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bgCard },
+  headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 12 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: theme.colors.textPrimary },
+  headerSubtitle: { fontSize: 11, color: theme.colors.textMuted, marginTop: 2, maxWidth: '100%' },
   content: { padding: 18, paddingBottom: 42 },
   sectionTitle: { fontSize: 18, fontWeight: '900', color: theme.colors.textPrimary, marginBottom: 12 },
+  summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  summaryPill: { flex: 1, minHeight: 44, borderRadius: 8, backgroundColor: theme.colors.bgCard, borderWidth: 1, borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 7 },
+  summaryText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '800', flex: 1 },
+  summaryValue: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: '900' },
   secondSection: { marginTop: 22 },
   card: { padding: 14, borderRadius: 8, backgroundColor: theme.colors.bgCard, borderWidth: 1, borderColor: theme.colors.border, marginBottom: 10 },
   cardTitle: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: '900', marginBottom: 5 },

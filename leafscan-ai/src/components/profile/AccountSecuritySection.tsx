@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface AccountSecuritySectionProps {
@@ -43,17 +44,19 @@ export function AccountSecuritySection({
   onToggleGoogleLink,
   onDeleteAccount,
 }: AccountSecuritySectionProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tài khoản & Bảo mật</Text>
-      <Row icon="key-outline" label="Đổi mật khẩu" onPress={onChangePassword} />
+      <Text style={styles.title}>{t('profile.account_security.title')}</Text>
+      <Row icon="key-outline" label={t('profile.account_security.change_password')} onPress={onChangePassword} />
       <Row
         icon="logo-google"
-        label="Liên kết Google"
-        value={isGoogleLinked ? 'Đã liên kết' : 'Chưa liên kết'}
+        label={t('profile.account_security.link_google')}
+        value={isGoogleLinked ? t('profile.account_security.linked') : t('profile.account_security.not_linked')}
         onPress={onToggleGoogleLink}
       />
-      <Row icon="alert-circle-outline" label="Xóa tài khoản" onPress={onDeleteAccount} danger />
+      <Row icon="alert-circle-outline" label={t('profile.account_security.delete_account')} onPress={onDeleteAccount} danger />
     </View>
   );
 }

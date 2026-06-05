@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Plant } from '../../types';
 import { theme } from '../../theme/theme';
 
@@ -11,19 +12,20 @@ interface MyPlantsSectionProps {
   onPressManage: () => void;
 }
 
-const STATUS_MAP: Record<Plant['status'], { label: string; color: string; bg: string }> = {
-  healthy: { label: 'Ổn định', color: theme.colors.healthy, bg: theme.colors.healthyBg },
-  warning: { label: 'Cần chú ý', color: theme.colors.moderate, bg: theme.colors.moderateBg },
-  critical: { label: 'Nguy cơ cao', color: theme.colors.severe, bg: theme.colors.severeBg },
+const STATUS_STYLE: Record<Plant['status'], { color: string; bg: string; labelKey: string }> = {
+  healthy: { labelKey: 'profile.myPlantsSection.healthy', color: theme.colors.healthy, bg: theme.colors.healthyBg },
+  warning: { labelKey: 'profile.myPlantsSection.warning', color: theme.colors.moderate, bg: theme.colors.moderateBg },
+  critical: { labelKey: 'profile.myPlantsSection.critical', color: theme.colors.severe, bg: theme.colors.severeBg },
 };
 
 function PlantRow({ plant, onPress }: { plant: Plant; onPress: () => void }) {
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const status = STATUS_MAP[plant.status];
+  const status = STATUS_STYLE[plant.status];
 
   return (
     <Animated.View style={animatedStyle}>
@@ -52,16 +54,16 @@ function PlantRow({ plant, onPress }: { plant: Plant; onPress: () => void }) {
             {plant.name}
           </Text>
           <Text style={styles.meta} numberOfLines={1}>
-            Lần quét gần nhất: {plant.lastScanned}
+            {t('profile.myPlantsSection.latestScan', { value: plant.lastScanned })}
           </Text>
           <View style={[styles.statusChip, { backgroundColor: status.bg }]}>
-            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+            <Text style={[styles.statusText, { color: status.color }]}>{t(status.labelKey)}</Text>
           </View>
         </View>
 
         <View style={styles.right}>
           <Text style={styles.scanCount}>{plant.totalScans}</Text>
-          <Text style={styles.scanLabel}>lần quét</Text>
+          <Text style={styles.scanLabel}>{t('profile.myPlantsSection.scanLabel')}</Text>
         </View>
       </Pressable>
     </Animated.View>
@@ -69,21 +71,22 @@ function PlantRow({ plant, onPress }: { plant: Plant; onPress: () => void }) {
 }
 
 export function MyPlantsSection({ plants, onPressPlant, onPressManage }: MyPlantsSectionProps) {
+  const { t } = useTranslation();
   const previewPlants = plants.slice(0, 4);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Cây của tôi</Text>
+        <Text style={styles.title}>{t('profile.myPlantsSection.title')}</Text>
         <Pressable onPress={onPressManage}>
-          <Text style={styles.manageText}>Quản lý vườn</Text>
+          <Text style={styles.manageText}>{t('profile.myPlantsSection.manage')}</Text>
         </Pressable>
       </View>
 
       {previewPlants.length === 0 ? (
         <View style={styles.emptyCard}>
           <Ionicons name="leaf-outline" size={20} color={theme.colors.primaryLight} />
-          <Text style={styles.emptyText}>Bạn chưa thêm cây nào để theo dõi.</Text>
+          <Text style={styles.emptyText}>{t('profile.myPlantsSection.empty')}</Text>
         </View>
       ) : (
         <View style={styles.list}>

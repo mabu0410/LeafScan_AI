@@ -26,11 +26,13 @@ function inferApiBaseUrl(): string {
 }
 
 const configuredApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const configuredApiDomain = process.env.EXPO_PUBLIC_API_DOMAIN?.trim();
+const configuredApiUrl = configuredApiDomain || configuredApiBaseUrl;
 const shouldInferApiBaseUrl =
-  !configuredApiBaseUrl || AUTO_VALUES.has(configuredApiBaseUrl.toLowerCase());
+  !configuredApiUrl || AUTO_VALUES.has(configuredApiUrl.toLowerCase());
 
 export const API_BASE_URL = normalizeApiBaseUrl(
-  shouldInferApiBaseUrl ? inferApiBaseUrl() : configuredApiBaseUrl
+  shouldInferApiBaseUrl ? inferApiBaseUrl() : configuredApiUrl
 );
 export const API_V1_URL = `${API_BASE_URL}/api/v1`;
 

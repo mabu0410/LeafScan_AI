@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { useGoogleAuth } from '../api/google-auth';
 import { useAuthStore } from '../stores/authStore';
@@ -27,6 +28,7 @@ type Props = {
 
 export default function LoginScreen({ navigation }: Props) {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -48,7 +50,7 @@ export default function LoginScreen({ navigation }: Props) {
             setGoogleLoading(true);
             loginWithGoogle(googleResponse.authentication.idToken)
                 .catch((error: any) => {
-                    Alert.alert('Đăng nhập Google thất bại', error?.message || 'Vui lòng thử lại.');
+                    Alert.alert(t('auth.googleLoginFailed'), error?.message || t('common.tryAgain'));
                 })
                 .finally(() => setGoogleLoading(false));
             return;
@@ -59,7 +61,7 @@ export default function LoginScreen({ navigation }: Props) {
 
     const handleLogin = async () => {
         if (!email.trim() || !password) {
-            Alert.alert('Thiếu thông tin', 'Vui lòng nhập email và mật khẩu.');
+            Alert.alert(t('auth.missingInfo'), t('auth.loginMissingInfo'));
             return;
         }
 
@@ -67,7 +69,7 @@ export default function LoginScreen({ navigation }: Props) {
         try {
             await login({ email: email.trim(), password });
         } catch (error: any) {
-            Alert.alert('Đăng nhập thất bại', error?.message || 'Vui lòng kiểm tra lại thông tin đăng nhập.');
+            Alert.alert(t('auth.login_failed'), error?.message || t('common.tryAgain'));
         } finally {
             setLoading(false);
         }
@@ -76,14 +78,14 @@ export default function LoginScreen({ navigation }: Props) {
     const handleGoogleLogin = async () => {
         if (!isGoogleAuthConfigured) {
             Alert.alert(
-                'Chưa cấu hình Google OAuth',
-                'Thiếu Google client ID. Vui lòng cấu hình EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID trong leafscan-ai/.env.'
+                t('auth.googleNotConfigured'),
+                t('auth.googleMissingClient')
             );
             return;
         }
 
         if (!googleRequest) {
-            Alert.alert('Vui lòng thử lại', 'Google OAuth chưa sẵn sàng.');
+            Alert.alert(t('common.retry'), t('auth.googleNotReady'));
             return;
         }
 
@@ -95,7 +97,7 @@ export default function LoginScreen({ navigation }: Props) {
     };
 
     const handleAppleLogin = () => {
-        Alert.alert('Chưa hỗ trợ', 'Ứng dụng hiện chưa cấu hình đăng nhập Apple.');
+        Alert.alert(t('common.notSupported'), t('auth.appleLoginUnsupported'));
     };
 
     return (
@@ -122,13 +124,13 @@ export default function LoginScreen({ navigation }: Props) {
                         </View>
 
                         <Text style={styles.brand}>Leaf AI</Text>
-                        <Text style={styles.subtitle}>Đăng nhập để quản lý và theo dõi mùa màng</Text>
+                        <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
 
                         <View style={styles.form}>
                             <InputField
-                                label="Email hoặc Số điện thoại"
+                                label={t('auth.emailOrPhone')}
                                 icon="person-outline"
-                                placeholder="Nhập email hoặc số điện thoại"
+                                placeholder={t('auth.emailOrPhonePlaceholder')}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 value={email}
@@ -136,9 +138,9 @@ export default function LoginScreen({ navigation }: Props) {
                             />
 
                             <InputField
-                                label="Mật khẩu"
+                                label={t('auth.password')}
                                 icon="lock-closed-outline"
-                                placeholder="Nhập mật khẩu"
+                                placeholder={t('auth.passwordPlaceholder')}
                                 secureTextEntry={!showPassword}
                                 value={password}
                                 onChangeText={setPassword}
@@ -151,17 +153,17 @@ export default function LoginScreen({ navigation }: Props) {
                                 onPress={() => navigation.navigate('ForgotPassword')}
                                 style={styles.forgotButton}
                             >
-                                <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+                                <Text style={styles.forgotText}>{t('auth.forgotPasswordQuestion')}</Text>
                             </TouchableOpacity>
 
                             <PrimaryButton
-                                label="Đăng nhập"
+                                label={t('auth.login')}
                                 loading={loading}
                                 onPress={handleLogin}
                             />
                         </View>
 
-                        <Divider label="Hoặc đăng nhập bằng" />
+                        <Divider label={t('auth.socialLoginDivider')} />
 
                         <View style={styles.socialStack}>
                             <SocialButton
@@ -180,9 +182,9 @@ export default function LoginScreen({ navigation }: Props) {
                         </View>
 
                         <View style={styles.footerRow}>
-                            <Text style={styles.footerText}>Chưa có tài khoản?</Text>
+                            <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
                             <TouchableOpacity activeOpacity={0.72} onPress={() => navigation.navigate('Register')}>
-                                <Text style={styles.footerLink}>Đăng ký ngay</Text>
+                                <Text style={styles.footerLink}>{t('auth.registerNow')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

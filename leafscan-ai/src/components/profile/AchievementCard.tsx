@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../theme/theme';
 
 interface LevelInfo {
@@ -24,6 +25,7 @@ interface AchievementCardProps {
 }
 
 export function AchievementCard({ level, badges }: AchievementCardProps) {
+  const { t } = useTranslation();
   const progress = useSharedValue(0);
   const progressPercent = level.target > 0 ? Math.min(level.current / level.target, 1) : 0;
 
@@ -44,7 +46,11 @@ export function AchievementCard({ level, badges }: AchievementCardProps) {
         <View style={styles.textWrap}>
           <Text style={styles.levelTitle}>{level.title}</Text>
           <Text style={styles.levelSubtitle}>
-            {level.current}/{level.target} lần quét để lên {level.nextTitle}
+            {t('profile.levelProgress', {
+              current: level.current,
+              target: level.target,
+              nextTitle: level.nextTitle,
+            })}
           </Text>
         </View>
       </View>

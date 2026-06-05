@@ -67,7 +67,7 @@ def build_vnpay_payment_url(
         raise ValueError("Thiếu cấu hình VNPAY_TMN_CODE hoặc VNPAY_HASH_SECRET.")
 
     now = datetime.now(VN_TZ)
-    resolved_return_url = return_url or VNPAY_RETURN_URL or f"{PUBLIC_BASE_URL}/api/v1/partner-payments/vnpay/return"
+    resolved_return_url = return_url or get_vnpay_return_url()
     params: dict[str, object] = {
         "vnp_Version": "2.1.0",
         "vnp_Command": "pay",
@@ -85,6 +85,10 @@ def build_vnpay_payment_url(
     }
     params["vnp_SecureHash"] = _sign_data(params, resolved_secret)
     return f"{payment_url or VNPAY_PAYMENT_URL}?{urlencode(sorted(params.items()))}"
+
+
+def get_vnpay_return_url() -> str:
+    return VNPAY_RETURN_URL or f"{PUBLIC_BASE_URL}/api/v1/vnpay/return"
 
 
 def get_vnpay_ipn_url() -> str:

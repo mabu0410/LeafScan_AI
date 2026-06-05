@@ -42,6 +42,10 @@ def _parse_csv(raw_value: str | None) -> list[str]:
         return []
     return [item.strip() for item in raw_value.split(",") if item.strip()]
 
+
+def _normalize_base_url(value: str) -> str:
+    return value.strip().rstrip("/")
+
 # ──────────────────────────────────────────────
 # AI Model Configuration
 # ──────────────────────────────────────────────
@@ -68,7 +72,12 @@ MODEL_PATH: str = _env_or_default("MODEL_PATH", _DEFAULT_MODEL_PATH)
 
 # Cho phép React Native (Expo) kết nối tới Backend
 CORS_ORIGINS: list[str] = _parse_cors_origins(os.getenv("CORS_ORIGINS"))
-PUBLIC_BASE_URL: str = _env_or_default("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
+# PUBLIC_DOMAIN là biến trung tâm cho local/ngrok/cloud. Nếu set biến này,
+# các URL public như VNPAY callback sẽ đi theo domain đó.
+PUBLIC_DOMAIN: str = _normalize_base_url(
+    os.getenv("PUBLIC_DOMAIN") or os.getenv("PUBLIC_BASE_URL") or "http://localhost:8000"
+)
+PUBLIC_BASE_URL: str = PUBLIC_DOMAIN
 ADMIN_EMAILS: list[str] = [email.lower() for email in _parse_csv(os.getenv("ADMIN_EMAILS"))]
 
 # ──────────────────────────────────────────────
@@ -128,6 +137,8 @@ VNPAY_PAYMENT_URL: str = _env_or_default(
 )
 VNPAY_RETURN_URL: str = os.getenv("VNPAY_RETURN_URL", "").strip()
 VNPAY_IPN_URL: str = os.getenv("VNPAY_IPN_URL", "").strip()
+VNPAY_FEE_PERCENT: float = float(os.getenv("VNPAY_FEE_PERCENT", "0"))
+VNPAY_FEE_FIXED_VND: int = int(os.getenv("VNPAY_FEE_FIXED_VND", "0"))
 
 # ──────────────────────────────────────────────
 # Push Notifications

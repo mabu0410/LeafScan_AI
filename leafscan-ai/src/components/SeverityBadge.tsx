@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../theme/theme';
 
 interface SeverityBadgeProps {
@@ -9,24 +10,25 @@ interface SeverityBadgeProps {
 }
 
 export function SeverityBadge({ severity, size = 'md' }: SeverityBadgeProps) {
+  const { t } = useTranslation();
   const config = {
     healthy: {
       bg: theme.colors.healthyBg,
       text: theme.colors.healthy,
       icon: 'checkmark-circle' as const,
-      label: 'Lành mạnh',
+      label: t('history.severity.healthyTitle'),
     },
     moderate: {
       bg: theme.colors.moderateBg,
       text: theme.colors.moderate,
       icon: 'warning' as const,
-      label: 'Cảnh báo',
+      label: t('history.severity.moderateTitle'),
     },
     severe: {
       bg: theme.colors.severeBg,
       text: theme.colors.severe,
       icon: 'close-circle' as const,
-      label: 'Nguy hiểm',
+      label: t('history.severity.severeTitle'),
     },
   };
 

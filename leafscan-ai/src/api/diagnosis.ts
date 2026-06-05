@@ -34,6 +34,8 @@ export interface DiagnoseInput {
   selectedPlantKey?: string;
 }
 
+export type ScanFeedbackValue = 'correct' | 'incorrect' | 'unsure';
+
 export async function diagnoseApi(input: DiagnoseInput): Promise<Disease> {
   const form = new FormData();
   const filename = input.imageUri.split('/').pop() || `leaf_${Date.now()}.jpg`;
@@ -116,8 +118,23 @@ export async function diagnoseApi(input: DiagnoseInput): Promise<Disease> {
   return {
     success: true,
     ...mapped,
+    scanId: response?.scan_id == null ? undefined : String(response.scan_id),
     imageUri: input.imageUri,
     uploadedImageUrl,
     referenceImage,
   };
+}
+
+export async function submitScanFeedbackApi(
+  token: string,
+  scanId: string,
+  feedback: ScanFeedbackValue,
+  note?: string
+): Promise<void> {
+  const response = await requestJson<any>(`/diagnose/${scanId}/feedback`, {
+    method: 'POST',
+    token,
+    body: { feedback, note },
+  });
+  if (!response.success) throw new Error(response.message || 'Không gửi được phản hồi AI.');
 }

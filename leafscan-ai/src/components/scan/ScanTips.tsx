@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { ScanState } from './types';
 
 interface ScanTipsProps {
@@ -11,13 +12,13 @@ interface ScanTipsProps {
 type TipItem = {
   id: 'stable' | 'light' | 'fill';
   icon: React.ComponentProps<typeof Ionicons>['name'];
-  text: string;
+  textKey: string;
 };
 
 const TIPS: TipItem[] = [
-  { id: 'stable', icon: 'hand-left-outline', text: 'Giữ máy ổn định' },
-  { id: 'light', icon: 'sunny-outline', text: 'Chụp đủ ánh sáng' },
-  { id: 'fill', icon: 'expand-outline', text: 'Lá chiếm phần lớn khung' },
+  { id: 'stable', icon: 'hand-left-outline', textKey: 'scan.tips.stable' },
+  { id: 'light', icon: 'sunny-outline', textKey: 'scan.tips.light' },
+  { id: 'fill', icon: 'expand-outline', textKey: 'scan.tips.fill' },
 ];
 
 function highlightedTip(state: ScanState): TipItem['id'] | null {
@@ -28,6 +29,7 @@ function highlightedTip(state: ScanState): TipItem['id'] | null {
 }
 
 export function ScanTips({ state, bottomInset }: ScanTipsProps) {
+  const { t } = useTranslation();
   const { height } = useWindowDimensions();
   const compact = height < 700;
   const activeId = highlightedTip(state);
@@ -43,7 +45,7 @@ export function ScanTips({ state, bottomInset }: ScanTipsProps) {
               size={13}
               color={active ? 'rgba(224, 255, 237, 0.98)' : 'rgba(209, 235, 220, 0.9)'}
             />
-            <Text style={[styles.tipText, active && styles.tipTextActive]}>{tip.text}</Text>
+            <Text style={[styles.tipText, active && styles.tipTextActive]}>{t(tip.textKey)}</Text>
           </View>
         );
       })}

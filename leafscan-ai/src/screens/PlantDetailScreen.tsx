@@ -3,6 +3,7 @@ import { View, Text, Image, ScrollView, TouchableOpacity, Alert, StyleSheet } fr
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
 import { usePlantsStore } from '../stores/plantsStore';
 import { HealthRing } from '../components/HealthRing';
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function PlantDetailScreen({ navigation, route }: Props) {
+    const { t } = useTranslation();
     const { plantId } = route.params;
     const plants = usePlantsStore(state => state.plants);
     const deletePlant = usePlantsStore(state => state.deletePlant);
@@ -31,26 +33,26 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
     if (!plant) {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ color: theme.colors.textSecondary }}>Không tìm thấy cây</Text>
+                <Text style={{ color: theme.colors.textSecondary }}>{t('plant.notFound')}</Text>
             </View>
         );
     }
 
     const handleDelete = () => {
         Alert.alert(
-            'Xóa cây',
-            `Bạn có chắc muốn xóa ${plant.name}?`,
+            t('plant.deleteTitle'),
+            t('plant.deleteConfirm', { name: plant.name }),
             [
-                { text: 'Hủy', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                    text: 'Xóa',
+                    text: t('common.delete'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await deletePlant(plantId);
                             navigation.goBack();
                         } catch (error: any) {
-                            Alert.alert('Không thể xóa cây', error?.message || 'Vui lòng thử lại.');
+                            Alert.alert(t('plant.deleteFailedTitle'), error?.message || t('common.tryAgain'));
                         }
                     },
                 },
@@ -65,7 +67,7 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Chi tiết cây</Text>
+                <Text style={styles.headerTitle}>{t('plant.detailTitle')}</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('EditPlant', { plantId })} style={styles.backButton}>
                     <Ionicons name="create-outline" size={22} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
@@ -92,17 +94,17 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
                     <View style={styles.statCard}>
                         <Ionicons name="calendar-outline" size={20} color={theme.colors.primary} />
                         <Text style={styles.statValue}>{plant.daysTracked}</Text>
-                        <Text style={styles.statLabel}>Ngày theo dõi</Text>
+                        <Text style={styles.statLabel}>{t('plant.daysTracked')}</Text>
                     </View>
                     <View style={styles.statCard}>
                         <Ionicons name="scan-outline" size={20} color={theme.colors.primary} />
                         <Text style={styles.statValue}>{plant.totalScans}</Text>
-                        <Text style={styles.statLabel}>Lần quét</Text>
+                        <Text style={styles.statLabel}>{t('plant.scanCount')}</Text>
                     </View>
                     <View style={styles.statCard}>
                         <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
                         <Text style={styles.statValue}>{plant.nextScan}</Text>
-                        <Text style={styles.statLabel}>Quét tiếp</Text>
+                        <Text style={styles.statLabel}>{t('plant.nextScan')}</Text>
                     </View>
                 </View>
 
@@ -110,7 +112,7 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
                 <View style={styles.detailCard}>
                     <Ionicons name="location-outline" size={20} color={theme.colors.textMuted} />
                     <View>
-                        <Text style={styles.detailLabel}>Vị trí</Text>
+                        <Text style={styles.detailLabel}>{t('plant.location')}</Text>
                         <Text style={styles.detailValue}>{plant.location}</Text>
                     </View>
                 </View>
@@ -120,7 +122,7 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
                     <View style={styles.detailCard}>
                         <Ionicons name="document-text-outline" size={20} color={theme.colors.textMuted} />
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.detailLabel}>Ghi chú</Text>
+                            <Text style={styles.detailLabel}>{t('plant.notes')}</Text>
                             <Text style={styles.detailValue}>{plant.notes}</Text>
                         </View>
                     </View>
@@ -138,11 +140,11 @@ export default function PlantDetailScreen({ navigation, route }: Props) {
                         style={styles.scanButton}
                     >
                         <Ionicons name="camera" size={20} color={theme.colors.white} />
-                        <Text style={styles.scanButtonText}>Quét ngay</Text>
+                        <Text style={styles.scanButtonText}>{t('plant.scanNow')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
                         <Ionicons name="trash-outline" size={20} color={theme.colors.severe} />
-                        <Text style={styles.deleteButtonText}>Xóa cây</Text>
+                        <Text style={styles.deleteButtonText}>{t('plant.deletePlant')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
