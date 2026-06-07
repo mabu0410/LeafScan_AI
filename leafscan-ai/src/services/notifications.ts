@@ -2,17 +2,40 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { registerPushTokenApi, unregisterPushTokenApi } from '../api/notifications';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+type NotificationsModule = typeof import('expo-notifications');
+
+let notificationsModule: NotificationsModule | null = null;
+let notificationHandlerConfigured = false;
+
+function isAndroidExpoGo(): boolean {
+  return Platform.OS === 'android' && Constants.appOwnership === 'expo';
+}
+
+function loadNotificationsModule(): NotificationsModule {
+  assertAndroidPushEnvironment(getProjectId());
+
+  if (notificationsModule === null) {
+    // Lazy-load to avoid Expo Go Android SDK 53+ remote-push warning at module import time.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    notificationsModule = require('expo-notifications') as NotificationsModule;
+  }
+
+  if (!notificationHandlerConfigured) {
+    notificationsModule.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+    notificationHandlerConfigured = true;
+  }
+
+  return notificationsModule;
+}
 
 function getProjectId(): string | undefined {
   return (
@@ -26,7 +49,7 @@ function getProjectId(): string | undefined {
 function assertAndroidPushEnvironment(projectId?: string) {
   if (Platform.OS !== 'android') return;
 
-  if (Constants.appOwnership === 'expo') {
+  if (isAndroidExpoGo()) {
     throw new Error(
       'Android push notifications không hỗ trợ trong Expo Go từ SDK 53. Hãy chạy development build hoặc production build.'
     );
@@ -39,28 +62,32 @@ function assertAndroidPushEnvironment(projectId?: string) {
   }
 }
 
-async function ensureAndroidChannel() {
+async function ensureAndroidChannel(notifications: NotificationsModule) {
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync('default', {
+  await notifications.setNotificationChannelAsync('default', {
     name: 'LeafScan reminders',
-    importance: Notifications.AndroidImportance.MAX,
+    importance: notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#5C8B5A',
   });
 }
 
 async function getExpoPushToken(requestPermission: boolean): Promise<string> {
-  await ensureAndroidChannel();
+  const projectId = getProjectId();
+  assertAndroidPushEnvironment(projectId);
 
   if (!Device.isDevice) {
     throw new Error('Push notification cần thiết bị thật hoặc development build.');
   }
 
-  const existing = await Notifications.getPermissionsAsync();
+  const notifications = loadNotificationsModule();
+  await ensureAndroidChannel(notifications);
+
+  const existing = await notifications.getPermissionsAsync();
   let finalStatus = existing.status;
 
   if (existing.status !== 'granted' && requestPermission) {
-    const requested = await Notifications.requestPermissionsAsync();
+    const requested = await notifications.requestPermissionsAsync();
     finalStatus = requested.status;
   }
 
@@ -68,12 +95,9 @@ async function getExpoPushToken(requestPermission: boolean): Promise<string> {
     throw new Error('Bạn chưa cấp quyền nhận thông báo.');
   }
 
-  const projectId = getProjectId();
-  assertAndroidPushEnvironment(projectId);
-
   const tokenResult = projectId
-    ? await Notifications.getExpoPushTokenAsync({ projectId })
-    : await Notifications.getExpoPushTokenAsync();
+    ? await notifications.getExpoPushTokenAsync({ projectId })
+    : await notifications.getExpoPushTokenAsync();
 
   return tokenResult.data;
 }

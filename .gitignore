@@ -82,6 +82,8 @@ backend/*.sqlite3
 backend/*.log
 backend/app/uploads/*
 !backend/app/uploads/.gitkeep
+!backend/app/uploads/marketplace/
+!backend/app/uploads/marketplace/*.png
 
 # ──────────────────────────────
 # Heavy model weights / personal files

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useCameraPermissions } from 'expo-camera';
@@ -12,7 +12,14 @@ import { useHistoryStore } from '../stores/historyStore';
 import { usePlantsStore } from '../stores/plantsStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { deleteAccountApi } from '../api/account';
-import { googleLinkApi, googleUnlinkApi, useGoogleAuth } from '../api/google-auth';
+import {
+    getGoogleAuthErrorMessage,
+    resolveGoogleIdToken,
+    googleLinkApi,
+    googleUnlinkApi,
+    signInWithNativeGoogle,
+    useGoogleAuth,
+} from '../api/google-auth';
 import { registerForPushNotificationsAsync, unregisterPushNotificationsAsync } from '../services/notifications';
 import { theme } from '../theme/theme';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
@@ -80,7 +87,6 @@ export default function ProfileScreen() {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const {
         request: googleRequest,
-        response: googleResponse,
         promptAsync: googlePromptAsync,
         isConfigured: isGoogleAuthConfigured,
     } = useGoogleAuth();
@@ -91,24 +97,6 @@ export default function ProfileScreen() {
         loadPlants().catch(() => undefined);
         loadHistory().catch(() => undefined);
     }, [loadHistory, loadPlants]);
-
-    // Handle Google OAuth response
-    useEffect(() => {
-        if (googleResponse?.type === 'success' && googleResponse.authentication?.idToken) {
-            const idToken = googleResponse.authentication.idToken;
-            if (accessToken) {
-                // Link mode
-                googleLinkApi(accessToken, idToken)
-                    .then(() => {
-                        setIsGoogleLinked(true);
-                        Alert.alert(t('common.success'), t('profile.alerts.googleLinked'));
-                    })
-                    .catch((err: any) => {
-                        Alert.alert(t('common.error'), err.message || t('profile.alerts.googleLinkFailed'));
-                    });
-            }
-        }
-    }, [googleResponse, accessToken, t]);
 
     const sortedScans = useMemo(
         () =>
@@ -315,6 +303,7 @@ export default function ProfileScreen() {
                 <ProfileHeader
                     name={user?.name || t('profile.defaultName')}
                     email={user?.email || 'email@example.com'}
+                    avatarUri={user?.avatar || null}
                     onEditPress={() => navigation.navigate('EditProfile')}
                 />
             </Animated.View>
@@ -386,12 +375,48 @@ export default function ProfileScreen() {
                                 );
                                 return;
                             }
+                            if (!accessToken) {
+                                Alert.alert(t('common.error'), t('profile.alerts.googleLinkFailed'));
+                                return;
+                            }
+
+                            if (Platform.OS === 'android') {
+                                try {
+                                    const idToken = await signInWithNativeGoogle();
+                                    if (!idToken) return;
+                                    await googleLinkApi(accessToken, idToken);
+                                    setIsGoogleLinked(true);
+                                    Alert.alert(t('common.success'), t('profile.alerts.googleLinked'));
+                                } catch (err: any) {
+                                    Alert.alert(t('common.error'), err.message || t('profile.alerts.googleLinkFailed'));
+                                }
+                                return;
+                            }
+
                             if (!googleRequest) {
                                 Alert.alert(t('common.retry'), t('auth.googleNotReady'));
                                 return;
                             }
-                            // Link — trigger Google sign-in
-                            googlePromptAsync();
+
+                            try {
+                                const result = await googlePromptAsync();
+                                if (result.type === 'cancel' || result.type === 'dismiss') return;
+
+                                const idToken = await resolveGoogleIdToken(result, googleRequest);
+                                if (!idToken) {
+                                    Alert.alert(
+                                        t('common.error'),
+                                        getGoogleAuthErrorMessage(result) || t('profile.alerts.googleLinkFailed')
+                                    );
+                                    return;
+                                }
+
+                                await googleLinkApi(accessToken, idToken);
+                                setIsGoogleLinked(true);
+                                Alert.alert(t('common.success'), t('profile.alerts.googleLinked'));
+                            } catch (err: any) {
+                                Alert.alert(t('common.error'), err.message || t('profile.alerts.googleLinkFailed'));
+                            }
                         }
                     }}
                     onDeleteAccount={() => setDeleteModalVisible(true)}

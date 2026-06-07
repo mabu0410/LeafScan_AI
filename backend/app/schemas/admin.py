@@ -217,6 +217,19 @@ class AdminPartnerRevenueItem(BaseModel):
     last_paid_at: datetime | None = None
 
 
+class AdminPayerRevenueItem(BaseModel):
+    kind: str
+    owner_id: int
+    owner_name: str
+    owner_email: str | None = None
+    gross_vnd: int
+    fee_vnd: int
+    net_vnd: int
+    refunded_vnd: int
+    transaction_count: int
+    last_paid_at: datetime | None = None
+
+
 class AdminRevenueReportData(BaseModel):
     start_date: date
     end_date: date
@@ -228,6 +241,8 @@ class AdminRevenueReportData(BaseModel):
     gross_success_vnd: int
     user_success_vnd: int
     partner_success_vnd: int
+    user_success_count: int
+    partner_success_count: int
     refunded_vnd: int
     vnpay_fee_vnd: int
     net_revenue_vnd: int
@@ -237,6 +252,7 @@ class AdminRevenueReportData(BaseModel):
     failed_count: int
     series: list[AdminRevenueSeriesItem]
     partner_reports: list[AdminPartnerRevenueItem]
+    payer_reports: list[AdminPayerRevenueItem]
 
 
 class AdminRevenueReportEnvelope(BaseModel):

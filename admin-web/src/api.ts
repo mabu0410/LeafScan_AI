@@ -51,6 +51,7 @@ async function requestJson<T>(
       method: options.method || 'GET',
       headers: {
         Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
       },
@@ -207,7 +208,10 @@ export async function exportAdminRevenueReport(
     partner_id: params.partnerId || undefined,
   });
   const response = await fetch(`${API_BASE_URL}/admin/revenue-report/export${query}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'ngrok-skip-browser-warning': 'true',
+    },
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);

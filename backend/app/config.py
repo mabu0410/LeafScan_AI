@@ -170,24 +170,24 @@ HOME_WEATHER_CACHE_TTL_SECONDS: int = int(os.getenv("HOME_WEATHER_CACHE_TTL_SECO
 # ──────────────────────────────────────────────
 
 # Tối thiểu 3% pixel nằm trong dải màu lá hợp lệ.
-LEAF_MIN_GREEN_RATIO: float = float(os.getenv("LEAF_MIN_GREEN_RATIO", "0.05"))
-# Tỉ lệ xanh tối thiểu ở vùng trung tâm (nơi người dùng cần đưa lá vào).
-LEAF_MIN_CENTER_GREEN_RATIO: float = float(os.getenv("LEAF_MIN_CENTER_GREEN_RATIO", "0.04"))
+LEAF_MIN_GREEN_RATIO: float = float(os.getenv("LEAF_MIN_GREEN_RATIO", "0.03"))
+# Tỉ lệ xanh/vàng-nâu tối thiểu ở vùng trung tâm.
+LEAF_MIN_CENTER_GREEN_RATIO: float = float(os.getenv("LEAF_MIN_CENTER_GREEN_RATIO", "0.02"))
 # Độ sáng trung bình (kênh V của HSV, thang 0-255).
-LEAF_MIN_BRIGHTNESS: float = float(os.getenv("LEAF_MIN_BRIGHTNESS", "55.0"))
+LEAF_MIN_BRIGHTNESS: float = float(os.getenv("LEAF_MIN_BRIGHTNESS", "40.0"))
 # Percentile 10% của độ sáng (V channel) để bắt case nền tối lớn.
-LEAF_MIN_BRIGHTNESS_P10: float = float(os.getenv("LEAF_MIN_BRIGHTNESS_P10", "35.0"))
+LEAF_MIN_BRIGHTNESS_P10: float = float(os.getenv("LEAF_MIN_BRIGHTNESS_P10", "25.0"))
 # Tỉ lệ pixel tối tối đa cho phép (V < 50).
-LEAF_MAX_DARK_PIXEL_RATIO: float = float(os.getenv("LEAF_MAX_DARK_PIXEL_RATIO", "0.60"))
+LEAF_MAX_DARK_PIXEL_RATIO: float = float(os.getenv("LEAF_MAX_DARK_PIXEL_RATIO", "0.75"))
 # Độ nét dựa trên variance của Laplacian.
-LEAF_MIN_BLUR_SCORE: float = float(os.getenv("LEAF_MIN_BLUR_SCORE", "90.0"))
+LEAF_MIN_BLUR_SCORE: float = float(os.getenv("LEAF_MIN_BLUR_SCORE", "35.0"))
 # Vùng xanh lớn nhất phải chiếm tối thiểu tỉ lệ ảnh.
 LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO: float = float(
-    os.getenv("LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO", "0.01")
+    os.getenv("LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO", "0.005")
 )
 # Vùng xanh lớn nhất phải đủ "tập trung" so với tổng pixel xanh.
 LEAF_MIN_GREEN_COMPONENT_DENSITY: float = float(
-    os.getenv("LEAF_MIN_GREEN_COMPONENT_DENSITY", "0.25")
+    os.getenv("LEAF_MIN_GREEN_COMPONENT_DENSITY", "0.08")
 )
 
 # ──────────────────────────────────────────────

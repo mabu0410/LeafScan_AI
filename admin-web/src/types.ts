@@ -261,6 +261,19 @@ export interface AdminPartnerRevenueItem {
   last_paid_at: string | null;
 }
 
+export interface AdminPayerRevenueItem {
+  kind: string;
+  owner_id: number;
+  owner_name: string;
+  owner_email: string | null;
+  gross_vnd: number;
+  fee_vnd: number;
+  net_vnd: number;
+  refunded_vnd: number;
+  transaction_count: number;
+  last_paid_at: string | null;
+}
+
 export interface AdminRevenueReportData {
   start_date: string;
   end_date: string;
@@ -272,6 +285,8 @@ export interface AdminRevenueReportData {
   gross_success_vnd: number;
   user_success_vnd: number;
   partner_success_vnd: number;
+  user_success_count: number;
+  partner_success_count: number;
   refunded_vnd: number;
   vnpay_fee_vnd: number;
   net_revenue_vnd: number;
@@ -281,6 +296,7 @@ export interface AdminRevenueReportData {
   failed_count: number;
   series: AdminRevenueSeriesItem[];
   partner_reports: AdminPartnerRevenueItem[];
+  payer_reports: AdminPayerRevenueItem[];
 }
 
 export interface AdminScanItem {

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -128,8 +128,20 @@ def notify_admins(
 ) -> int:
     admin_emails = [email.strip().lower() for email in ADMIN_EMAILS if email.strip()]
     if not admin_emails:
+        logger.warning(
+            "admin_notification_skipped reason=ADMIN_EMAILS_NOT_CONFIGURED type=%s",
+            notification_type,
+        )
         return 0
-    admins = db.query(User).filter(User.email.in_(admin_emails)).all()
+    admins = db.query(User).filter(func.lower(User.email).in_(admin_emails)).all()
+    if not admins:
+        logger.warning(
+            "admin_notification_skipped reason=ADMIN_USERS_NOT_FOUND type=%s configured_emails=%s",
+            notification_type,
+            admin_emails,
+        )
+        return 0
+
     created = 0
     for admin in admins:
         event_key = f"{event_key_prefix}:admin:{admin.id}" if event_key_prefix else None
@@ -143,6 +155,11 @@ def notify_admins(
             event_key=event_key,
         ):
             created += 1
+    logger.info(
+        "admin_notifications_created type=%s count=%s",
+        notification_type,
+        created,
+    )
     return created
 
 

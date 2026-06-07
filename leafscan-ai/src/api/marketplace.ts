@@ -1,6 +1,6 @@
 import { MarketplaceInquiry, PartnerMembership, PartnerOutlet, PartnerProduct, PartnerStore, PaymentTransaction } from '../types';
 import { requestJson } from './client';
-import { toApiAssetUrl } from './config';
+import { toApiAssetUrl, toMobileImageUrl } from './config';
 
 export interface PartnerRegistrationInput {
   companyName: string;
@@ -74,7 +74,7 @@ export function mapPartner(raw: any): PartnerStore {
     storeName: raw.store_name || undefined,
     description: raw.description || undefined,
     address: raw.address || undefined,
-    logoUrl: toApiAssetUrl(raw.logo_url),
+    logoUrl: toMobileImageUrl(raw.logo_url),
     coverUrl: toApiAssetUrl(raw.cover_url),
     contactEmail: raw.contact_email || '',
     phone: raw.phone || '',
@@ -106,7 +106,7 @@ export function mapPartnerOutlet(raw: any): PartnerOutlet {
     address: raw.address || undefined,
     contactEmail: raw.contact_email || undefined,
     phone: raw.phone || undefined,
-    logoUrl: toApiAssetUrl(raw.logo_url),
+    logoUrl: toMobileImageUrl(raw.logo_url),
     coverUrl: toApiAssetUrl(raw.cover_url),
     isActive: Boolean(raw.is_active),
     isPrimary: Boolean(raw.is_primary),
@@ -455,7 +455,7 @@ export async function uploadProductImageApi(token: string, productId: string, im
 export async function listMarketplacePartnersApi(): Promise<PartnerStore[]> {
   const response = await requestJson<any>('/marketplace/partners');
   if (!response.success) throw new Error(response.message || 'Không tải được cửa hàng');
-  return (response.data || []).map(mapPartner);
+  return (response.data || []).map(mapPartner).filter((partner: PartnerStore) => partner.status === 'active');
 }
 
 export async function getMarketplacePartnerApi(partnerId: string): Promise<PartnerStore> {

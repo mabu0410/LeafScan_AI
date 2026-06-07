@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,15 +9,22 @@ import { theme } from '../../theme/theme';
 interface ProfileHeaderProps {
   name: string;
   email: string;
+  avatarUri?: string | null;
   onEditPress: () => void;
 }
 
-export function ProfileHeader({ name, email, onEditPress }: ProfileHeaderProps) {
+export function ProfileHeader({ name, email, avatarUri, onEditPress }: ProfileHeaderProps) {
   const { t } = useTranslation();
+  const [imageFailed, setImageFailed] = useState(false);
   const scale = useSharedValue(1);
   const buttonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+  const shouldShowAvatar = Boolean(avatarUri) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [avatarUri]);
 
   return (
     <LinearGradient
@@ -29,7 +36,15 @@ export function ProfileHeader({ name, email, onEditPress }: ProfileHeaderProps) 
       <View style={styles.avatarWrap}>
         <View style={styles.avatarGlow} />
         <View style={styles.avatar}>
-          <Ionicons name="person" size={42} color={theme.colors.primary} />
+          {shouldShowAvatar ? (
+            <Image
+              source={{ uri: avatarUri as string }}
+              style={styles.avatarImage}
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <Ionicons name="person" size={42} color={theme.colors.primary} />
+          )}
         </View>
       </View>
 
@@ -92,6 +107,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#D8EED8',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   name: {
     fontSize: 28,

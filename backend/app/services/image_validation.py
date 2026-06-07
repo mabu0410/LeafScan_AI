@@ -92,11 +92,20 @@ def validate_leaf_image(image: str | Image.Image) -> LeafValidationResult:
         float(largest_component / green_pixels) if green_pixels > 0 else 0.0
     )
 
-    if (
+    # Ảnh thực tế có thể có nền tối lớn nhưng vùng lá vẫn đủ sáng.
+    # Chỉ chặn khi độ sáng trung bình thấp kèm thêm dấu hiệu ảnh quá tối.
+    is_too_dark = (
         brightness < LEAF_MIN_BRIGHTNESS
-        or brightness_p10 < LEAF_MIN_BRIGHTNESS_P10
-        or dark_pixel_ratio > LEAF_MAX_DARK_PIXEL_RATIO
-    ):
+        and (
+            brightness_p10 < LEAF_MIN_BRIGHTNESS_P10
+            or dark_pixel_ratio > LEAF_MAX_DARK_PIXEL_RATIO
+        )
+    )
+    is_extremely_dark = (
+        brightness < (LEAF_MIN_BRIGHTNESS * 0.75)
+        or dark_pixel_ratio > 0.90
+    )
+    if is_too_dark or is_extremely_dark:
         return LeafValidationResult(
             is_valid_leaf=False,
             error_code="IMAGE_TOO_DARK",
@@ -111,7 +120,14 @@ def validate_leaf_image(image: str | Image.Image) -> LeafValidationResult:
             green_component_density=green_component_density,
         )
 
-    if blur_score < LEAF_MIN_BLUR_SCORE:
+    has_strong_leaf_signal = (
+        green_ratio >= (LEAF_MIN_GREEN_RATIO * 2)
+        or largest_component_ratio >= (LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO * 2)
+    )
+
+    # Lá trơn hoặc ảnh crop gần có thể có blur score thấp dù vẫn đủ vùng lá.
+    # Với ảnh có tín hiệu lá rõ, để model xử lý tiếp thay vì chặn sớm.
+    if blur_score < LEAF_MIN_BLUR_SCORE and not has_strong_leaf_signal:
         return LeafValidationResult(
             is_valid_leaf=False,
             error_code="IMAGE_TOO_BLURRY",
@@ -126,12 +142,20 @@ def validate_leaf_image(image: str | Image.Image) -> LeafValidationResult:
             green_component_density=green_component_density,
         )
 
-    if (
+    low_color_signal = (
         green_ratio < LEAF_MIN_GREEN_RATIO
-        or center_green_ratio < LEAF_MIN_CENTER_GREEN_RATIO
-        or largest_component_ratio < LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO
-        or green_component_density < LEAF_MIN_GREEN_COMPONENT_DENSITY
-    ):
+        and largest_component_ratio < LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO
+    )
+    leaf_is_off_center_and_sparse = (
+        center_green_ratio < LEAF_MIN_CENTER_GREEN_RATIO
+        and not has_strong_leaf_signal
+    )
+    green_pixels_are_scattered = (
+        green_component_density < LEAF_MIN_GREEN_COMPONENT_DENSITY
+        and largest_component_ratio < (LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO * 2)
+    )
+
+    if low_color_signal or leaf_is_off_center_and_sparse or green_pixels_are_scattered:
         return LeafValidationResult(
             is_valid_leaf=False,
             error_code="NO_LEAF_DETECTED",

@@ -43,6 +43,7 @@ from app.schemas.admin import (
     AdminPaymentItem,
     AdminPaymentListData,
     AdminPaymentListEnvelope,
+    AdminPayerRevenueItem,
     AdminPaymentStatusStats,
     AdminPartnerRevenueItem,
     AdminRefundEnvelope,
@@ -634,6 +635,8 @@ def _build_revenue_report(
     gross_success = sum(row["amount_vnd"] for row in rows if row["status"] == "success")
     user_success = sum(row["amount_vnd"] for row in rows if row["kind"] == "user" and row["status"] == "success")
     partner_success = sum(row["amount_vnd"] for row in rows if row["kind"] == "partner" and row["status"] == "success")
+    user_success_count = sum(1 for row in rows if row["kind"] == "user" and row["status"] == "success")
+    partner_success_count = sum(1 for row in rows if row["kind"] == "partner" and row["status"] == "success")
     refunded = sum(row["amount_vnd"] for row in rows if row["status"] == "refunded")
     fee = sum(_vnpay_fee(row["amount_vnd"]) for row in rows if row["status"] == "success")
     success_count = sum(1 for row in rows if row["status"] == "success")
@@ -646,6 +649,7 @@ def _build_revenue_report(
         for key in _period_keys(start_day, end_day, clean_period)
     }
     partner_map: dict[int, dict] = {}
+    payer_map: dict[tuple[str, int], dict] = {}
     for row in rows:
         key = _period_key(row["report_at"], clean_period)
         bucket = series_map.setdefault(key, {"gross": 0, "fee": 0, "refunded": 0, "count": 0})
@@ -657,6 +661,31 @@ def _build_revenue_report(
             bucket["count"] += 1
         elif row["status"] == "refunded":
             bucket["refunded"] += amount
+
+        payer_key = (row["kind"], row["owner_id"])
+        payer_bucket = payer_map.setdefault(
+            payer_key,
+            {
+                "kind": row["kind"],
+                "owner_id": row["owner_id"],
+                "owner_name": row["owner_name"],
+                "owner_email": row["owner_email"],
+                "gross": 0,
+                "fee": 0,
+                "refunded": 0,
+                "count": 0,
+                "last_paid_at": None,
+            },
+        )
+        if row["status"] == "success":
+            payer_bucket["gross"] += amount
+            payer_bucket["fee"] += _vnpay_fee(amount)
+            payer_bucket["count"] += 1
+            paid_at = row["paid_at"] or row["created_at"]
+            if payer_bucket["last_paid_at"] is None or paid_at > payer_bucket["last_paid_at"]:
+                payer_bucket["last_paid_at"] = paid_at
+        elif row["status"] == "refunded":
+            payer_bucket["refunded"] += amount
 
         if row["kind"] != "partner" or row["partner_id"] is None:
             continue
@@ -709,6 +738,23 @@ def _build_revenue_report(
         for partner_id_value, values in partner_map.items()
     ]
 
+    payer_reports = [
+        AdminPayerRevenueItem(
+            kind=str(values["kind"]),
+            owner_id=int(values["owner_id"]),
+            owner_name=str(values["owner_name"]),
+            owner_email=values["owner_email"],
+            gross_vnd=int(values["gross"]),
+            fee_vnd=int(values["fee"]),
+            net_vnd=max(int(values["gross"]) - int(values["fee"]), 0),
+            refunded_vnd=int(values["refunded"]),
+            transaction_count=int(values["count"]),
+            last_paid_at=values["last_paid_at"],
+        )
+        for values in payer_map.values()
+        if int(values["gross"]) > 0 or int(values["refunded"]) > 0
+    ]
+
     return AdminRevenueReportData(
         start_date=start_day,
         end_date=end_day,
@@ -720,6 +766,8 @@ def _build_revenue_report(
         gross_success_vnd=gross_success,
         user_success_vnd=user_success,
         partner_success_vnd=partner_success,
+        user_success_count=user_success_count,
+        partner_success_count=partner_success_count,
         refunded_vnd=refunded,
         vnpay_fee_vnd=fee,
         net_revenue_vnd=max(gross_success - fee, 0),
@@ -729,6 +777,7 @@ def _build_revenue_report(
         failed_count=failed_count,
         series=series,
         partner_reports=sorted(partner_reports, key=lambda item: item.net_vnd, reverse=True),
+        payer_reports=sorted(payer_reports, key=lambda item: item.net_vnd, reverse=True),
     )
 
 
@@ -756,16 +805,17 @@ def _csv_report(data: AdminRevenueReportData) -> bytes:
     writer.writerow(["Doanh thu rong", data.net_revenue_vnd])
     writer.writerow(["Hoan tien", data.refunded_vnd])
     writer.writerow([])
-    writer.writerow(["Ky", "Doanh thu gop", "Phi", "Doanh thu rong", "Hoan tien", "Giao dich thanh cong"])
+    writer.writerow(["Ky", "Doanh thu LeafScan gop", "Phi", "Doanh thu LeafScan rong", "Hoan tien", "Giao dich thanh cong"])
     for item in data.series:
         writer.writerow([item.period, item.gross_vnd, item.fee_vnd, item.net_vnd, item.refunded_vnd, item.transaction_count])
     writer.writerow([])
-    writer.writerow(["Dai ly", "Email", "Doanh thu gop", "Phi", "Doanh thu rong", "Hoan tien", "Giao dich", "Lan thanh toan cuoi"])
-    for item in data.partner_reports:
+    writer.writerow(["Nguon thanh toan", "Loai", "Email", "Doanh thu LeafScan gop", "Phi", "Doanh thu LeafScan rong", "Hoan tien", "Giao dich", "Lan thanh toan cuoi"])
+    for item in data.payer_reports:
         writer.writerow(
             [
-                item.partner_name,
-                item.contact_email or "",
+                item.owner_name,
+                item.kind,
+                item.owner_email or "",
                 item.gross_vnd,
                 item.fee_vnd,
                 item.net_vnd,
@@ -792,6 +842,8 @@ def _pdf_report(data: AdminRevenueReportData) -> bytes:
         f"Phi VNPAY uoc tinh: {data.vnpay_fee_vnd:,} VND",
         f"Doanh thu rong: {data.net_revenue_vnd:,} VND",
         f"Hoan tien da ghi nhan: {data.refunded_vnd:,} VND",
+        f"Goi nguoi dung: {data.user_success_vnd:,} VND / {data.user_success_count} giao dich",
+        f"Goi dai ly: {data.partner_success_vnd:,} VND / {data.partner_success_count} giao dich",
         "",
         "Doanh thu theo ky:",
     ]
@@ -799,11 +851,11 @@ def _pdf_report(data: AdminRevenueReportData) -> bytes:
         f"{item.period}: gross {item.gross_vnd:,} | fee {item.fee_vnd:,} | net {item.net_vnd:,} | tx {item.transaction_count}"
         for item in data.series[:22]
     )
-    if data.partner_reports:
-        lines.extend(["", "Top dai ly:"])
+    if data.payer_reports:
+        lines.extend(["", "Top nguon thanh toan:"])
         lines.extend(
-            f"{item.partner_name}: net {item.net_vnd:,} | gross {item.gross_vnd:,} | tx {item.transaction_count}"
-            for item in data.partner_reports[:10]
+            f"{item.owner_name}: net {item.net_vnd:,} | gross {item.gross_vnd:,} | tx {item.transaction_count}"
+            for item in data.payer_reports[:10]
         )
 
     y = 790

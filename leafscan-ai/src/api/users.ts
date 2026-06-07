@@ -1,5 +1,6 @@
 import { AuthUser, meApi } from './auth';
 import { requestJson } from './client';
+import { toApiAssetUrl } from './config';
 
 export interface UpdateUserProfilePayload {
   name: string;
@@ -14,7 +15,7 @@ function normalizeUser(raw: any): AuthUser {
     name: raw.name || '',
     email: raw.email || '',
     phone: raw.phone || undefined,
-    avatar: raw.avatar || undefined,
+    avatar: toApiAssetUrl(raw.avatar),
     role: raw.role || 'farmer',
     createdAt: raw.created_at || raw.createdAt || undefined,
   };

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   BarChart3,
@@ -82,6 +83,26 @@ const PAGE_SIZE = 5;
 
 type RouteName = 'login' | 'dashboard' | 'partners' | 'products' | 'care-tips' | 'users' | 'payments' | 'scans' | 'diseases' | 'inquiries' | 'notifications';
 type IconComponent = typeof LayoutDashboard;
+type ToastType = 'success' | 'error' | 'info';
+
+interface ToastState {
+  message: string;
+  type: ToastType;
+}
+
+function inferToastType(message: string): ToastType {
+  const normalized = message.trim().toLocaleLowerCase('vi');
+  if (
+    normalized.startsWith('không ') ||
+    normalized.includes('thất bại') ||
+    normalized.includes('lỗi') ||
+    normalized.includes('hết hạn')
+  ) {
+    return 'error';
+  }
+  if (normalized.startsWith('có ')) return 'info';
+  return 'success';
+}
 
 function getInitialRoute(): RouteName {
   const route = window.location.pathname.replace('/', '') as RouteName;
@@ -203,7 +224,7 @@ function planLabel(value: string) {
 }
 
 function transactionKindLabel(value: string) {
-  return value === 'partner' ? 'Đại lý' : 'Người dùng';
+  return value === 'partner' ? 'Gói đại lý' : 'Gói người dùng';
 }
 
 function paginateRows<T>(rows: T[], page: number, pageSize = PAGE_SIZE) {
@@ -236,18 +257,31 @@ export function App() {
   const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);
   const [notificationInbox, setNotificationInbox] = useState<NotificationListData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [globalSearch, setGlobalSearch] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [seenApprovalCounts, setSeenApprovalCounts] = useState<{ partners: number; products: number } | null>(null);
+  const [previousRoute, setPreviousRoute] = useState<RouteName | null>(null);
+
+  const setMessage = (message: string | null, type?: ToastType) => {
+    setToast(message ? { message, type: type || inferToastType(message) } : null);
+  };
 
   const navigate = (next: RouteName) => {
     setNotificationsOpen(false);
     setSidebarOpen(false);
+    if (next !== route) {
+      setPreviousRoute(route);
+    }
     setRoute(next);
     window.history.pushState(null, '', next === 'login' ? '/login' : `/${next}`);
+  };
+
+  const goBackFromScans = () => {
+    const target = previousRoute && previousRoute !== 'login' && previousRoute !== route ? previousRoute : 'dashboard';
+    navigate(target);
   };
 
   const toggleSidebar = () => {
@@ -326,6 +360,60 @@ export function App() {
       refresh({ silent: true });
     }, 60000);
     return () => window.clearInterval(timer);
+  }, [session]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!session) return undefined;
+
+    let cancelled = false;
+    const pollAdminActivity = async () => {
+      try {
+        const [partnerRows, productRows, notificationRows] = await Promise.all([
+          listPendingPartners(session.accessToken),
+          listPendingProducts(session.accessToken),
+          listNotifications(session.accessToken),
+        ]);
+        if (cancelled) return;
+        setPartners(partnerRows);
+        setProducts(productRows);
+        setNotificationInbox(notificationRows);
+        setDashboardData((current) =>
+          current
+            ? {
+                ...current,
+                partners: { ...current.partners, pending: partnerRows.length },
+                products: { ...current.products, pending: productRows.length },
+              }
+            : current
+        );
+      } catch (error) {
+        if ((error as Error).name === 'AuthError') {
+          logout();
+        }
+      }
+    };
+
+    const timer = window.setInterval(() => {
+      pollAdminActivity();
+    }, 10000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        pollAdminActivity();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [session]);
 
   useEffect(() => {
@@ -489,16 +577,11 @@ export function App() {
     }
   };
 
-  const accountInitial = (session.user.name || session.user.email || 'A').trim().charAt(0).toUpperCase();
-
   return (
     <div className={`shell ${sidebarCollapsed ? 'sidebarCollapsed' : ''} ${sidebarOpen ? 'sidebarOpen' : ''}`}>
       <button className="sidebarBackdrop" type="button" aria-label="Đóng menu" onClick={() => setSidebarOpen(false)} />
       <aside className="sidebar" id="admin-sidebar">
         <div className="brand">
-          <div className="brandIcon">
-            <ShieldCheck size={22} />
-          </div>
           <div>
             <div className="brandName">LeafScan Admin</div>
             <div className="brandMeta">Duyệt chợ sản phẩm</div>
@@ -519,7 +602,6 @@ export function App() {
         </nav>
 
         <div className="account">
-          <div className="accountAvatar">{accountInitial}</div>
           <div>
             <div className="accountName">{session.user.name}</div>
             <div className="accountEmail">{session.user.email}</div>
@@ -608,7 +690,6 @@ export function App() {
               Đăng xuất
             </button>
             <div className="topbarAccount">
-              <span>{accountInitial}</span>
               <div>
                 <strong>{session.user.name}</strong>
                 <small>Quản trị viên</small>
@@ -618,15 +699,35 @@ export function App() {
           </div>
         </header>
 
-        <section className="pageTitle">
-          <div className="eyebrow">Không gian quản trị</div>
-          <h1>{routeTitle(route)}</h1>
+        <section className={`pageTitle ${route === 'scans' ? 'pageTitleWithBack' : ''}`}>
+          {route === 'scans' && (
+            <button className="pageBackButton" type="button" onClick={goBackFromScans}>
+              <ArrowLeft size={18} />
+              Quay lại
+            </button>
+          )}
+          <div className="pageTitleText">
+            <div className="eyebrow">Không gian quản trị</div>
+            <h1>{routeTitle(route)}</h1>
+          </div>
         </section>
 
-        {message && (
-          <div className="notice">
-            <AlertCircle size={17} />
-            {message}
+        {toast && (
+          <div
+            className={`actionToast actionToast--${toast.type}`}
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+          >
+            <span className="actionToastIcon">
+              {toast.type === 'success' ? <BadgeCheck size={22} /> : toast.type === 'error' ? <AlertCircle size={22} /> : <Bell size={22} />}
+            </span>
+            <div className="actionToastContent">
+              <strong>{toast.type === 'success' ? 'Thành công' : toast.type === 'error' ? 'Có lỗi xảy ra' : 'Thông báo mới'}</strong>
+              <span>{toast.message}</span>
+            </div>
+            <button type="button" className="actionToastClose" aria-label="Đóng thông báo" onClick={() => setToast(null)}>
+              <X size={18} />
+            </button>
           </div>
         )}
 
@@ -1722,6 +1823,7 @@ function PaymentsPage({
 
   const range = serverRange(data);
   const partnerOptions = report?.partner_reports || [];
+  const payerReports = report?.payer_reports || [];
   const reportMax = Math.max(...(report?.series || []).map((item) => Math.max(item.gross_vnd, item.net_vnd, item.refunded_vnd)), 1);
   const barWidth = 30;
   const barGap = 18;
@@ -1746,8 +1848,8 @@ function PaymentsPage({
             }}
           >
             <option value="all">Tất cả</option>
-            <option value="user">Người dùng</option>
-            <option value="partner">Đại lý</option>
+            <option value="user">Gói người dùng</option>
+            <option value="partner">Gói đại lý</option>
           </select>
         </label>
         <label className="filterSelect">
@@ -1777,9 +1879,9 @@ function PaymentsPage({
           </select>
         </label>
         <label className="filterSelect">
-          <span>Báo cáo đại lý</span>
+          <span>Lọc gói đại lý</span>
           <select value={partnerFilter} onChange={(event) => setPartnerFilter(event.target.value)}>
-            <option value="">Tất cả đại lý</option>
+            <option value="">Tất cả nguồn đại lý</option>
             {partnerOptions.map((partner) => (
               <option key={partner.partner_id} value={partner.partner_id}>
                 {partner.partner_name}
@@ -1798,18 +1900,18 @@ function PaymentsPage({
         <section className="panel revenueSummaryPanel">
           <div className="sectionHeader">
             <div>
-              <h2>Báo cáo doanh thu</h2>
-              <p>{report ? `${report.start_date} - ${report.end_date}` : 'Đang tải dữ liệu doanh thu.'}</p>
+              <h2>Doanh thu hệ thống</h2>
+              <p>{report ? `${report.start_date} - ${report.end_date} · Doanh thu thuộc LeafScan` : 'Đang tải dữ liệu doanh thu.'}</p>
             </div>
             <CircleDollarSign size={22} />
           </div>
           <div className="revenueKpis">
-            <Info label="Doanh thu gộp" value={money(report?.gross_success_vnd || 0)} />
+            <Info label="Doanh thu LeafScan gộp" value={money(report?.gross_success_vnd || 0)} />
             <Info label="Phí VNPAY ước tính" value={`${money(report?.vnpay_fee_vnd || 0)} (${report?.fee_percent || 0}% + ${money(report?.fee_fixed_vnd || 0)}/GD)`} />
-            <Info label="Doanh thu ròng" value={money(report?.net_revenue_vnd || 0)} />
+            <Info label="Doanh thu LeafScan ròng" value={money(report?.net_revenue_vnd || 0)} />
             <Info label="Đã hoàn tiền" value={`${money(report?.refunded_vnd || 0)} / ${report?.refunded_count || 0} GD`} />
-            <Info label="Gói người dùng" value={`${money(report?.user_success_vnd || 0)} / ${report?.success_count || 0} GD thành công`} />
-            <Info label="Gói đại lý" value={money(report?.partner_success_vnd || 0)} />
+            <Info label="Gói người dùng" value={`${money(report?.user_success_vnd || 0)} / ${report?.user_success_count || 0} GD thành công`} />
+            <Info label="Gói đại lý" value={`${money(report?.partner_success_vnd || 0)} / ${report?.partner_success_count || 0} GD thành công`} />
           </div>
           <div className="exportRow">
             <button className="secondaryButton compactButton" disabled={!!exporting || reportLoading} type="button" onClick={() => exportReport('excel')}>
@@ -1827,7 +1929,7 @@ function PaymentsPage({
           <div className="sectionHeader">
             <div>
               <h2>Biểu đồ doanh thu {period === 'monthly' ? 'theo tháng' : 'theo ngày'}</h2>
-              <p>So sánh doanh thu gộp, ròng và khoản hoàn tiền.</p>
+              <p>So sánh tiền thu vào hệ thống, doanh thu ròng và khoản hoàn tiền.</p>
             </div>
             <TrendingUp size={22} />
           </div>
@@ -1862,35 +1964,35 @@ function PaymentsPage({
       <section className="panel adminListPanel partnerRevenuePanel">
         <div className="tableSectionTitle">
           <div>
-            <h2>Báo cáo riêng từng đại lý</h2>
-            <p>Chỉ tính giao dịch gói đại lý trong khoảng thời gian đang lọc.</p>
+            <h2>Người/đơn vị đã thanh toán</h2>
+            <p>Thống kê ai đã trả tiền cho LeafScan. Với gói đại lý, đây là phí sử dụng nền tảng, không phải doanh thu bán hàng của chủ đại lý.</p>
           </div>
         </div>
-        {!report?.partner_reports.length ? (
-          <EmptyState title="Chưa có doanh thu đại lý trong khoảng này" />
+        {!payerReports.length ? (
+          <EmptyState title="Chưa có người thanh toán trong khoảng này" />
         ) : (
           <div className="adminTable">
             <div className="adminTableHead partnerRevenueGridRow">
-              <span>Đại lý</span>
-              <span>Doanh thu gộp</span>
+              <span>Người thanh toán</span>
+              <span>Doanh thu LeafScan</span>
               <span>Phí</span>
-              <span>Doanh thu ròng</span>
+              <span>Ròng</span>
               <span>Hoàn tiền</span>
               <span>Giao dịch</span>
             </div>
-            {report.partner_reports.map((partner) => (
-              <div className="adminTableRow partnerRevenueGridRow" key={partner.partner_id}>
+            {payerReports.map((payer) => (
+              <div className="adminTableRow partnerRevenueGridRow" key={`${payer.kind}-${payer.owner_id}`}>
                 <div>
-                  <strong>{partner.partner_name}</strong>
-                  <small>{partner.contact_email || `Đại lý #${partner.partner_id}`}</small>
+                  <strong>{payer.owner_name}</strong>
+                  <small>{transactionKindLabel(payer.kind)}{payer.owner_email ? ` · ${payer.owner_email}` : ` #${payer.owner_id}`}</small>
                 </div>
-                <b>{money(partner.gross_vnd)}</b>
-                <span>{money(partner.fee_vnd)}</span>
-                <b>{money(partner.net_vnd)}</b>
-                <span>{money(partner.refunded_vnd)}</span>
+                <b>{money(payer.gross_vnd)}</b>
+                <span>{money(payer.fee_vnd)}</span>
+                <b>{money(payer.net_vnd)}</b>
+                <span>{money(payer.refunded_vnd)}</span>
                 <div>
-                  <strong>{numberLabel(partner.transaction_count)}</strong>
-                  <small>{partner.last_paid_at ? `Cuối: ${dateLabel(partner.last_paid_at)}` : 'Chưa thanh toán'}</small>
+                  <strong>{numberLabel(payer.transaction_count)}</strong>
+                  <small>{payer.last_paid_at ? `Cuối: ${dateLabel(payer.last_paid_at)}` : 'Chưa thanh toán'}</small>
                 </div>
               </div>
             ))}
@@ -1899,6 +2001,12 @@ function PaymentsPage({
       </section>
 
       <section className="panel adminListPanel">
+        <div className="tableSectionTitle">
+          <div>
+            <h2>Chi tiết giao dịch thanh toán</h2>
+            <p>Danh sách từng giao dịch để kiểm tra người trả tiền, mã đơn và trạng thái xử lý.</p>
+          </div>
+        </div>
         {loading && !data.items.length ? (
           <EmptyState title="Đang tải giao dịch..." />
         ) : data.items.length === 0 ? (
@@ -1906,9 +2014,9 @@ function PaymentsPage({
         ) : (
           <div className="adminTable">
             <div className="adminTableHead paymentGridRow">
-              <span>Chủ giao dịch</span>
+              <span>Người thanh toán</span>
               <span>Gói/Mã</span>
-              <span>Số tiền</span>
+              <span>Tiền vào hệ thống</span>
               <span>Trạng thái</span>
               <span>Thời gian</span>
               <span>Thao tác</span>

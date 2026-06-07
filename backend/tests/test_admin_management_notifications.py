@@ -297,8 +297,13 @@ def test_admin_revenue_report_export_and_refund(app_client, db_session):
     assert report_data["gross_success_vnd"] == 298000
     assert report_data["user_success_vnd"] == 99000
     assert report_data["partner_success_vnd"] == 199000
+    assert report_data["user_success_count"] == 1
+    assert report_data["partner_success_count"] == 1
     assert report_data["success_count"] == 2
     assert any(item["partner_id"] == graph["partner_id"] for item in report_data["partner_reports"])
+    payer_reports = report_data["payer_reports"]
+    assert any(item["kind"] == "user" and item["owner_id"] == owner.id for item in payer_reports)
+    assert any(item["kind"] == "partner" and item["owner_id"] == graph["partner_id"] for item in payer_reports)
 
     excel = app_client.get(
         "/api/v1/admin/revenue-report/export",

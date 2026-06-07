@@ -730,14 +730,13 @@ async def upload_product_image(
 @router.get("/marketplace/partners", response_model=PartnerListEnvelope)
 def list_public_partners(db: Session = Depends(get_db)):
     partners = db.query(Partner).filter(Partner.status == "active").order_by(desc(Partner.created_at)).all()
-    public_partners = [partner for partner in partners if _active_membership(db, partner.id) is not None]
-    return PartnerListEnvelope(success=True, message="Thành công", data=[_partner_response(db, item) for item in public_partners])
+    return PartnerListEnvelope(success=True, message="Thành công", data=[_partner_response(db, item) for item in partners])
 
 
 @router.get("/marketplace/partners/{partner_id}", response_model=PartnerEnvelope)
 def get_public_partner(partner_id: int, db: Session = Depends(get_db)):
     partner = db.query(Partner).filter(Partner.id == partner_id, Partner.status == "active").first()
-    if not partner or _active_membership(db, partner.id) is None:
+    if not partner:
         raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
     return PartnerEnvelope(success=True, message="Thành công", data=_partner_response(db, partner))
 
@@ -825,7 +824,7 @@ def create_marketplace_inquiry(
         store = product.store
     elif payload.partner_id is not None:
         partner = db.query(Partner).filter(Partner.id == payload.partner_id, Partner.status == "active").first()
-        if not partner or _active_membership(db, partner.id) is None:
+        if not partner:
             raise HTTPException(status_code=404, detail="Không tìm thấy cửa hàng.")
         store = _get_partner_store(db, partner.id, payload.store_id) if payload.store_id else None
     else:

@@ -18,7 +18,7 @@ function mapUser(raw: any): HomeUser {
     id: Number(raw?.id ?? 0),
     name: raw?.name || 'Người dùng LeafScan',
     email: raw?.email || '',
-    avatar: raw?.avatar || null,
+    avatar: toApiAssetUrl(raw?.avatar) || null,
   };
 }
 

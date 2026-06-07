@@ -1621,7 +1621,7 @@ function StatusCard({ partner }: { partner: PartnerStore }) {
     title = 'Hồ sơ đã được duyệt';
     text = partner.activeMembership
       ? 'Gói đối tác đang hoạt động. Sản phẩm đã duyệt sẽ được hiển thị trong marketplace.'
-      : 'Bạn cần thanh toán gói đối tác để đăng và hiển thị sản phẩm.';
+      : 'Cửa hàng đã hiển thị cho người dùng. Bạn cần thanh toán gói đối tác để đăng và hiển thị sản phẩm.';
     tone = 'success';
   } else if (partner.status === 'rejected') {
     icon = 'alert-circle-outline';
@@ -1769,7 +1769,7 @@ function PaymentCard({
 }) {
   return (
     <View style={styles.card}>
-      <SectionTitle title="Chọn gói quảng cáo" subtitle="Sau khi thanh toán, shop và tối đa 20 sản phẩm active có thể hiển thị public. Admin sẽ hậu kiểm nội dung sản phẩm." />
+      <SectionTitle title="Chọn gói quảng cáo" subtitle="Cửa hàng hiển thị public sau khi được duyệt. Gói trả phí mở quyền đăng tối đa 20 sản phẩm active để admin hậu kiểm." />
       <PlanButtons saving={saving} payingPlan={payingPlan} onPay={onPay} />
     </View>
   );

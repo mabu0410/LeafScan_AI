@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -15,7 +15,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../types';
-import { useGoogleAuth } from '../api/google-auth';
+import {
+    getGoogleAuthDebugInfo,
+    getGoogleAuthErrorMessage,
+    resolveGoogleIdToken,
+    signInWithNativeGoogle,
+    useGoogleAuth,
+} from '../api/google-auth';
 import { useAuthStore } from '../stores/authStore';
 import { theme } from '../theme/theme';
 
@@ -40,26 +46,9 @@ export default function RegisterScreen({ navigation }: Props) {
     const loginWithGoogle = useAuthStore(state => state.loginWithGoogle);
     const {
         request: googleRequest,
-        response: googleResponse,
         promptAsync: googlePromptAsync,
         isConfigured: isGoogleAuthConfigured,
     } = useGoogleAuth();
-
-    useEffect(() => {
-        if (!googleResponse) return;
-
-        if (googleResponse.type === 'success' && googleResponse.authentication?.idToken) {
-            setGoogleLoading(true);
-            loginWithGoogle(googleResponse.authentication.idToken)
-                .catch((error: any) => {
-                    Alert.alert(t('auth.googleRegisterFailed'), error?.message || t('common.tryAgain'));
-                })
-                .finally(() => setGoogleLoading(false));
-            return;
-        }
-
-        setGoogleLoading(false);
-    }, [googleResponse, loginWithGoogle]);
 
     const handleRegister = async () => {
         if (!name.trim() || !email.trim() || !password) {
@@ -92,14 +81,46 @@ export default function RegisterScreen({ navigation }: Props) {
             return;
         }
 
+        if (Platform.OS === 'android') {
+            setGoogleLoading(true);
+            try {
+                const idToken = await signInWithNativeGoogle();
+                if (!idToken) return;
+                await loginWithGoogle(idToken);
+            } catch (error: any) {
+                console.warn('[GoogleAuth] native register failed', error);
+                Alert.alert(t('auth.googleRegisterFailed'), error?.message || t('common.tryAgain'));
+            } finally {
+                setGoogleLoading(false);
+            }
+            return;
+        }
+
         if (!googleRequest) {
             Alert.alert(t('common.retry'), t('auth.googleNotReady'));
             return;
         }
 
         setGoogleLoading(true);
-        const result = await googlePromptAsync();
-        if (result.type !== 'success') {
+        try {
+            const result = await googlePromptAsync();
+            console.log('[GoogleAuth] register result', getGoogleAuthDebugInfo(result));
+            if (result.type === 'cancel' || result.type === 'dismiss') return;
+
+            const idToken = await resolveGoogleIdToken(result, googleRequest);
+            if (!idToken) {
+                Alert.alert(
+                    t('auth.googleRegisterFailed'),
+                    getGoogleAuthErrorMessage(result) || t('common.tryAgain')
+                );
+                return;
+            }
+
+            await loginWithGoogle(idToken);
+        } catch (error: any) {
+            console.warn('[GoogleAuth] register failed', error);
+            Alert.alert(t('auth.googleRegisterFailed'), error?.message || t('common.tryAgain'));
+        } finally {
             setGoogleLoading(false);
         }
     };

@@ -90,9 +90,9 @@ upserted_partner AS (
   )
   SELECT
     partner_user.id,
-    'Công ty TNHH Đối Tác Demo',
-    'Cửa hàng Đối Tác Demo',
-    'Cửa hàng demo phục vụ kiểm thử luồng đối tác, marketplace và đăng sản phẩm.',
+    'Công ty TNHH Nông Gia Phố Sài Gòn',
+    'Nông Gia Phố Sài Gòn',
+    'Cửa hàng demo phục vụ kiểm thử luồng đối tác, marketplace và đăng sản phẩm nông nghiệp.',
     'Số 01 đường Demo, Quận 1, TP. Hồ Chí Minh',
     'doitac@example.com',
     '0909000001',
@@ -107,8 +107,8 @@ upserted_partner AS (
     '["phan_bon", "che_pham_sinh_hoc", "vat_tu_cham_soc"]'::json,
     'https://doitac.example.com',
     'https://zalo.me/0909000001',
-    '/uploads/demo_partner_cover.jpg',
-    '/uploads/demo_partner_logo.jpg',
+    'https://picsum.photos/seed/leafscan-nong-gia-pho-sai-gon/1200/520',
+    'https://api.dicebear.com/9.x/initials/png?seed=N%C3%B4ng%20Gia%20Ph%E1%BB%91%20S%C3%A0i%20G%C3%B2n&backgroundColor=16a34a,0f766e,2563eb&textColor=ffffff',
     'active',
     NULL,
     NOW()
@@ -162,13 +162,13 @@ INSERT INTO partner_stores (
 )
 SELECT
   partner_ids.id,
-  'Cửa hàng Đối Tác Demo',
+  'Nông Gia Phố Sài Gòn',
   'Cửa hàng demo phục vụ kiểm thử luồng quản lý nhiều cửa hàng.',
   'Số 01 đường Demo, Quận 1, TP. Hồ Chí Minh',
   'doitac@example.com',
   '0909000001',
-  '/uploads/demo_partner_logo.jpg',
-  '/uploads/demo_partner_cover.jpg',
+  'https://api.dicebear.com/9.x/initials/png?seed=N%C3%B4ng%20Gia%20Ph%E1%BB%91%20S%C3%A0i%20G%C3%B2n&backgroundColor=16a34a,0f766e,2563eb&textColor=ffffff',
+  'https://picsum.photos/seed/leafscan-nong-gia-pho-sai-gon/1200/520',
   TRUE,
   TRUE,
   NOW(),

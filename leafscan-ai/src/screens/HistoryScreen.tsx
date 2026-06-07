@@ -180,6 +180,14 @@ export default function HistoryScreen() {
     });
   };
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('MainTabs');
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
@@ -203,6 +211,7 @@ export default function HistoryScreen() {
                 <HistoryHeader
                   totalScans={scans.length}
                   searchVisible={searchVisible}
+                  onBack={handleBack}
                   onToggleSearch={toggleSearch}
                 />
               </Animated.View>

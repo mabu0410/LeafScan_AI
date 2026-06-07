@@ -54,6 +54,16 @@ export function toApiAssetUrl(value?: string | null): string | undefined {
   return trimmed;
 }
 
+export function toMobileImageUrl(value?: string | null): string | undefined {
+  const assetUrl = toApiAssetUrl(value);
+  if (!assetUrl) return undefined;
+
+  return assetUrl.replace(
+    /^https:\/\/api\.dicebear\.com\/([^/]+)\/initials\/svg(\?|$)/i,
+    'https://api.dicebear.com/$1/initials/png$2',
+  );
+}
+
 if (__DEV__) {
   console.info(`[LeafScan API] API_BASE_URL=${API_BASE_URL}`);
 }

@@ -51,20 +51,41 @@ const LOG_TYPES = [
   { id: 'general', label: 'Khác' },
 ];
 
+const TIME_PRESETS = ['06:00', '09:00', '12:00', '16:00', '18:00', '20:00'];
+
+function pad2(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function toLocalInput(date: Date) {
+  return [
+    date.getFullYear(),
+    pad2(date.getMonth() + 1),
+    pad2(date.getDate()),
+  ].join('-') + `T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
 function nowInput() {
-  return new Date().toISOString().slice(0, 16);
+  return toLocalInput(new Date());
 }
 
 function inputFromOffset(hours: number) {
   const date = new Date();
-  date.setHours(date.getHours() + hours);
-  return date.toISOString().slice(0, 16);
+  date.setMinutes(date.getMinutes() + hours * 60);
+  return toLocalInput(date);
+}
+
+function parseInputDate(value?: string | null) {
+  if (!value?.trim()) return new Date();
+  const normalized = value.trim().replace(' ', 'T');
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
 function toApiDate(value: string) {
   const clean = value.trim();
   if (!clean) return null;
-  const date = new Date(clean);
+  const date = parseInputDate(clean);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
@@ -72,7 +93,49 @@ function toInputDate(value?: string | null) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 16);
+  return toLocalInput(date);
+}
+
+function formatDisplayDate(value?: string | null) {
+  const date = parseInputDate(value);
+  return date.toLocaleDateString('vi-VN', {
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function formatDisplayTime(value?: string | null) {
+  const date = parseInputDate(value);
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+function pickDayOffset(value: string | null | undefined, daysFromToday: number) {
+  const current = parseInputDate(value);
+  const next = new Date();
+  next.setDate(next.getDate() + daysFromToday);
+  next.setHours(current.getHours(), current.getMinutes(), 0, 0);
+  return toLocalInput(next);
+}
+
+function shiftDate(value: string | null | undefined, days: number) {
+  const date = parseInputDate(value);
+  date.setDate(date.getDate() + days);
+  return toLocalInput(date);
+}
+
+function setTimeOfDay(value: string | null | undefined, time: string) {
+  const [hour, minute] = time.split(':').map(Number);
+  const date = parseInputDate(value);
+  date.setHours(hour || 0, minute || 0, 0, 0);
+  return toLocalInput(date);
+}
+
+function shiftMinutes(value: string | null | undefined, minutes: number) {
+  const date = parseInputDate(value);
+  date.setMinutes(date.getMinutes() + minutes);
+  return toLocalInput(date);
 }
 
 function labelFor(options: Array<{ id: string; label: string }>, value: string) {
@@ -285,13 +348,14 @@ export default function CareCenterScreen() {
               <FormHeader title={editingTaskId ? 'Sửa việc chăm sóc' : 'Tạo việc chăm sóc'} onReset={editingTaskId ? resetTaskForm : undefined} />
               <Field label="Tiêu đề" value={taskForm.title} onChangeText={(title) => setTaskForm((form) => ({ ...form, title }))} placeholder="Ví dụ: Tưới nước luống cà chua" />
               <OptionRow value={taskForm.taskType} options={TASK_TYPES} onChange={(taskType) => setTaskForm((form) => ({ ...form, taskType }))} />
-              <Field label="Thời gian" value={taskForm.dueAt || ''} onChangeText={(dueAt) => setTaskForm((form) => ({ ...form, dueAt }))} placeholder="YYYY-MM-DDTHH:mm" />
-              <DateQuickActions
-                onPick={(dueAt) => setTaskForm((form) => ({ ...form, dueAt }))}
-                options={[
+              <DateTimeSelector
+                label="Thời gian"
+                value={taskForm.dueAt || ''}
+                onChange={(dueAt) => setTaskForm((form) => ({ ...form, dueAt }))}
+                presets={[
                   ['Bây giờ', nowInput()],
                   ['+1 giờ', inputFromOffset(1)],
-                  ['Ngày mai', inputFromOffset(24)],
+                  ['Ngày mai', pickDayOffset(taskForm.dueAt, 1)],
                 ]}
               />
               <PlantSelector plants={plants} selectedId={taskForm.plantId} onSelect={(plantId) => setTaskForm((form) => ({ ...form, plantId }))} selectedName={selectedTaskPlant?.name} />
@@ -310,13 +374,14 @@ export default function CareCenterScreen() {
               <FormHeader title={editingLogId ? 'Sửa nhật ký' : 'Ghi nhật ký chăm sóc'} onReset={editingLogId ? resetLogForm : undefined} />
               <Field label="Tiêu đề" value={logForm.title} onChangeText={(title) => setLogForm((form) => ({ ...form, title }))} placeholder="Ví dụ: Đã bón phân hữu cơ" />
               <OptionRow value={logForm.logType} options={LOG_TYPES} onChange={(logType) => setLogForm((form) => ({ ...form, logType }))} />
-              <Field label="Thời gian" value={logForm.performedAt || ''} onChangeText={(performedAt) => setLogForm((form) => ({ ...form, performedAt }))} placeholder="YYYY-MM-DDTHH:mm" />
-              <DateQuickActions
-                onPick={(performedAt) => setLogForm((form) => ({ ...form, performedAt }))}
-                options={[
+              <DateTimeSelector
+                label="Thời gian thực hiện"
+                value={logForm.performedAt || ''}
+                onChange={(performedAt) => setLogForm((form) => ({ ...form, performedAt }))}
+                presets={[
                   ['Bây giờ', nowInput()],
-                  ['Hôm qua', inputFromOffset(-24)],
-                  ['Tuần trước', inputFromOffset(-24 * 7)],
+                  ['Hôm qua', pickDayOffset(logForm.performedAt, -1)],
+                  ['Tuần trước', pickDayOffset(logForm.performedAt, -7)],
                 ]}
               />
               <Field label="Ghi chú" value={logForm.description || ''} onChangeText={(description) => setLogForm((form) => ({ ...form, description }))} placeholder="Ghi lại tình trạng cây, lượng nước, phân bón..." multiline />
@@ -373,15 +438,94 @@ function Field({ label, value, onChangeText, placeholder, multiline }: { label: 
   );
 }
 
-function DateQuickActions({ options, onPick }: { options: Array<[string, string]>; onPick: (value: string) => void }) {
+function DateTimeSelector({
+  label,
+  value,
+  presets,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  presets: Array<[string, string]>;
+  onChange: (value: string) => void;
+}) {
+  const activeTime = formatDisplayTime(value);
+
   return (
-    <View style={styles.dateQuickRow}>
-      {options.map(([label, value]) => (
-        <Pressable key={label} style={styles.dateQuickButton} onPress={() => onPick(value)}>
-          <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
-          <Text style={styles.dateQuickText}>{label}</Text>
-        </Pressable>
-      ))}
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.dateTimeBox}>
+        <View style={styles.dateTimeSummary}>
+          <View style={styles.dateSummaryLeft}>
+            <Text style={styles.dateDisplay} numberOfLines={1}>
+              {formatDisplayDate(value)}
+            </Text>
+            <Text style={styles.dateHelper}>Chọn ngày và giờ chăm sóc</Text>
+          </View>
+          <View style={styles.timePill}>
+            <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
+            <Text style={styles.timeDisplay}>{activeTime}</Text>
+          </View>
+        </View>
+
+        <View style={styles.pickerBlock}>
+          <Text style={styles.pickerLabel}>Chọn nhanh</Text>
+          <View style={styles.dateQuickRow}>
+            {presets.map(([presetLabel, presetValue]) => (
+              <Pressable key={presetLabel} style={styles.dateQuickButton} onPress={() => onChange(presetValue)}>
+                <Ionicons name="flash-outline" size={14} color={theme.colors.primary} />
+                <Text style={styles.dateQuickText}>{presetLabel}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.pickerBlock}>
+          <Text style={styles.pickerLabel}>Chọn ngày</Text>
+          <View style={styles.dateQuickRow}>
+            <Pressable style={styles.dateQuickButton} onPress={() => onChange(shiftDate(value, -1))}>
+              <Ionicons name="chevron-back-outline" size={14} color={theme.colors.primary} />
+              <Text style={styles.dateQuickText}>-1 ngày</Text>
+            </Pressable>
+            <Pressable style={styles.dateQuickButton} onPress={() => onChange(pickDayOffset(value, 0))}>
+              <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
+              <Text style={styles.dateQuickText}>Hôm nay</Text>
+            </Pressable>
+            <Pressable style={styles.dateQuickButton} onPress={() => onChange(pickDayOffset(value, 1))}>
+              <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
+              <Text style={styles.dateQuickText}>Ngày mai</Text>
+            </Pressable>
+            <Pressable style={styles.dateQuickButton} onPress={() => onChange(shiftDate(value, 1))}>
+              <Text style={styles.dateQuickText}>+1 ngày</Text>
+              <Ionicons name="chevron-forward-outline" size={14} color={theme.colors.primary} />
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.pickerBlock}>
+          <Text style={styles.pickerLabel}>Chọn giờ</Text>
+          <View style={styles.timeGrid}>
+            {TIME_PRESETS.map((time) => {
+              const active = activeTime === time;
+              return (
+                <Pressable key={time} style={[styles.timeChip, active && styles.timeChipActive]} onPress={() => onChange(setTimeOfDay(value, time))}>
+                  <Text style={[styles.timeChipText, active && styles.timeChipTextActive]}>{time}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={styles.minuteRow}>
+            <Pressable style={styles.minuteButton} onPress={() => onChange(shiftMinutes(value, -15))}>
+              <Ionicons name="remove-outline" size={16} color={theme.colors.primary} />
+              <Text style={styles.minuteText}>15 phút</Text>
+            </Pressable>
+            <Pressable style={styles.minuteButton} onPress={() => onChange(shiftMinutes(value, 15))}>
+              <Ionicons name="add-outline" size={16} color={theme.colors.primary} />
+              <Text style={styles.minuteText}>15 phút</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -508,6 +652,37 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: theme.colors.textPrimary, fontWeight: '800' },
   input: { minHeight: 46, borderWidth: 1, borderColor: '#DDE7DA', borderRadius: 14, paddingHorizontal: 13, color: theme.colors.textPrimary, backgroundColor: '#FBFDFB' },
   textArea: { minHeight: 86, paddingTop: 12, textAlignVertical: 'top' },
+  dateTimeBox: {
+    borderWidth: 1,
+    borderColor: '#DDE7DA',
+    borderRadius: 16,
+    backgroundColor: '#FBFDFB',
+    padding: 12,
+    gap: 12,
+  },
+  dateTimeSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  dateSummaryLeft: { flex: 1, minWidth: 0 },
+  dateDisplay: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: '800', textTransform: 'capitalize' },
+  dateHelper: { marginTop: 3, color: theme.colors.textMuted, fontSize: 12 },
+  timePill: {
+    minHeight: 40,
+    borderRadius: 999,
+    backgroundColor: theme.colors.primaryPale,
+    borderWidth: 1,
+    borderColor: '#D4E9D8',
+    paddingHorizontal: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timeDisplay: { color: theme.colors.primary, fontSize: 17, fontWeight: '900' },
+  pickerBlock: { gap: 8 },
+  pickerLabel: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '800' },
   dateQuickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   dateQuickButton: {
     minHeight: 34,
@@ -521,6 +696,34 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateQuickText: { color: theme.colors.primary, fontSize: 12, fontWeight: '800' },
+  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timeChip: {
+    minWidth: 72,
+    minHeight: 38,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: '#DDE7DA',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  timeChipText: { color: theme.colors.textSecondary, fontWeight: '800' },
+  timeChipTextActive: { color: '#fff' },
+  minuteRow: { flexDirection: 'row', gap: 8 },
+  minuteButton: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: 12,
+    backgroundColor: '#F5FBF3',
+    borderWidth: 1,
+    borderColor: '#DDE7DA',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  minuteText: { color: theme.colors.primary, fontWeight: '800', fontSize: 12 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { minHeight: 36, borderRadius: 999, borderWidth: 1, borderColor: '#DDE7DA', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },

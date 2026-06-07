@@ -1,4 +1,5 @@
 import { requestJson } from './client';
+import { toApiAssetUrl } from './config';
 
 export interface AuthUser {
   id: string;
@@ -25,7 +26,7 @@ function mapAuthData(payload: any): AuthResult {
       name: payload.user.name,
       email: payload.user.email,
       phone: payload.user.phone || undefined,
-      avatar: payload.user.avatar || undefined,
+      avatar: toApiAssetUrl(payload.user.avatar),
       role: payload.user.role || 'farmer',
       createdAt: payload.user.created_at || undefined,
     },
@@ -70,7 +71,7 @@ export async function meApi(token: string): Promise<AuthUser> {
     name: response.data.user.name,
     email: response.data.user.email,
     phone: response.data.user.phone || undefined,
-    avatar: response.data.user.avatar || undefined,
+    avatar: toApiAssetUrl(response.data.user.avatar),
     role: response.data.user.role || 'farmer',
     createdAt: response.data.user.created_at || undefined,
   };

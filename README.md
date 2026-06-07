@@ -434,6 +434,8 @@ Kiểm tra TypeScript admin web:
 
 ```bash
 cd admin-web
+cd /home/manhbao/Downloads/DO_AN_VMB/admin-web
+./node_modules/.bin/vite --host 0.0.0.0
 npm run lint
 npm run build
 ```

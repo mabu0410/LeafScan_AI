@@ -125,6 +125,28 @@ def _create_product(
 
 
 class TestPartnerMarketplace:
+    def test_partner_registration_creates_admin_notification(self, app_client):
+        admin_email, admin_token = _register_user(app_client, _unique_email("admin_notify"))
+        _mark_admin(admin_email)
+        _, partner_token = _register_user(app_client)
+
+        partner = _register_partner(app_client, partner_token, upload_documents=False)
+
+        notifications = app_client.get(
+            "/api/v1/notifications",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert notifications.status_code == 200, notifications.text
+        matching = [
+            item
+            for item in notifications.json()["data"]["items"]
+            if item["notification_type"] == "partner_review"
+            and item["data"].get("partner_id") == partner["id"]
+        ]
+        assert len(matching) == 1
+        assert matching[0]["data"]["route"] == "partners"
+        assert matching[0]["read_at"] is None
+
     def test_partner_registration_rejects_missing_business_license(self, app_client):
         _, token = _register_user(app_client)
         resp = app_client.post(
@@ -170,6 +192,33 @@ class TestPartnerMarketplace:
         _mark_admin(admin_email)
         approved = _approve_partner(app_client, admin_token, partner["id"])
         assert approved["status"] == "active"
+
+    def test_only_admin_approved_partner_is_visible_to_users(self, app_client):
+        _, token = _register_user(app_client)
+        partner = _register_partner(app_client, token)
+
+        before_approval = app_client.get("/api/v1/marketplace/partners")
+        assert before_approval.status_code == 200
+        assert all(item["id"] != partner["id"] for item in before_approval.json()["data"])
+
+        hidden_detail = app_client.get(f"/api/v1/marketplace/partners/{partner['id']}")
+        assert hidden_detail.status_code == 404
+
+        admin_email, admin_token = _register_user(app_client, _unique_email("admin"))
+        _mark_admin(admin_email)
+        _approve_partner(app_client, admin_token, partner["id"])
+
+        after_approval = app_client.get("/api/v1/marketplace/partners")
+        assert after_approval.status_code == 200
+        visible_partner = next(
+            item for item in after_approval.json()["data"] if item["id"] == partner["id"]
+        )
+        assert visible_partner["status"] == "active"
+        assert visible_partner["active_membership"] is None
+
+        visible_detail = app_client.get(f"/api/v1/marketplace/partners/{partner['id']}")
+        assert visible_detail.status_code == 200
+        assert visible_detail.json()["data"]["id"] == partner["id"]
 
     def test_admin_approval_requires_store_photo_and_business_license_file(self, app_client):
         _, token = _register_user(app_client)
