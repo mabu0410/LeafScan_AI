@@ -4,6 +4,7 @@ import {
   AdminDiseasePayload,
   AdminPaymentItem,
   AdminRevenueReportData,
+  AdminScanFeedbackItem,
   AdminScanItem,
   AdminUserItem,
   AuthSession,
@@ -255,6 +256,23 @@ export async function listAdminScans(
     { token }
   );
   if (!response.data) throw new Error(response.message || 'Không tải được lịch sử quét.');
+  return response.data;
+}
+
+export async function listAdminScanFeedback(
+  token: string,
+  params: { q?: string; feedback?: string; page?: number; pageSize?: number } = {}
+): Promise<PaginatedData<AdminScanFeedbackItem>> {
+  const response = await requestJson<ApiEnvelope<PaginatedData<AdminScanFeedbackItem>>>(
+    `/admin/scan-feedback${queryString({
+      q: params.q,
+      feedback: params.feedback === 'all' ? undefined : params.feedback,
+      page: params.page,
+      page_size: params.pageSize,
+    })}`,
+    { token }
+  );
+  if (!response.data) throw new Error(response.message || 'Không tải được phản hồi quét.');
   return response.data;
 }
 

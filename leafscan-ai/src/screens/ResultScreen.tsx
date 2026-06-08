@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Alert, View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -31,6 +31,7 @@ export default function ResultScreen({ navigation, route }: Props) {
     const [activeTab, setActiveTab] = useState<'overview' | 'treatment' | 'prevention'>('overview');
     const [recommendedProducts, setRecommendedProducts] = useState<PartnerProduct[]>([]);
     const [feedback, setFeedback] = useState<ScanFeedbackValue | null>(null);
+    const [feedbackNote, setFeedbackNote] = useState('');
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const hasValidResult = Boolean(disease && disease.success !== false && disease.id && disease.name);
     const scanImageUri = disease?.imageUri || disease?.uploadedImageUrl;
@@ -84,9 +85,14 @@ export default function ResultScreen({ navigation, route }: Props) {
             Alert.alert('Chưa có mã lượt quét', 'Kết quả này chưa có scan_id để lưu phản hồi.');
             return;
         }
+        const note = feedbackNote.trim();
+        if (!note) {
+            Alert.alert('Thiếu mô tả', 'Vui lòng mô tả ngắn tình trạng thật của cây hoặc lý do bạn chọn phản hồi này.');
+            return;
+        }
         setFeedbackLoading(true);
         try {
-            await submitScanFeedbackApi(token, disease.scanId, value);
+            await submitScanFeedbackApi(token, disease.scanId, value, note);
             setFeedback(value);
             Alert.alert('Đã gửi phản hồi', 'Cảm ơn bạn đã giúp LeafScan cải thiện kết quả chẩn đoán.');
         } catch (err: any) {
@@ -158,6 +164,15 @@ export default function ResultScreen({ navigation, route }: Props) {
                         <Text style={styles.feedbackTitle}>Phản hồi kết quả AI</Text>
                     </View>
                     <Text style={styles.feedbackText}>Kết quả chẩn đoán này có đúng với tình trạng cây không?</Text>
+                    <TextInput
+                        value={feedbackNote}
+                        onChangeText={setFeedbackNote}
+                        editable={!feedbackLoading}
+                        multiline
+                        placeholder="Mô tả thêm: ví dụ lá có mốc trắng, đốm nâu, kết quả đúng/sai ở điểm nào..."
+                        placeholderTextColor={theme.colors.textMuted}
+                        style={styles.feedbackInput}
+                    />
                     <View style={styles.feedbackRow}>
                         {[
                             { value: 'correct' as const, label: 'Đúng', icon: 'checkmark-circle-outline' as const },
@@ -439,6 +454,19 @@ const styles = StyleSheet.create({
         color: theme.colors.textSecondary,
         fontSize: 13,
         lineHeight: 19,
+    },
+    feedbackInput: {
+        minHeight: 82,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.bg,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        color: theme.colors.textPrimary,
+        fontSize: 13,
+        lineHeight: 19,
+        textAlignVertical: 'top',
     },
     feedbackRow: {
         flexDirection: 'row',

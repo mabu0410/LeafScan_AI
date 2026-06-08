@@ -25,6 +25,7 @@ from app.models.domain import (
     Plant,
     ProductImpression,
     PushToken,
+    ScanFeedback,
     ScanHistory,
     Subscription,
     User,
@@ -53,6 +54,9 @@ from app.schemas.admin import (
     AdminRevenueReportEnvelope,
     AdminRevenueSeriesItem,
     AdminRecentTransactionItem,
+    AdminScanFeedbackItem,
+    AdminScanFeedbackListData,
+    AdminScanFeedbackListEnvelope,
     AdminScanActivityStats,
     AdminScanItem,
     AdminScanListData,
@@ -205,7 +209,7 @@ def _content_stats(db: Session) -> AdminContentStats:
     care_tips_total = _count(db, CareTip)
     care_tips_active = _count(db, CareTip, CareTip.is_active == True)  # noqa: E712
     return AdminContentStats(
-        diseases_total=_count(db, Disease),
+        diseases_total=_count(db, Disease, ~Disease.disease_key.ilike("feedback_%")),
         care_tips_total=care_tips_total,
         care_tips_active=care_tips_active,
         care_tips_hidden=max(care_tips_total - care_tips_active, 0),
@@ -1056,6 +1060,74 @@ def admin_list_scans(
     )
 
 
+@router.get("/scan-feedback", response_model=AdminScanFeedbackListEnvelope)
+def admin_list_scan_feedback(
+    q: str | None = None,
+    feedback: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    query = (
+        db.query(ScanFeedback, User, ScanHistory, Plant, Disease)
+        .join(User, User.id == ScanFeedback.user_id)
+        .join(ScanHistory, ScanHistory.id == ScanFeedback.scan_id)
+        .outerjoin(Plant, Plant.id == ScanHistory.plant_id)
+        .outerjoin(Disease, Disease.disease_key == ScanHistory.disease_key)
+        .order_by(desc(ScanFeedback.created_at))
+    )
+
+    feedback_value = feedback.strip().lower() if feedback else None
+    if feedback_value and feedback_value != "all":
+        if feedback_value not in {"correct", "incorrect", "unsure"}:
+            raise HTTPException(status_code=400, detail="Bộ lọc phản hồi không hợp lệ.")
+        query = query.filter(ScanFeedback.feedback == feedback_value)
+
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                User.name.ilike(like),
+                User.email.ilike(like),
+                Plant.name.ilike(like),
+                Disease.name.ilike(like),
+                ScanHistory.disease_key.ilike(like),
+                ScanFeedback.feedback.ilike(like),
+                ScanFeedback.note.ilike(like),
+            )
+        )
+
+    total = int(query.count() or 0)
+    safe_page, safe_size, page_count = _page_bounds(total, page, page_size)
+    rows = query.offset((safe_page - 1) * safe_size).limit(safe_size).all()
+    items = [
+        AdminScanFeedbackItem(
+            id=int(row.id),
+            scan_id=int(scan.id),
+            user_id=int(user.id),
+            user_name=user.name,
+            user_email=user.email,
+            plant_id=int(plant.id) if plant else None,
+            plant_name=plant.name if plant else None,
+            disease_key=scan.disease_key,
+            disease_name=disease.name if disease else None,
+            image_url=scan.image_url,
+            confidence=float(scan.confidence) if scan.confidence is not None else None,
+            feedback=row.feedback,
+            note=row.note,
+            scan_date=scan.scan_date,
+            created_at=row.created_at,
+        )
+        for row, user, scan, plant, disease in rows
+    ]
+    return AdminScanFeedbackListEnvelope(
+        success=True,
+        message="Thành công",
+        data=AdminScanFeedbackListData(items=items, total=total, page=safe_page, page_size=safe_size, page_count=page_count),
+    )
+
+
 def _disease_item(row: Disease) -> AdminDiseaseItem:
     return AdminDiseaseItem(
         id=int(row.id),
@@ -1078,7 +1150,11 @@ def admin_list_diseases(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    query = db.query(Disease).order_by(Disease.name.asc())
+    query = (
+        db.query(Disease)
+        .filter(~Disease.disease_key.ilike("feedback_%"))
+        .order_by(Disease.name.asc())
+    )
     if q:
         like = f"%{q.strip()}%"
         query = query.filter(or_(Disease.name.ilike(like), Disease.disease_key.ilike(like), Disease.model_class_name.ilike(like)))

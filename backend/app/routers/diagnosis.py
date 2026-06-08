@@ -302,6 +302,9 @@ def submit_scan_feedback(
     feedback_value = payload.feedback.strip().lower()
     if feedback_value not in allowed:
         raise HTTPException(status_code=400, detail="Phản hồi phải là correct, incorrect hoặc unsure.")
+    feedback_note = (payload.note or "").strip()
+    if not feedback_note:
+        raise HTTPException(status_code=400, detail="Vui lòng nhập mô tả phản hồi.")
 
     scan = db.query(ScanHistory).filter(ScanHistory.id == scan_id, ScanHistory.user_id == current_user.id).first()
     if not scan:
@@ -313,11 +316,11 @@ def submit_scan_feedback(
         .first()
     )
     if row is None:
-        row = ScanFeedback(user_id=current_user.id, scan_id=scan_id, feedback=feedback_value, note=payload.note)
+        row = ScanFeedback(user_id=current_user.id, scan_id=scan_id, feedback=feedback_value, note=feedback_note)
         db.add(row)
     else:
         row.feedback = feedback_value
-        row.note = payload.note
+        row.note = feedback_note
     db.commit()
     db.refresh(row)
     return ScanFeedbackEnvelope(success=True, message="Đã ghi nhận phản hồi AI.", data=row)

@@ -302,6 +302,38 @@ class AdminScanListEnvelope(BaseModel):
     data: AdminScanListData
 
 
+class AdminScanFeedbackItem(BaseModel):
+    id: int
+    scan_id: int
+    user_id: int
+    user_name: str | None = None
+    user_email: str | None = None
+    plant_id: int | None = None
+    plant_name: str | None = None
+    disease_key: str | None = None
+    disease_name: str | None = None
+    image_url: str | None = None
+    confidence: float | None = None
+    feedback: str
+    note: str | None = None
+    scan_date: datetime | None = None
+    created_at: datetime
+
+
+class AdminScanFeedbackListData(BaseModel):
+    items: list[AdminScanFeedbackItem]
+    total: int
+    page: int
+    page_size: int
+    page_count: int
+
+
+class AdminScanFeedbackListEnvelope(BaseModel):
+    success: bool
+    message: str
+    data: AdminScanFeedbackListData
+
+
 class AdminDiseaseItem(BaseModel):
     id: int
     disease_key: str

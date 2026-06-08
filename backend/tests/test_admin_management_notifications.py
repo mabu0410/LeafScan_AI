@@ -456,14 +456,31 @@ def test_scan_feedback_only_owner_can_submit(app_client, db_session):
     assert owner_feedback.status_code == 200, owner_feedback.text
     assert owner_feedback.json()["data"]["feedback"] == "correct"
 
-    updated_feedback = app_client.post(
+    missing_note = app_client.post(
         f"/api/v1/diagnose/{scan.id}/feedback",
         headers=_auth(owner_token),
         json={"feedback": "unsure"},
     )
+    assert missing_note.status_code == 400
+
+    updated_feedback = app_client.post(
+        f"/api/v1/diagnose/{scan.id}/feedback",
+        headers=_auth(owner_token),
+        json={"feedback": "unsure", "note": "need expert review"},
+    )
     assert updated_feedback.status_code == 200, updated_feedback.text
     assert updated_feedback.json()["data"]["feedback"] == "unsure"
     assert db_session.query(ScanFeedback).filter(ScanFeedback.scan_id == scan.id).count() == 1
+
+    admin_email, admin_token = _register_user(app_client, _unique_email("admin"))
+    _mark_admin(admin_email)
+    admin_feedback = app_client.get(
+        "/api/v1/admin/scan-feedback",
+        headers=_auth(admin_token),
+        params={"q": "need expert", "feedback": "unsure"},
+    )
+    assert admin_feedback.status_code == 200, admin_feedback.text
+    assert admin_feedback.json()["data"]["items"][0]["note"] == "need expert review"
 
 
 def test_notifications_can_be_read_and_marked_read_all(app_client, db_session):

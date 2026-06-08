@@ -18,6 +18,7 @@ import {
   Leaf,
   LogOut,
   Menu,
+  MessageSquare,
   PackageCheck,
   Pencil,
   RefreshCw,
@@ -43,6 +44,7 @@ import {
   listAdminDiseases,
   listAdminInquiries,
   listAdminPayments,
+  listAdminScanFeedback,
   listAdminScans,
   listAdminUsers,
   listAdminCareTips,
@@ -66,6 +68,7 @@ import {
   AdminDiseasePayload,
   AdminPaymentItem,
   AdminRevenueReportData,
+  AdminScanFeedbackItem,
   AdminScanItem,
   AdminUserItem,
   AuthSession,
@@ -81,7 +84,7 @@ import {
 const SESSION_KEY = 'leafscan-admin-session';
 const PAGE_SIZE = 5;
 
-type RouteName = 'login' | 'dashboard' | 'partners' | 'products' | 'care-tips' | 'users' | 'payments' | 'scans' | 'diseases' | 'inquiries' | 'notifications';
+type RouteName = 'login' | 'dashboard' | 'partners' | 'products' | 'care-tips' | 'users' | 'payments' | 'scans' | 'feedback' | 'diseases' | 'inquiries' | 'notifications';
 type IconComponent = typeof LayoutDashboard;
 type ToastType = 'success' | 'error' | 'info';
 
@@ -114,6 +117,7 @@ function getInitialRoute(): RouteName {
     route === 'users' ||
     route === 'payments' ||
     route === 'scans' ||
+    route === 'feedback' ||
     route === 'diseases' ||
     route === 'inquiries' ||
     route === 'notifications'
@@ -128,10 +132,17 @@ function routeTitle(route: RouteName) {
   if (route === 'users') return 'Người dùng';
   if (route === 'payments') return 'Thanh toán';
   if (route === 'scans') return 'Lịch sử quét';
+  if (route === 'feedback') return 'Phản hồi quét';
   if (route === 'diseases') return 'Bệnh cây';
   if (route === 'inquiries') return 'Yêu cầu tư vấn';
   if (route === 'notifications') return 'Thông báo';
   return 'Tổng quan';
+}
+
+function initials(value: string | null | undefined) {
+  const parts = (value || 'LeafScan Admin').trim().split(/\s+/).filter(Boolean);
+  const picked = parts.length > 1 ? [parts[0], parts[parts.length - 1]] : [parts[0] || 'A'];
+  return picked.map((part) => part.charAt(0).toUpperCase()).join('').slice(0, 2);
 }
 
 function currency(value: string | null) {
@@ -202,6 +213,9 @@ function statusLabel(value: string | null | undefined) {
     payment: 'Thanh toán',
     care_task: 'Lịch chăm sóc',
     system: 'Hệ thống',
+    correct: 'Đúng',
+    incorrect: 'Sai',
+    unsure: 'Không chắc',
   };
   return labels[value || ''] || value || 'Không rõ';
 }
@@ -599,9 +613,11 @@ export function App() {
           <NavButton icon={Users} label="Người dùng" active={route === 'users'} onClick={() => navigate('users')} badge={dashboardData?.users.total} />
           <NavButton icon={CircleDollarSign} label="Thanh toán" active={route === 'payments'} onClick={() => navigate('payments')} badge={dashboardData?.revenue.pending_count} />
           <NavButton icon={BarChart3} label="Lịch sử quét" active={route === 'scans'} onClick={() => navigate('scans')} badge={dashboardData?.activity.last_30d} />
+          <NavButton icon={MessageSquare} label="Phản hồi quét" active={route === 'feedback'} onClick={() => navigate('feedback')} />
         </nav>
 
         <div className="account">
+          <div className="accountAvatar">{initials(session.user.name)}</div>
           <div>
             <div className="accountName">{session.user.name}</div>
             <div className="accountEmail">{session.user.email}</div>
@@ -690,6 +706,7 @@ export function App() {
               Đăng xuất
             </button>
             <div className="topbarAccount">
+              <span>{initials(session.user.name)}</span>
               <div>
                 <strong>{session.user.name}</strong>
                 <small>Quản trị viên</small>
@@ -760,6 +777,9 @@ export function App() {
         )}
         {route === 'scans' && (
           <ScansPage token={session.accessToken} quickSearch={globalSearch} onMessage={setMessage} />
+        )}
+        {route === 'feedback' && (
+          <ScanFeedbackPage token={session.accessToken} quickSearch={globalSearch} onMessage={setMessage} />
         )}
       </main>
     </div>
@@ -2145,6 +2165,110 @@ function ScansPage({
                 </div>
                 <b>{scan.confidence.toFixed(1)}%</b>
                 <span>{dateLabel(scan.scan_date)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+      <Pagination page={data.page} pageCount={data.page_count} total={data.total} start={range.start} end={range.end} onPageChange={setPage} />
+    </div>
+  );
+}
+
+function ScanFeedbackPage({
+  token,
+  quickSearch,
+  onMessage,
+}: {
+  token: string;
+  quickSearch: string;
+  onMessage: (message: string | null) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [feedbackFilter, setFeedbackFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<PaginatedData<AdminScanFeedbackItem>>(() => emptyPaginated<AdminScanFeedbackItem>());
+  const query = `${quickSearch} ${search}`.trim();
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    listAdminScanFeedback(token, { q: query, feedback: feedbackFilter, page, pageSize: 10 })
+      .then((rows) => {
+        if (!cancelled) setData(rows);
+      })
+      .catch((error) => onMessage((error as Error).message || 'Không tải được phản hồi quét.'))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, query, feedbackFilter, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, feedbackFilter]);
+  const range = serverRange(data);
+
+  return (
+    <div className="listPage">
+      <section className="filterPanel feedbackFilters">
+        <label className="filterSearch">
+          <Search size={18} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm người dùng, cây, bệnh, mô tả..." />
+        </label>
+        <label className="filterSelect">
+          <span>Phản hồi</span>
+          <select value={feedbackFilter} onChange={(event) => setFeedbackFilter(event.target.value)}>
+            <option value="all">Tất cả phản hồi</option>
+            <option value="correct">Đúng</option>
+            <option value="incorrect">Sai</option>
+            <option value="unsure">Không chắc</option>
+          </select>
+        </label>
+        <div className="filterMetric">
+          <MessageSquare size={19} />
+          <span>Phản hồi</span>
+          <strong>{numberLabel(data.total)}</strong>
+        </div>
+      </section>
+
+      <section className="panel adminListPanel">
+        {loading && !data.items.length ? (
+          <EmptyState title="Đang tải phản hồi quét..." />
+        ) : data.items.length === 0 ? (
+          <EmptyState title="Chưa có phản hồi quét phù hợp" />
+        ) : (
+          <div className="adminTable">
+            <div className="adminTableHead feedbackGridRow">
+              <span>Ảnh</span>
+              <span>Người dùng / cây</span>
+              <span>Kết quả AI</span>
+              <span>Phản hồi</span>
+              <span>Mô tả người dùng</span>
+              <span>Thời gian</span>
+            </div>
+            {data.items.map((item) => (
+              <div className="adminTableRow feedbackGridRow" key={item.id}>
+                <div className="scanThumb">
+                  <AssetImage src={item.image_url} alt={`Feedback #${item.id}`} icon={Leaf} />
+                </div>
+                <div>
+                  <strong>{item.user_name || 'Không rõ người dùng'}</strong>
+                  <small>{item.user_email || 'Không có email'} · {item.plant_name || 'Không gắn cây'}</small>
+                </div>
+                <div>
+                  <strong>{item.disease_name || item.disease_key || 'Không xác định'}</strong>
+                  <small>Scan #{item.scan_id} · {item.confidence == null ? 'Chưa có độ tin cậy' : `${item.confidence.toFixed(1)}%`}</small>
+                </div>
+                <span className={statusPillClass(item.feedback)}>{statusLabel(item.feedback)}</span>
+                <p className="tableMessage feedbackNote">{item.note || 'Không có mô tả.'}</p>
+                <div>
+                  <strong>{dateLabel(item.created_at)}</strong>
+                  <small>{item.scan_date ? `Quét: ${dateLabel(item.scan_date)}` : 'Không rõ ngày quét'}</small>
+                </div>
               </div>
             ))}
           </div>

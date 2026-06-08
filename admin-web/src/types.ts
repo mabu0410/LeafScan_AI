@@ -316,6 +316,24 @@ export interface AdminScanItem {
   scan_date: string;
 }
 
+export interface AdminScanFeedbackItem {
+  id: number;
+  scan_id: number;
+  user_id: number;
+  user_name: string | null;
+  user_email: string | null;
+  plant_id: number | null;
+  plant_name: string | null;
+  disease_key: string | null;
+  disease_name: string | null;
+  image_url: string | null;
+  confidence: number | null;
+  feedback: string;
+  note: string | null;
+  scan_date: string | null;
+  created_at: string;
+}
+
 export interface AdminDiseaseItem {
   id: number;
   disease_key: string;

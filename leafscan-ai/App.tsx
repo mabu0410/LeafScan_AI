@@ -1,6 +1,5 @@
 import 'react-native-gesture-handler';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -19,17 +18,10 @@ function AppContent() {
     useI18nSync();
     usePushNotificationSync(accessToken, notificationsEnabled);
     return (
-        <View style={styles.appRoot}>
+        <>
             <StatusBar hidden animated style={darkMode ? 'light' : 'dark'} />
             <AppNavigator />
-            <View
-                pointerEvents="none"
-                style={[
-                    styles.topLeftStatusMask,
-                    { backgroundColor: darkMode ? '#0F1411' : '#FFFDF8' },
-                ]}
-            />
-        </View>
+        </>
     );
 }
 
@@ -44,18 +36,3 @@ export default function App() {
         </GestureHandlerRootView>
     );
 }
-
-const styles = StyleSheet.create({
-    appRoot: {
-        flex: 1,
-    },
-    topLeftStatusMask: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: 54,
-        height: 42,
-        zIndex: 9999,
-        elevation: 9999,
-    },
-});
