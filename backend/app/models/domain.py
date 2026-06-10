@@ -575,3 +575,13 @@ class ScanFeedback(Base):
 
     user = relationship("User", backref="scan_feedback")
     scan = relationship("ScanHistory", backref="feedback_rows")
+
+class SystemSetting(Base):
+    """Bảng lưu cấu hình hệ thống động."""
+    __tablename__ = "system_settings"
+
+    key = Column(String(100), primary_key=True, index=True)
+    value = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    type = Column(String(20), nullable=False, default="string") # string, float, integer, boolean
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

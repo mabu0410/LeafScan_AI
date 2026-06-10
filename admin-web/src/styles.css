@@ -57,7 +57,6 @@ a {
   box-shadow: 0 22px 60px rgba(13, 30, 23, 0.22);
 }
 
-.loginMark,
 .brandIcon {
   width: 48px;
   height: 48px;
@@ -69,7 +68,7 @@ a {
 }
 
 .loginPanel h1 {
-  margin: 18px 0 8px;
+  margin: 0 0 24px;
   font-size: 28px;
 }
 
@@ -1073,10 +1072,6 @@ dd {
   grid-template-columns: minmax(220px, 1.2fr) minmax(220px, 1.1fr) 140px 130px 190px 128px;
 }
 
-.partnerRevenueGridRow {
-  grid-template-columns: minmax(240px, 1.4fr) 150px 130px 150px 130px 150px;
-}
-
 .scanGridRow {
   grid-template-columns: 92px minmax(220px, 1.2fr) minmax(220px, 1.1fr) 110px 170px;
 }
@@ -1113,7 +1108,6 @@ dd {
   .adminTableRow,
   .userGrid,
   .paymentGridRow,
-  .partnerRevenueGridRow,
   .scanGridRow {
     grid-template-columns: 1fr;
     align-items: start;
@@ -1299,11 +1293,11 @@ body {
 }
 
 .topbarAccount {
-  min-width: 210px;
+  min-width: 170px;
   border-left: 1px solid #e5ebe7;
   padding-left: 18px;
   display: grid;
-  grid-template-columns: 44px 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
 }
@@ -2270,18 +2264,44 @@ dt {
   margin-top: 14px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
-  background: #fbfdfb;
+  background: #f8fbff;
 }
 
 .barChart svg {
   width: 100%;
-  min-width: 620px;
-  height: 240px;
+  min-width: 760px;
+  height: 300px;
   display: block;
 }
 
-.barGross {
-  fill: #1f7a56;
+.revenueAxisGrid {
+  stroke: #dfe7f1;
+  stroke-width: 1;
+}
+
+.revenueAxisLine {
+  stroke: #aebdcc;
+  stroke-width: 1.2;
+}
+
+.revenueAxisLabel {
+  fill: #667085;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.revenueGrossLine {
+  fill: none;
+  stroke: #059669;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.revenueGrossPoint {
+  fill: #059669;
+  stroke: #fff;
+  stroke-width: 2;
 }
 
 .barNet {
@@ -2292,10 +2312,21 @@ dt {
   fill: #dc2626;
 }
 
+.revenueValueLabel {
+  fill: #102033;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .barLabel {
   fill: #647067;
   font-size: 10px;
   font-weight: 700;
+}
+
+.barLabelActive {
+  fill: #102033;
+  font-weight: 900;
 }
 
 .chartLegend {
@@ -2333,8 +2364,34 @@ dt {
   background: #dc2626;
 }
 
-.partnerRevenuePanel {
-  margin-bottom: 14px;
+.chartQuickStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.chartQuickStats div {
+  border: 1px solid var(--adm-border-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fbfdff;
+}
+
+.chartQuickStats span,
+.chartQuickStats small {
+  display: block;
+  color: var(--adm-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.chartQuickStats strong {
+  display: block;
+  margin: 4px 0 2px;
+  color: var(--adm-text);
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .tableSectionTitle {
@@ -3284,8 +3341,8 @@ body {
 }
 
 .topbarAccount {
-  min-width: 220px;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  min-width: 170px;
+  grid-template-columns: minmax(0, 1fr) auto;
   border-left: 1px solid var(--adm-border);
 }
 
@@ -3386,6 +3443,7 @@ body {
 }
 
 .statCard svg {
+  flex: 0 0 42px;
   width: 42px;
   height: 42px;
   border-radius: 12px;
@@ -3394,11 +3452,21 @@ body {
   background: var(--adm-primary-soft);
 }
 
+.statCard > div {
+  min-width: 0;
+}
+
 .statValue {
   color: var(--adm-text);
   font-size: 27px;
   font-weight: 850;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.statCardMoney .statValue {
+  font-size: 25px;
+  white-space: nowrap;
 }
 
 .statLabel {
@@ -3839,14 +3907,10 @@ dt {
 
 .loginPage {
   background:
-    linear-gradient(120deg, rgba(37, 99, 235, 0.84), rgba(15, 23, 42, 0.74)),
+    linear-gradient(120deg, rgba(21, 94, 67, 0.9), rgba(35, 86, 118, 0.86)),
     url("https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=1800&q=80");
   background-size: cover;
   background-position: center;
-}
-
-.loginMark {
-  background: linear-gradient(135deg, var(--adm-primary), #60a5fa);
 }
 
 .loginPanel {

@@ -62,12 +62,14 @@ import {
   updatePartnerStatus,
   updateProductStatus,
 } from './api';
+import { SettingsPage } from './pages/SettingsPage';
 import {
   AdminDashboardData,
   AdminDiseaseItem,
   AdminDiseasePayload,
   AdminPaymentItem,
   AdminRevenueReportData,
+  AdminRevenueSeriesItem,
   AdminScanFeedbackItem,
   AdminScanItem,
   AdminUserItem,
@@ -84,7 +86,7 @@ import {
 const SESSION_KEY = 'leafscan-admin-session';
 const PAGE_SIZE = 5;
 
-type RouteName = 'login' | 'dashboard' | 'partners' | 'products' | 'care-tips' | 'users' | 'payments' | 'scans' | 'feedback' | 'diseases' | 'inquiries' | 'notifications';
+type RouteName = 'login' | 'dashboard' | 'partners' | 'products' | 'care-tips' | 'users' | 'payments' | 'scans' | 'feedback' | 'inquiries' | 'notifications' | 'settings';
 type IconComponent = typeof LayoutDashboard;
 type ToastType = 'success' | 'error' | 'info';
 
@@ -107,6 +109,44 @@ function inferToastType(message: string): ToastType {
   return 'success';
 }
 
+function normalizeSearchText(value: unknown) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function matchesSearchQuery(values: unknown[], query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return true;
+  const haystack = normalizeSearchText(values.filter(Boolean).join(' '));
+  return normalizedQuery.split(' ').every((part) => haystack.includes(part));
+}
+
+function quickSearchTarget(value: string): RouteName | null {
+  const query = normalizeSearchText(value);
+  if (!query) return null;
+
+  const routes: Array<[RouteName, string[]]> = [
+    ['products', ['san pham', 'vat tu', 'phan bon', 'thuoc', 'hat giong', 'che pham', 'marketplace']],
+    ['partners', ['dai ly', 'doi tac', 'cua hang', 'cong ty']],
+    ['care-tips', ['meo', 'cham soc', 'tuoi nuoc', 'phong benh', 'cat tia', 'bon phan']],
+    ['payments', ['thanh toan', 'doanh thu', 'giao dich', 'vnpay', 'tien']],
+    ['users', ['nguoi dung', 'nong dan', 'admin', 'quan tri']],
+    ['inquiries', ['tu van', 'yeu cau', 'lien he']],
+    ['notifications', ['thong bao']],
+    ['scans', ['lich su quet', 'quet', 'scan']],
+    ['feedback', ['phan hoi']],
+    ['settings', ['cau hinh', 'he thong', 'setting']],
+  ];
+
+  return routes.find(([, keywords]) => keywords.some((keyword) => query.includes(keyword)))?.[0] ?? null;
+}
+
 function getInitialRoute(): RouteName {
   const route = window.location.pathname.replace('/', '') as RouteName;
   if (
@@ -118,9 +158,9 @@ function getInitialRoute(): RouteName {
     route === 'payments' ||
     route === 'scans' ||
     route === 'feedback' ||
-    route === 'diseases' ||
     route === 'inquiries' ||
-    route === 'notifications'
+    route === 'notifications' ||
+    route === 'settings'
   ) return route;
   return 'dashboard';
 }
@@ -133,9 +173,9 @@ function routeTitle(route: RouteName) {
   if (route === 'payments') return 'Thanh toán';
   if (route === 'scans') return 'Lịch sử quét';
   if (route === 'feedback') return 'Phản hồi quét';
-  if (route === 'diseases') return 'Bệnh cây';
   if (route === 'inquiries') return 'Yêu cầu tư vấn';
   if (route === 'notifications') return 'Thông báo';
+  if (route === 'settings') return 'Cấu hình hệ thống';
   return 'Tổng quan';
 }
 
@@ -155,6 +195,23 @@ function money(value: number) {
     currency: 'VND',
     maximumFractionDigits: 0,
   }).format(value || 0);
+}
+
+function compactMoney(value: number) {
+  const amount = value || 0;
+  const format = (next: number) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: next >= 10 ? 0 : 1 }).format(next);
+  if (Math.abs(amount) >= 1_000_000_000) return `${format(amount / 1_000_000_000)} tỷ`;
+  if (Math.abs(amount) >= 1_000_000) return `${format(amount / 1_000_000)}tr`;
+  if (Math.abs(amount) >= 1_000) return `${format(amount / 1_000)}k`;
+  return new Intl.NumberFormat('vi-VN').format(amount);
+}
+
+function revenueScaleMax(value: number) {
+  const amount = Math.max(value || 0, 1);
+  const power = 10 ** Math.floor(Math.log10(amount));
+  const normalized = amount / power;
+  const bucket = [1, 2, 3, 5, 10].find((candidate) => normalized <= candidate) || 10;
+  return bucket * power;
 }
 
 function numberLabel(value: number) {
@@ -268,6 +325,7 @@ export function App() {
   const [partners, setPartners] = useState<PartnerStore[]>([]);
   const [products, setProducts] = useState<PartnerProduct[]>([]);
   const [careTips, setCareTips] = useState<CareTip[]>([]);
+  const [diseases, setDiseases] = useState<AdminDiseaseItem[]>([]);
   const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);
   const [notificationInbox, setNotificationInbox] = useState<NotificationListData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -313,6 +371,7 @@ export function App() {
     setPartners([]);
     setProducts([]);
     setCareTips([]);
+    setDiseases([]);
     setDashboardData(null);
     setNotificationInbox(null);
     navigate('login');
@@ -325,17 +384,19 @@ export function App() {
       setMessage(null);
     }
     try {
-      const [dashboardRows, partnerRows, productRows, careTipRows, notificationRows] = await Promise.all([
+      const [dashboardRows, partnerRows, productRows, careTipRows, diseaseRows, notificationRows] = await Promise.all([
         getAdminDashboard(session.accessToken),
         listPendingPartners(session.accessToken),
         listPendingProducts(session.accessToken),
         listAdminCareTips(session.accessToken),
+        listAdminDiseases(session.accessToken),
         listNotifications(session.accessToken),
       ]);
       setDashboardData(dashboardRows);
       setPartners(partnerRows);
       setProducts(productRows);
       setCareTips(careTipRows);
+      setDiseases(diseaseRows);
       setNotificationInbox(notificationRows);
     } catch (error) {
       if ((error as Error).name === 'AuthError') {
@@ -598,7 +659,6 @@ export function App() {
         <div className="brand">
           <div>
             <div className="brandName">LeafScan Admin</div>
-            <div className="brandMeta">Duyệt chợ sản phẩm</div>
           </div>
         </div>
 
@@ -607,23 +667,15 @@ export function App() {
           <NavButton icon={Building2} label="Đại lý" active={route === 'partners'} onClick={() => navigate('partners')} badge={partners.length} />
           <NavButton icon={PackageCheck} label="Sản phẩm" active={route === 'products'} onClick={() => navigate('products')} badge={products.length} />
           <NavButton icon={Leaf} label="Mẹo chăm sóc" active={route === 'care-tips'} onClick={() => navigate('care-tips')} badge={careTips.length} />
-          <NavButton icon={Sprout} label="Bệnh cây" active={route === 'diseases'} onClick={() => navigate('diseases')} badge={dashboardData?.content.diseases_total} />
           <NavButton icon={FileText} label="Yêu cầu tư vấn" active={route === 'inquiries'} onClick={() => navigate('inquiries')} />
           <NavButton icon={Bell} label="Thông báo" active={route === 'notifications'} onClick={() => navigate('notifications')} badge={notificationCount} />
           <NavButton icon={Users} label="Người dùng" active={route === 'users'} onClick={() => navigate('users')} badge={dashboardData?.users.total} />
           <NavButton icon={CircleDollarSign} label="Thanh toán" active={route === 'payments'} onClick={() => navigate('payments')} badge={dashboardData?.revenue.pending_count} />
           <NavButton icon={BarChart3} label="Lịch sử quét" active={route === 'scans'} onClick={() => navigate('scans')} badge={dashboardData?.activity.last_30d} />
           <NavButton icon={MessageSquare} label="Phản hồi quét" active={route === 'feedback'} onClick={() => navigate('feedback')} />
+          <NavButton icon={Save} label="Cấu hình hệ thống" active={route === 'settings'} onClick={() => navigate('settings')} />
         </nav>
 
-        <div className="account">
-          <div className="accountAvatar">{initials(session.user.name)}</div>
-          <div>
-            <div className="accountName">{session.user.name}</div>
-            <div className="accountEmail">{session.user.email}</div>
-          </div>
-          <ChevronDown size={16} />
-        </div>
       </aside>
 
       <main className="main">
@@ -641,7 +693,26 @@ export function App() {
             </button>
             <label className="quickSearch">
               <Search size={18} />
-              <input value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder="Tìm kiếm nhanh..." />
+              <input
+                value={globalSearch}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setGlobalSearch(nextValue);
+                  if (route === 'dashboard') {
+                    const target = quickSearchTarget(nextValue);
+                    if (target && target !== route) navigate(target);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  const target = quickSearchTarget(globalSearch);
+                  if (target && target !== route) {
+                    event.preventDefault();
+                    navigate(target);
+                  }
+                }}
+                placeholder="Tìm kiếm nhanh..."
+              />
               <kbd>Ctrl K</kbd>
             </label>
           </div>
@@ -706,7 +777,6 @@ export function App() {
               Đăng xuất
             </button>
             <div className="topbarAccount">
-              <span>{initials(session.user.name)}</span>
               <div>
                 <strong>{session.user.name}</strong>
                 <small>Quản trị viên</small>
@@ -758,10 +828,7 @@ export function App() {
           <ProductsPage products={products} loading={loading} quickSearch={globalSearch} onAction={approveProduct} />
         )}
         {route === 'care-tips' && (
-          <CareTipsPage careTips={careTips} loading={loading} quickSearch={globalSearch} onSave={saveCareTip} onDelete={removeCareTip} />
-        )}
-        {route === 'diseases' && (
-          <DiseasesPage token={session.accessToken} quickSearch={globalSearch} onMessage={setMessage} onRefreshDashboard={() => refresh({ silent: true })} />
+          <CareTipsPage careTips={careTips} diseases={diseases} loading={loading} quickSearch={globalSearch} onSave={saveCareTip} onDelete={removeCareTip} />
         )}
         {route === 'inquiries' && (
           <InquiriesPage token={session.accessToken} quickSearch={globalSearch} onMessage={setMessage} />
@@ -780,6 +847,9 @@ export function App() {
         )}
         {route === 'feedback' && (
           <ScanFeedbackPage token={session.accessToken} quickSearch={globalSearch} onMessage={setMessage} />
+        )}
+        {route === 'settings' && (
+          <SettingsPage />
         )}
       </main>
     </div>
@@ -809,11 +879,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: AuthSession) => void }) {
   return (
     <main className="loginPage">
       <section className="loginPanel">
-        <div className="loginMark">
-          <ShieldCheck size={28} />
-        </div>
         <h1>LeafScan Admin</h1>
-        <p>Đăng nhập bằng tài khoản nằm trong ADMIN_EMAILS để duyệt chợ sản phẩm.</p>
         <form onSubmit={submit} className="loginForm">
           <label>
             Email hoặc tài khoản
@@ -894,7 +960,7 @@ function Dashboard({
     <div className="dashboard">
       <div className="statGrid">
         {stats.map((item) => (
-          <div className="statCard" key={item.label}>
+          <div className={`statCard ${item.label === 'Doanh thu thành công' ? 'statCardMoney' : ''}`} key={item.label}>
             <item.icon size={22} />
             <div>
               <div className="statValue">{item.value}</div>
@@ -979,7 +1045,6 @@ function Dashboard({
               total={dashboardData.plants.total}
               rows={[
                 ['Cây trong vườn', dashboardData.plants.total],
-                ['Bệnh trong thư viện', dashboardData.content.diseases_total],
                 ['Mẹo đang hiển thị', dashboardData.content.care_tips_active],
                 ['Mẹo tạm ẩn', dashboardData.content.care_tips_hidden],
               ]}
@@ -1330,12 +1395,12 @@ function PartnersPage({
   const [statusFilter, setStatusFilter] = useState('pending_review');
   const [areaFilter, setAreaFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const query = `${quickSearch} ${search}`.trim().toLowerCase();
+  const query = `${quickSearch} ${search}`.trim();
   const areaOptions = Array.from(new Set(partners.map((partner) => partner.service_area).filter(Boolean) as string[]));
   const filteredPartners = partners.filter((partner) => {
     const matchesSearch =
       !query ||
-      [
+      matchesSearchQuery([
         partner.store_name,
         partner.company_name,
         partner.contact_email,
@@ -1343,11 +1408,7 @@ function PartnersPage({
         partner.address,
         partner.service_area,
         partner.main_products,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
+      ], query);
     const matchesStatus = statusFilter === 'all' || partner.status === statusFilter;
     const matchesArea = areaFilter === 'all' || partner.service_area === areaFilter;
     return matchesSearch && matchesStatus && matchesArea;
@@ -1482,23 +1543,19 @@ function ProductsPage({
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const query = `${quickSearch} ${search}`.trim().toLowerCase();
+  const query = `${quickSearch} ${search}`.trim();
   const categoryOptions = Array.from(new Set(products.flatMap((product) => product.target_categories || []).filter(Boolean)));
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
       !query ||
-      [
+      matchesSearchQuery([
         product.name,
         product.partner_name,
         product.description,
         product.price_range,
         ...(product.target_diseases || []),
         ...(product.target_categories || []),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
+      ], query);
     const matchesCategory = categoryFilter === 'all' || (product.target_categories || []).includes(categoryFilter);
     const matchesStatus = statusFilter === 'all' || product.moderation_status === statusFilter;
     return matchesSearch && matchesCategory && matchesStatus;
@@ -1843,13 +1900,32 @@ function PaymentsPage({
 
   const range = serverRange(data);
   const partnerOptions = report?.partner_reports || [];
-  const payerReports = report?.payer_reports || [];
-  const reportMax = Math.max(...(report?.series || []).map((item) => Math.max(item.gross_vnd, item.net_vnd, item.refunded_vnd)), 1);
-  const barWidth = 30;
-  const barGap = 18;
-  const chartHeight = 220;
-  const chartPadding = 28;
-  const chartWidth = Math.max(620, (report?.series.length || 1) * (barWidth + barGap) + chartPadding * 2);
+  const revenueSeries = report?.series || [];
+  const reportMax = Math.max(...revenueSeries.map((item) => Math.max(item.gross_vnd, item.net_vnd, item.refunded_vnd)), 1);
+  const chartScaleMax = revenueScaleMax(reportMax);
+  const chartWidth = Math.max(760, revenueSeries.length * (period === 'monthly' ? 72 : 42) + 116);
+  const chartHeight = 300;
+  const chartMargin = { top: 34, right: 28, bottom: 58, left: 76 };
+  const chartInnerWidth = chartWidth - chartMargin.left - chartMargin.right;
+  const chartInnerHeight = chartHeight - chartMargin.top - chartMargin.bottom;
+  const chartBaseY = chartMargin.top + chartInnerHeight;
+  const chartSlotWidth = chartInnerWidth / Math.max(revenueSeries.length, 1);
+  const chartBarWidth = Math.min(period === 'monthly' ? 42 : 24, Math.max(14, chartSlotWidth * 0.52));
+  const chartTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(chartScaleMax * ratio));
+  const chartLabelStep = Math.max(1, Math.ceil(revenueSeries.length / 10));
+  const grossLinePoints = revenueSeries
+    .map((item, index) => {
+      const x = chartMargin.left + index * chartSlotWidth + chartSlotWidth / 2;
+      const y = chartBaseY - (item.gross_vnd / chartScaleMax) * chartInnerHeight;
+      return `${x},${y}`;
+    })
+    .join(' ');
+  const peakRevenue = revenueSeries.reduce<AdminRevenueSeriesItem | null>(
+    (peak, item) => (!peak || item.net_vnd > peak.net_vnd ? item : peak),
+    null
+  );
+  const revenuePeriods = revenueSeries.filter((item) => item.gross_vnd > 0 || item.net_vnd > 0 || item.refunded_vnd > 0).length;
+  const chartTransactionCount = revenueSeries.reduce((sum, item) => sum + item.transaction_count, 0);
 
   return (
     <div className="listPage">
@@ -1956,69 +2032,96 @@ function PaymentsPage({
           <div className="barChart" aria-label="Biểu đồ doanh thu">
             <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img">
               <title>Biểu đồ doanh thu</title>
-              {(report?.series || []).map((item, index) => {
-                const x = chartPadding + index * (barWidth + barGap);
-                const grossHeight = Math.max(2, (item.gross_vnd / reportMax) * 142);
-                const netHeight = Math.max(2, (item.net_vnd / reportMax) * 142);
-                const refundHeight = item.refunded_vnd ? Math.max(2, (item.refunded_vnd / reportMax) * 142) : 0;
-                const baseY = 164;
+              {chartTicks.map((tick) => {
+                const y = chartBaseY - (tick / chartScaleMax) * chartInnerHeight;
+                return (
+                  <g key={tick}>
+                    <line className="revenueAxisGrid" x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={y} y2={y} />
+                    <text className="revenueAxisLabel" x={chartMargin.left - 12} y={y + 4} textAnchor="end">
+                      {compactMoney(tick)}
+                    </text>
+                  </g>
+                );
+              })}
+              <line className="revenueAxisLine" x1={chartMargin.left} x2={chartWidth - chartMargin.right} y1={chartBaseY} y2={chartBaseY} />
+              {grossLinePoints && <polyline className="revenueGrossLine" points={grossLinePoints} />}
+              {revenueSeries.map((item, index) => {
+                const xCenter = chartMargin.left + index * chartSlotWidth + chartSlotWidth / 2;
+                const netHeight = item.net_vnd ? Math.max(3, (item.net_vnd / chartScaleMax) * chartInnerHeight) : 0;
+                const refundHeight = item.refunded_vnd ? Math.max(3, (item.refunded_vnd / chartScaleMax) * chartInnerHeight) : 0;
+                const label = item.period.slice(period === 'monthly' ? 2 : 5);
+                const hasValue = item.gross_vnd > 0 || item.net_vnd > 0 || item.refunded_vnd > 0;
+                const showDateLabel = index === 0 || index === revenueSeries.length - 1 || index % chartLabelStep === 0 || hasValue;
                 return (
                   <g key={item.period}>
-                    <rect className="barGross" x={x} y={baseY - grossHeight} width={9} height={grossHeight} rx={3} />
-                    <rect className="barNet" x={x + 11} y={baseY - netHeight} width={9} height={netHeight} rx={3} />
-                    {refundHeight > 0 && <rect className="barRefund" x={x + 22} y={baseY - refundHeight} width={8} height={refundHeight} rx={3} />}
-                    <text className="barLabel" x={x + 15} y={190} textAnchor="middle">{item.period.slice(period === 'monthly' ? 2 : 5)}</text>
+                    <title>{`${item.period}: gộp ${money(item.gross_vnd)}, ròng ${money(item.net_vnd)}, hoàn ${money(item.refunded_vnd)}`}</title>
+                    {netHeight > 0 && (
+                      <rect
+                        className="barNet"
+                        x={xCenter - chartBarWidth / 2}
+                        y={chartBaseY - netHeight}
+                        width={chartBarWidth}
+                        height={netHeight}
+                        rx={5}
+                      />
+                    )}
+                    {refundHeight > 0 && (
+                      <rect
+                        className="barRefund"
+                        x={xCenter + chartBarWidth / 2 + 4}
+                        y={chartBaseY - refundHeight}
+                        width={7}
+                        height={refundHeight}
+                        rx={4}
+                      />
+                    )}
+                    {item.gross_vnd > 0 && (
+                      <circle
+                        className="revenueGrossPoint"
+                        cx={xCenter}
+                        cy={chartBaseY - (item.gross_vnd / chartScaleMax) * chartInnerHeight}
+                        r={3.5}
+                      />
+                    )}
+                    {item.net_vnd > 0 && (
+                      <text className="revenueValueLabel" x={xCenter} y={Math.max(chartBaseY - netHeight - 8, 14)} textAnchor="middle">
+                        {compactMoney(item.net_vnd)}
+                      </text>
+                    )}
+                    {showDateLabel && (
+                      <text className={`barLabel ${hasValue ? 'barLabelActive' : ''}`} x={xCenter} y={chartBaseY + 22} textAnchor="middle">
+                        {label}
+                      </text>
+                    )}
                   </g>
                 );
               })}
             </svg>
           </div>
           <div className="chartLegend">
-            <span><i className="legendGross" /> Gộp</span>
-            <span><i className="legendNet" /> Ròng</span>
+            <span><i className="legendNet" /> Doanh thu ròng</span>
+            <span><i className="legendGross" /> Doanh thu gộp</span>
             <span><i className="legendRefund" /> Hoàn tiền</span>
+          </div>
+          <div className="chartQuickStats">
+            <div>
+              <span>Cao nhất</span>
+              <strong>{money(peakRevenue?.net_vnd || 0)}</strong>
+              <small>{peakRevenue?.period || 'Chưa có dữ liệu'}</small>
+            </div>
+            <div>
+              <span>{period === 'monthly' ? 'Tháng có doanh thu' : 'Ngày có doanh thu'}</span>
+              <strong>{numberLabel(revenuePeriods)}</strong>
+              <small>Trong khoảng lọc</small>
+            </div>
+            <div>
+              <span>Giao dịch trên biểu đồ</span>
+              <strong>{numberLabel(chartTransactionCount)}</strong>
+              <small>Giao dịch thành công</small>
+            </div>
           </div>
         </section>
       </div>
-
-      <section className="panel adminListPanel partnerRevenuePanel">
-        <div className="tableSectionTitle">
-          <div>
-            <h2>Người/đơn vị đã thanh toán</h2>
-            <p>Thống kê ai đã trả tiền cho LeafScan. Với gói đại lý, đây là phí sử dụng nền tảng, không phải doanh thu bán hàng của chủ đại lý.</p>
-          </div>
-        </div>
-        {!payerReports.length ? (
-          <EmptyState title="Chưa có người thanh toán trong khoảng này" />
-        ) : (
-          <div className="adminTable">
-            <div className="adminTableHead partnerRevenueGridRow">
-              <span>Người thanh toán</span>
-              <span>Doanh thu LeafScan</span>
-              <span>Phí</span>
-              <span>Ròng</span>
-              <span>Hoàn tiền</span>
-              <span>Giao dịch</span>
-            </div>
-            {payerReports.map((payer) => (
-              <div className="adminTableRow partnerRevenueGridRow" key={`${payer.kind}-${payer.owner_id}`}>
-                <div>
-                  <strong>{payer.owner_name}</strong>
-                  <small>{transactionKindLabel(payer.kind)}{payer.owner_email ? ` · ${payer.owner_email}` : ` #${payer.owner_id}`}</small>
-                </div>
-                <b>{money(payer.gross_vnd)}</b>
-                <span>{money(payer.fee_vnd)}</span>
-                <b>{money(payer.net_vnd)}</b>
-                <span>{money(payer.refunded_vnd)}</span>
-                <div>
-                  <strong>{numberLabel(payer.transaction_count)}</strong>
-                  <small>{payer.last_paid_at ? `Cuối: ${dateLabel(payer.last_paid_at)}` : 'Chưa thanh toán'}</small>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
       <section className="panel adminListPanel">
         <div className="tableSectionTitle">
@@ -2581,7 +2684,7 @@ function InquiriesPage({
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const query = `${quickSearch} ${search}`.trim().toLowerCase();
+  const query = `${quickSearch} ${search}`.trim();
 
   useEffect(() => {
     let cancelled = false;
@@ -2819,7 +2922,7 @@ const EMPTY_CARE_TIP_FORM: CareTipFormState = {
   title: '',
   summary: '',
   content: '',
-  category: 'general',
+  category: 'Chăm sóc chung',
   suitablePlants: '',
   relatedDiseaseId: '',
   priority: '0',
@@ -2830,6 +2933,20 @@ const EMPTY_CARE_TIP_FORM: CareTipFormState = {
   startDate: '',
   endDate: '',
 };
+
+const CARE_TIP_CATEGORY_OPTIONS = [
+  'Tưới nước',
+  'Phòng bệnh',
+  'Cắt tỉa',
+  'Môi trường trồng',
+  'Theo dõi cây',
+  'Bón phân',
+  'Chăm sóc chung',
+];
+
+function careTipCategoryLabel(category: string) {
+  return category === 'general' ? 'Chăm sóc chung' : category;
+}
 
 function listToCsv(values: string[]) {
   return values.join(', ');
@@ -2857,7 +2974,7 @@ function careTipToForm(tip: CareTip): CareTipFormState {
     title: tip.title || '',
     summary: tip.summary || '',
     content: tip.content || '',
-    category: tip.category || 'general',
+    category: tip.category || 'Chăm sóc chung',
     suitablePlants: listToCsv(tip.suitable_plants || []),
     relatedDiseaseId: tip.related_disease_id ? String(tip.related_disease_id) : '',
     priority: String(tip.priority ?? 0),
@@ -2891,12 +3008,14 @@ function formToCareTipPayload(form: CareTipFormState): CareTipPayload {
 
 function CareTipsPage({
   careTips,
+  diseases,
   loading,
   quickSearch,
   onSave,
   onDelete,
 }: {
   careTips: CareTip[];
+  diseases: AdminDiseaseItem[];
   loading: boolean;
   quickSearch: string;
   onSave: (payload: CareTipPayload, id?: number) => Promise<void>;
@@ -2908,14 +3027,26 @@ function CareTipsPage({
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const query = `${quickSearch} ${search}`.trim().toLowerCase();
+  const diseaseOptions = useMemo(
+    () => [...diseases].sort((first, second) => first.name.localeCompare(second.name, 'vi')),
+    [diseases]
+  );
+  const diseaseById = useMemo(() => new Map(diseases.map((disease) => [disease.id, disease])), [diseases]);
   const filteredCareTips = careTips.filter((tip) => {
+    const relatedDisease = tip.related_disease_id ? diseaseById.get(tip.related_disease_id) : null;
     const matchesSearch =
       !query ||
-      [tip.title, tip.summary, tip.content, tip.category, tip.slug, ...(tip.suitable_plants || [])]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
+      matchesSearchQuery([
+        tip.title,
+        tip.summary,
+        tip.content,
+        tip.category,
+        tip.slug,
+        relatedDisease?.name,
+        relatedDisease?.disease_key,
+        tip.related_disease_id ? `benh-${tip.related_disease_id}` : '',
+        ...(tip.suitable_plants || []),
+      ], query);
     const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? tip.is_active : !tip.is_active);
     return matchesSearch && matchesStatus;
   });
@@ -2976,12 +3107,17 @@ function CareTipsPage({
             <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required minLength={3} />
           </label>
           <label>
-            Slug
-            <input value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} placeholder="tu-dong-neu-bo-trong" />
-          </label>
-          <label>
             Danh mục
-            <input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} required minLength={2} />
+            <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} required>
+              {!CARE_TIP_CATEGORY_OPTIONS.includes(form.category) && form.category && (
+                <option value={form.category}>{careTipCategoryLabel(form.category)} (danh mục cũ)</option>
+              )}
+              {CARE_TIP_CATEGORY_OPTIONS.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Ưu tiên
@@ -3000,8 +3136,19 @@ function CareTipsPage({
             <input value={form.suitablePlants} onChange={(event) => setForm({ ...form, suitablePlants: event.target.value })} placeholder="cà chua, táo, nho" />
           </label>
           <label>
-            ID bệnh
-            <input type="number" value={form.relatedDiseaseId} onChange={(event) => setForm({ ...form, relatedDiseaseId: event.target.value })} />
+            Bệnh liên quan
+            <select value={form.relatedDiseaseId} onChange={(event) => setForm({ ...form, relatedDiseaseId: event.target.value })}>
+              <option value="">Không gắn bệnh</option>
+              {form.relatedDiseaseId && !diseaseById.has(Number(form.relatedDiseaseId)) && (
+                <option value={form.relatedDiseaseId}>Bệnh ID {form.relatedDiseaseId} (không còn trong thư viện)</option>
+              )}
+              {diseaseOptions.map((disease) => (
+                <option key={disease.id} value={disease.id}>
+                  {disease.name}
+                  {disease.severity ? ` - ${statusLabel(disease.severity)}` : ''}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Trạng thái
@@ -3009,26 +3156,6 @@ function CareTipsPage({
               <option value="active">Đang hiển thị</option>
               <option value="inactive">Tạm ẩn</option>
             </select>
-          </label>
-          <label>
-            Từ ngày
-            <input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
-          </label>
-          <label>
-            Đến ngày
-            <input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} />
-          </label>
-          <label>
-            Nguồn
-            <input value={form.sourceName} onChange={(event) => setForm({ ...form, sourceName: event.target.value })} />
-          </label>
-          <label>
-            URL nguồn
-            <input value={form.sourceUrl} onChange={(event) => setForm({ ...form, sourceUrl: event.target.value })} />
-          </label>
-          <label className="wideInfo">
-            Ghi chú nguồn
-            <input value={form.sourceNote} onChange={(event) => setForm({ ...form, sourceNote: event.target.value })} />
           </label>
         </div>
 
@@ -3063,32 +3190,35 @@ function CareTipsPage({
           {filteredCareTips.length === 0 ? (
             <EmptyState title="Không có mẹo chăm sóc phù hợp" />
           ) : (
-            pagination.rows.map((tip) => (
-              <article className="careTipRow" key={tip.id}>
-                <div>
-                  <div className="cardHeader compact">
-                    <h2>{tip.title}</h2>
-                    <span className={statusPillClass(tip.is_active ? 'active' : 'inactive')}>{tip.is_active ? 'Đang hiển thị' : 'Tạm ẩn'}</span>
+            pagination.rows.map((tip) => {
+              const relatedDisease = tip.related_disease_id ? diseaseById.get(tip.related_disease_id) : null;
+              return (
+                <article className="careTipRow" key={tip.id}>
+                  <div>
+                    <div className="cardHeader compact">
+                      <h2>{tip.title}</h2>
+                      <span className={statusPillClass(tip.is_active ? 'active' : 'inactive')}>{tip.is_active ? 'Đang hiển thị' : 'Tạm ẩn'}</span>
+                    </div>
+                    <p>{tip.summary}</p>
+                    <div className="metaLine">
+                      <span>{careTipCategoryLabel(tip.category)}</span>
+                      {tip.related_disease_id && <span>{relatedDisease?.name || `Bệnh ID ${tip.related_disease_id}`}</span>}
+                      <span>Độ ưu tiên {tip.priority}</span>
+                    </div>
                   </div>
-                  <p>{tip.summary}</p>
-                  <div className="metaLine">
-                    <span>{tip.category}</span>
-                    <span>Độ ưu tiên {tip.priority}</span>
-                    <span>{tip.slug}</span>
+                  <div className="rowActions">
+                    <button className="secondaryButton" type="button" onClick={() => editTip(tip)} disabled={loading}>
+                      <Pencil size={15} />
+                      Sửa
+                    </button>
+                    <button className="rejectButton" type="button" onClick={() => confirmDelete(tip)} disabled={loading}>
+                      <Trash2 size={15} />
+                      Xóa
+                    </button>
                   </div>
-                </div>
-                <div className="rowActions">
-                  <button className="secondaryButton" type="button" onClick={() => editTip(tip)} disabled={loading}>
-                    <Pencil size={15} />
-                    Sửa
-                  </button>
-                  <button className="rejectButton" type="button" onClick={() => confirmDelete(tip)} disabled={loading}>
-                    <Trash2 size={15} />
-                    Xóa
-                  </button>
-                </div>
-              </article>
-            ))
+                </article>
+              );
+            })
           )}
         </div>
         <Pagination

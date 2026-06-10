@@ -42,7 +42,7 @@ class LeafValidationResult:
     green_component_density: float
 
 
-def validate_leaf_image(image: str | Image.Image) -> LeafValidationResult:
+def validate_leaf_image(image: str | Image.Image, settings: dict = None) -> LeafValidationResult:
     """
     Validate ảnh đầu vào có đủ điều kiện để chẩn đoán lá cây hay không.
 
@@ -92,17 +92,27 @@ def validate_leaf_image(image: str | Image.Image) -> LeafValidationResult:
         float(largest_component / green_pixels) if green_pixels > 0 else 0.0
     )
 
+    settings = settings or {}
+    min_brightness = settings.get("LEAF_MIN_BRIGHTNESS", LEAF_MIN_BRIGHTNESS)
+    min_brightness_p10 = settings.get("LEAF_MIN_BRIGHTNESS_P10", LEAF_MIN_BRIGHTNESS_P10)
+    max_dark_pixel_ratio = settings.get("LEAF_MAX_DARK_PIXEL_RATIO", LEAF_MAX_DARK_PIXEL_RATIO)
+    min_green_ratio = settings.get("LEAF_MIN_GREEN_RATIO", LEAF_MIN_GREEN_RATIO)
+    min_largest_green_ratio = settings.get("LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO", LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO)
+    min_blur_score = settings.get("LEAF_MIN_BLUR_SCORE", LEAF_MIN_BLUR_SCORE)
+    min_center_green_ratio = settings.get("LEAF_MIN_CENTER_GREEN_RATIO", LEAF_MIN_CENTER_GREEN_RATIO)
+    min_green_density = settings.get("LEAF_MIN_GREEN_COMPONENT_DENSITY", LEAF_MIN_GREEN_COMPONENT_DENSITY)
+
     # Ảnh thực tế có thể có nền tối lớn nhưng vùng lá vẫn đủ sáng.
     # Chỉ chặn khi độ sáng trung bình thấp kèm thêm dấu hiệu ảnh quá tối.
     is_too_dark = (
-        brightness < LEAF_MIN_BRIGHTNESS
+        brightness < min_brightness
         and (
-            brightness_p10 < LEAF_MIN_BRIGHTNESS_P10
-            or dark_pixel_ratio > LEAF_MAX_DARK_PIXEL_RATIO
+            brightness_p10 < min_brightness_p10
+            or dark_pixel_ratio > max_dark_pixel_ratio
         )
     )
     is_extremely_dark = (
-        brightness < (LEAF_MIN_BRIGHTNESS * 0.75)
+        brightness < (min_brightness * 0.75)
         or dark_pixel_ratio > 0.90
     )
     if is_too_dark or is_extremely_dark:
@@ -121,13 +131,13 @@ def validate_leaf_image(image: str | Image.Image) -> LeafValidationResult:
         )
 
     has_strong_leaf_signal = (
-        green_ratio >= (LEAF_MIN_GREEN_RATIO * 2)
-        or largest_component_ratio >= (LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO * 2)
+        green_ratio >= (min_green_ratio * 2)
+        or largest_component_ratio >= (min_largest_green_ratio * 2)
     )
 
     # Lá trơn hoặc ảnh crop gần có thể có blur score thấp dù vẫn đủ vùng lá.
     # Với ảnh có tín hiệu lá rõ, để model xử lý tiếp thay vì chặn sớm.
-    if blur_score < LEAF_MIN_BLUR_SCORE and not has_strong_leaf_signal:
+    if blur_score < min_blur_score and not has_strong_leaf_signal:
         return LeafValidationResult(
             is_valid_leaf=False,
             error_code="IMAGE_TOO_BLURRY",
@@ -143,16 +153,16 @@ def validate_leaf_image(image: str | Image.Image) -> LeafValidationResult:
         )
 
     low_color_signal = (
-        green_ratio < LEAF_MIN_GREEN_RATIO
-        and largest_component_ratio < LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO
+        green_ratio < min_green_ratio
+        and largest_component_ratio < min_largest_green_ratio
     )
     leaf_is_off_center_and_sparse = (
-        center_green_ratio < LEAF_MIN_CENTER_GREEN_RATIO
+        center_green_ratio < min_center_green_ratio
         and not has_strong_leaf_signal
     )
     green_pixels_are_scattered = (
-        green_component_density < LEAF_MIN_GREEN_COMPONENT_DENSITY
-        and largest_component_ratio < (LEAF_MIN_LARGEST_GREEN_COMPONENT_RATIO * 2)
+        green_component_density < min_green_density
+        and largest_component_ratio < (min_largest_green_ratio * 2)
     )
 
     if low_color_signal or leaf_is_off_center_and_sparse or green_pixels_are_scattered:
@@ -267,12 +277,12 @@ def _largest_connected_component_size(mask: np.ndarray) -> int:
 # Dict-based wrapper (backward-compatible with diagnosis router)
 # ──────────────────────────────────────────────
 
-def validate_leaf_image_dict(image: str | Image.Image) -> dict:
+def validate_leaf_image_dict(image: str | Image.Image, settings: dict = None) -> dict:
     """
     Wrapper trả về dict tương thích với diagnosis router.
     Dùng thay cho leaf_validator.validate_leaf_image cũ.
     """
-    result = validate_leaf_image(image)
+    result = validate_leaf_image(image, settings)
 
     reason = "ok"
     if result.error_code == "IMAGE_TOO_DARK":

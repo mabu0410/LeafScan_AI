@@ -38,7 +38,7 @@ interface ApiEnvelope<T> {
   data?: T;
 }
 
-async function requestJson<T>(
+export async function requestJson<T>(
   path: string,
   options: {
     method?: string;
@@ -96,6 +96,8 @@ export async function loginAdmin(email: string, password: string): Promise<AuthS
   if (!response.success || !data?.access_token || !data?.user) {
     throw new Error(response.message || 'Đăng nhập thất bại.');
   }
+
+  await requestJson<ApiEnvelope<AdminDashboardData>>('/admin/dashboard', { token: data.access_token });
 
   return {
     accessToken: data.access_token,

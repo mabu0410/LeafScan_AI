@@ -14,8 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import CORS_ORIGINS, UPLOAD_DIR
-from app.routers import diagnosis, auth, users, plants, history, chat, diseases, care_tips, home, partners, subscriptions, notifications, vnpay, admin
-from app.database import init_db
+from app.routers import diagnosis, auth, users, plants, history, chat, diseases, care_tips, home, partners, subscriptions, notifications, vnpay, admin, admin_settings
+from app.database import init_db, SessionLocal
+from app.services.settings_service import SettingsService
+from app.routers.diagnosis import model_service
 from app.services.notification_service import start_notification_scheduler, stop_notification_scheduler
 
 logging.basicConfig(
@@ -100,6 +102,7 @@ app.include_router(subscriptions.router)
 app.include_router(notifications.router)
 app.include_router(vnpay.router)
 app.include_router(admin.router)
+app.include_router(admin_settings.router)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
@@ -123,6 +126,18 @@ def on_startup() -> None:
     """Khởi tạo schema cho môi trường local demo."""
     init_db()
     start_notification_scheduler()
+    
+    db = SessionLocal()
+    try:
+        active_model = SettingsService.get_value(db, "ACTIVE_MODEL_PATH")
+        if active_model and active_model != model_service.model_path:
+            import os
+            if os.path.exists(active_model):
+                model_service.reload_model(active_model)
+    except Exception as e:
+        logger.error("Failed to load active model from settings", exc_info=e)
+    finally:
+        db.close()
 
 
 @app.on_event("shutdown")

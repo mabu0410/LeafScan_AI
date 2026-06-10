@@ -220,8 +220,8 @@ class ModelService:
     DISEASE_CLASSES: list[str] = _load_class_names()
     INPUT_SIZE: int = 224
 
-    def __init__(self):
-        self.model_path = MODEL_PATH.strip()
+    def __init__(self, initial_model_path: str = None):
+        self.model_path = (initial_model_path or MODEL_PATH).strip()
         self.backend = self._load_backend()
         logger.info(
             "model_backend_ready kind=%s model_path=%s num_classes=%d",
@@ -229,6 +229,21 @@ class ModelService:
             self.model_path,
             len(self.DISEASE_CLASSES),
         )
+
+    def reload_model(self, new_model_path: str) -> bool:
+        """Tải lại model mới từ disk (dùng khi admin cấu hình trên web)."""
+        new_model_path = new_model_path.strip()
+        if not new_model_path or new_model_path == self.model_path:
+            return False
+            
+        self.model_path = new_model_path
+        self.backend = self._load_backend()
+        logger.info(
+            "model_reloaded kind=%s model_path=%s",
+            self.backend.kind,
+            self.model_path,
+        )
+        return True
 
     def predict(self, image_path: str) -> list[PredictionItem]:
         """

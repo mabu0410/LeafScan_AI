@@ -40,6 +40,7 @@ from app.services.plant_scope_validator import (
 from app.services.stage_service import StageService
 from app.services.subscription_service import ensure_can_scan, record_scan_consumption
 from app.services.treatment_service import TreatmentService
+from app.services.settings_service import SettingsService
 
 
 router = APIRouter(prefix="/api/v1", tags=["Diagnosis"])
@@ -90,9 +91,11 @@ async def diagnose_disease(
 
     ensure_can_scan(db, current_user.id)
     image_path = await _save_upload(file)
+    
+    settings = SettingsService.get_all(db, as_dict=True)
 
     upload_image = _read_uploaded_image(image_path)
-    validation = validate_leaf_image(upload_image)
+    validation = validate_leaf_image(upload_image, settings)
     metrics = validation.get("metrics", {})
     _log_validation_metrics(metrics)
     if not validation.get("is_valid", False):
@@ -149,13 +152,18 @@ async def diagnose_disease(
         selected_plant_key=selected_plant_key,
         selected_plant=selected_plant,
     )
+    
+    min_top1_conf = settings.get("PLANT_SCOPE_MIN_TOP1_CONFIDENCE", PLANT_SCOPE_MIN_TOP1_CONFIDENCE)
+    min_margin = settings.get("PLANT_SCOPE_MIN_MARGIN", PLANT_SCOPE_MIN_MARGIN)
+    min_top5_count = settings.get("PLANT_SCOPE_MIN_TOP5_SAME_PLANT_COUNT", PLANT_SCOPE_MIN_TOP5_SAME_PLANT_COUNT)
+    
     scope_validation = validate_plant_scope(
         predictions=top_5_predictions,
         supported_plants=SUPPORTED_PLANTS,
         selected_plant_key=requested_plant_key,
-        min_top1_confidence=PLANT_SCOPE_MIN_TOP1_CONFIDENCE,
-        min_margin=PLANT_SCOPE_MIN_MARGIN,
-        min_top5_same_plant_count=PLANT_SCOPE_MIN_TOP5_SAME_PLANT_COUNT,
+        min_top1_confidence=min_top1_conf,
+        min_margin=min_margin,
+        min_top5_same_plant_count=min_top5_count,
     )
     scope_debug = scope_validation.get("debug", {})
     if not scope_validation.get("is_valid", False):
